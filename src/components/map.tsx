@@ -10,10 +10,13 @@
  *
  * Android renders Google tiles (`PROVIDER_GOOGLE`), which need a Maps API key in
  * `.env` (`EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`) — without it the base is grey but the
- * component still mounts and reports taps.
+ * component still mounts and reports taps. iOS uses the default provider (Apple
+ * Maps), which needs no key or extra SDK; `PROVIDER_GOOGLE` on iOS would require a
+ * separate iOS Google Maps SDK + `iosGoogleMapsApiKey` and a native rebuild, so it
+ * renders blank there — Apple Maps is the right native choice.
  */
 import { useEffect, useRef } from 'react';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -89,7 +92,10 @@ export function Map({
   return (
     <MapView
       ref={ref}
-      provider={PROVIDER_GOOGLE}
+      // Google tiles on Android (keyed via the config plugin); Apple Maps on iOS
+      // (default provider) — iOS has no Google Maps SDK/key, so PROVIDER_GOOGLE
+      // would render blank.
+      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
       style={[{ height }, styles.map, style]}
       initialRegion={regionFor(center, zoom)}
       onMapReady={handleReady}
