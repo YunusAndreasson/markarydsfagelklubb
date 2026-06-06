@@ -1,0 +1,170 @@
+import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import { ALERT } from '@/components/icon';
+import { StateBlock } from '@/components/state-block';
+import { ThemedView } from '@/components/themed-view';
+import { Spacing } from '@/constants/theme';
+import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { usePushRegistration } from '@/hooks/use-push-registration';
+import { useTheme } from '@/hooks/use-theme';
+import { ThemeModeProvider, useThemeMode } from '@/hooks/use-theme-mode';
+import { sv } from '@/lib/i18n/sv';
+import { configureNotificationHandler } from '@/lib/notifications';
+import { queryClient } from '@/lib/query-client';
+import { myProfileQueryOptions } from '@/lib/query/profile';
+
+// Hold the splash until auth + profile resolve, so a warm start with a persisted
+// session goes straight to the app (or onboarding) instead of flashing sign-in.
+void SplashScreen.preventAutoHideAsync();
+
+// Show club alerts as a banner even when the app is foregrounded (set once,
+// before React mounts).
+configureNotificationHandler();
+
+export default function RootLayout() {
+  return (
+    // GestureHandlerRootView must wrap the whole app so gesture-based UI added in
+    // later milestones (maps, sheets, swipes) receives native touch events.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeModeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <SafeAreaProvider>
+              <ThemedNavigation />
+            </SafeAreaProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeModeProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+// Feeds our token palette into React Navigation's theme so screen backgrounds,
+// headers and transitions use brand colors (and never flash white in dark mode).
+// `ThemeProvider`/`DarkTheme`/`DefaultTheme` come from expo-router's bundled
+// navigation core — there is no separate `@react-navigation/native` package.
+function ThemedNavigation() {
+  const { colorScheme } = useThemeMode();
+  const theme = useTheme();
+  const { session, initialized } = useAuth();
+  const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+
+  // Keep this device's push token registered + route notification taps (M14).
+  usePushRegistration();
+
+  // Resolve the profile alongside the session (mirrors the web `_authed` gate's
+  // `ensureQueryData`). `fetchMyProfile` returns null for "no row" → onboarding;
+  // only a thrown error means we genuinely couldn't resolve it.
+  const profileQuery = useQuery({ ...myProfileQueryOptions(), enabled: !!session });
+  const profileSettled = !session || profileQuery.isSuccess || profileQuery.isError;
+  const ready = initialized && profileSettled;
+
+  // Reveal the app once session + profile are known. The navigator is always
+  // mounted below; the splash hides the brief signed-out → signed-in correction.
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  // Hold until session + profile are known. On cold start the splash covers
+  // this; after a sign-in (while the profile loads) it reads as a brief spinner
+  // rather than a frozen blank, and avoids flickering onboarding before the
+  // profile resolves.
+  if (!ready) {
+    return (
+      <ThemedView style={styles.errorScreen}>
+        <ActivityIndicator color={theme.primary} />
+      </ThemedView>
+    );
+  }
+
+  // Profile fetch failed (network/RLS) — don't guess `hasProfile` and mis-route
+  // into onboarding; surface a retry instead.
+  if (session && profileQuery.isError) {
+    return (
+      <ThemedView style={styles.errorScreen}>
+        <StateBlock
+          icon={ALERT}
+          tone="error"
+          title={sv.errors.somethingWrong}
+          message={sv.errors.somethingWrongHelp}
+          action={{
+            label: sv.errors.tryAgain,
+            onPress: () => void profileQuery.refetch(),
+            loading: profileQuery.isFetching,
+          }}
+        />
+      </ThemedView>
+    );
+  }
+
+  const hasProfile = !!profileQuery.data;
+
+  return (
+    <ThemeProvider
+      value={{
+        ...base,
+        colors: {
+          ...base.colors,
+          primary: theme.tint,
+          background: theme.background,
+          // `card` backs the navigation headers. Keep it equal to the screen
+          // background so the top bar reads as seamless chrome (not a brighter
+          // elevated surface) and matches the bottom tab bar exactly.
+          card: theme.background,
+          text: theme.foreground,
+          border: theme.border,
+          notification: theme.destructive,
+        },
+      }}
+    >
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.background },
+        }}
+      >
+        {/* Signed out: only the sign-in flow + the magic-link callback. */}
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="auth/callback" />
+        </Stack.Protected>
+        {/* Signed in, no profile row yet: first-run onboarding. */}
+        <Stack.Protected guard={!!session && !hasProfile}>
+          <Stack.Screen name="onboarding" />
+        </Stack.Protected>
+        {/* Signed in + onboarded: the app. `(tabs)` is the bottom-tab shell
+            (Flöde · Rapportera · Profil) and owns "/"; observation/member routes
+            push over it; `kitchensink` is the M2 primitives showcase, gated to
+            `__DEV__` in the screen itself so it can't be reached in production. */}
+        <Stack.Protected guard={!!session && hasProfile}>
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen
+            name="observation/[id]/index"
+            options={{ headerShown: true, title: sv.observation.titleDetail }}
+          />
+          <Stack.Screen
+            name="observation/[id]/edit"
+            options={{ headerShown: true, title: sv.observation.titleEdit, presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="member/[userId]"
+            options={{ headerShown: true, title: sv.member.title }}
+          />
+          <Stack.Screen name="kitchensink" />
+        </Stack.Protected>
+      </Stack>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+    </ThemeProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  errorScreen: { flex: 1, justifyContent: 'center', padding: Spacing.three },
+});
