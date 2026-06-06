@@ -10,7 +10,7 @@
  * `flex: 1` then scrolls within the clamped card.
  */
 import { type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CLOSE, Icon } from '@/components/icon';
@@ -41,7 +41,15 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.root}>
+      {/* Lift the bottom-anchored card above the keyboard so a focused search
+          field never hides the results behind it. A native `Modal` gets its own
+          window that does NOT honor the Activity's `adjustResize`, so both
+          platforms need explicit avoidance: `padding` on iOS, `height` on
+          Android (shrinks the container so the flex-end card clears the keyboard). */}
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
@@ -64,7 +72,7 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
           </View>
           {children}
         </ThemedView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

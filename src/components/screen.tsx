@@ -42,6 +42,12 @@ export function Screen({
     <ScrollView
       style={[sharedStyles.flex, { backgroundColor: theme.background }, style]}
       contentInsetAdjustmentBehavior="automatic"
+      // Keep a focused input (comment, profile name/phone) above the keyboard:
+      // iOS insets the scroll content for the keyboard automatically; both
+      // platforms dismiss on drag and let taps through while it's open.
+      automaticallyAdjustKeyboardInsets
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       contentContainerStyle={[base, contentContainerStyle]}
       refreshControl={refreshControl}
       {...rest}
