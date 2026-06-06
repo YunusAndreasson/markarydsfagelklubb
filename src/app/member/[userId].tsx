@@ -12,7 +12,6 @@ import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
-import { ThemedText } from '@/components/themed-text';
 import { AvatarSize } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -75,9 +74,9 @@ export default function MemberScreen() {
       <View style={styles.body}>
         <View style={styles.headerRow}>
           <Avatar size="lg" name={name} uri={profile.avatarUrl} />
-          <ThemedText type="heading" numberOfLines={2} style={styles.flex}>
-            {name}
-          </ThemedText>
+          {/* The member's name is the native header title (set below, edenmind
+              parity) — don't repeat it as a content heading. */}
+          <View style={styles.flex} />
           {telHref ? (
             <Button
               title={sv.feed.callButtonGeneric}

@@ -1,33 +1,19 @@
 import { Stack } from 'expo-router';
 
-import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 
-// `NativeTabs` only renders the bottom bar — to get a real title bar at the top
-// of a tab (a large, collapsing title on iOS), each tab nests its own native
-// `Stack`. The header is themed to match the screen background so it reads as
-// seamless chrome (same grammar as the root stack + the bottom bar).
+// `NativeTabs` renders no header, so each tab nests its own native `Stack` to get
+// a real (large, collapsing on iOS) title bar. Header colors come from the root
+// `ThemeProvider` (`text`/`card`) — no per-tab tint overrides, matching edenmind.
+//
+// `headerLargeTitle` is opt-in on the tab root only (iOS HIG): leaving it in
+// `screenOptions` gives any pushed screen a ~100pt phantom large-title block.
 export const unstable_settings = { initialRouteName: 'index' };
 
 export default function FeedTabLayout() {
-  const theme = useTheme();
   return (
-    <Stack
-      screenOptions={{
-        headerLargeTitle: true,
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: theme.background },
-        headerLargeStyle: { backgroundColor: theme.background },
-        headerTintColor: theme.foreground,
-        // Force the title color: without this RNScreens lets the iOS large title
-        // fall back to the system label color (dark in a light-mode device),
-        // which is invisible on the app's themed header background.
-        headerTitleStyle: { color: theme.foreground },
-        headerLargeTitleStyle: { color: theme.foreground },
-        contentStyle: { backgroundColor: theme.background },
-      }}
-    >
-      <Stack.Screen name="index" options={{ title: sv.feed.title }} />
+    <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
+      <Stack.Screen name="index" options={{ title: sv.feed.title, headerLargeTitle: true }} />
     </Stack>
   );
 }
