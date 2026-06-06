@@ -179,13 +179,20 @@ export async function fetchMemberFeed(
     RawProfileRow,
     'display_name' | 'avatar_path' | 'phone'
   > | null;
-  const profile: MemberProfile | null = memberRow
-    ? {
-        displayName: memberRow.display_name,
-        avatarUrl: await signedUrlFor(memberRow.avatar_path),
-        phone: memberRow.phone,
-      }
-    : null;
+  // Build the avatar URL on its own statement first. Keeping the `await` inside
+  // the object literal of a ternary branch (`memberRow ? { …: await … } : null`)
+  // mis-compiles under this SDK's Hermes async transform — the whole object
+  // collapses to the number `0`, which then reads as a falsy "no profile" and
+  // surfaced as a spurious "Medlemmen hittades inte." on every member screen.
+  let profile: MemberProfile | null = null;
+  if (memberRow) {
+    const avatarUrl = await signedUrlFor(memberRow.avatar_path);
+    profile = {
+      displayName: memberRow.display_name,
+      avatarUrl,
+      phone: memberRow.phone,
+    };
+  }
   return { profile, observations };
 }
 
