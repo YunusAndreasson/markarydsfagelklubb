@@ -128,6 +128,10 @@ function ThemedNavigation() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.background },
+          // Seamless chrome + the iOS-native chevron-only back button (no long
+          // "previous title" text) on the pushed observation/member screens.
+          headerShadowVisible: false,
+          headerBackButtonDisplayMode: 'minimal',
         }}
       >
         {/* Signed out: only the sign-in flow + the magic-link callback. */}

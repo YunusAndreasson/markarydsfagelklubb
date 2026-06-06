@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Icon, type IconName } from '@/components/icon';
@@ -9,7 +9,6 @@ import { ImageUpload } from '@/components/image-upload';
 import { LocationPermissionSection } from '@/components/location-permission-section';
 import { NotificationPermissionSection } from '@/components/notification-permission-section';
 import { Screen } from '@/components/screen';
-import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ThemePicker } from '@/components/theme-picker';
 import { ThemedText } from '@/components/themed-text';
@@ -29,10 +28,9 @@ const ADMIN_BADGE: IconName = { sf: 'checkmark.shield.fill', material: 'verified
 // Profil — the user's own profile + settings screen (native port of the web's
 // /profile). Editable name/phone + avatar upload, read-only email + admin badge,
 // the theme picker, the location (M8) and push (M14) permission sections, and
-// sign-out. Tab root, so it keeps the M6 grammar: no native header, SectionHeader
-// as the title, manual top inset.
+// sign-out. The tab nests a native Stack (see `profile/_layout.tsx`), so "Profil"
+// is the native header title and the admin badge rides in `headerRight`.
 export default function ProfileScreen() {
-  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { signOut, user } = useAuth();
   const { data: profile } = useQuery(myProfileQueryOptions());
@@ -115,22 +113,21 @@ export default function ProfileScreen() {
   }
 
   return (
-    <Screen
-      contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={{ paddingTop: insets.top + Spacing.three }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.titleRow}>
-        <SectionHeader title={sv.profile.title} level="card" />
-        {profile?.isAdmin ? (
-          <View style={[styles.badge, { backgroundColor: theme.secondary }]}>
-            <Icon name={ADMIN_BADGE} size={13} color={theme.mutedForeground} />
-            <ThemedText type="micro" themeColor="mutedForeground">
-              {sv.profile.adminBadge}
-            </ThemedText>
-          </View>
-        ) : null}
-      </View>
+    <Screen keyboardShouldPersistTaps="handled">
+      {profile?.isAdmin ? (
+        <Stack.Screen
+          options={{
+            headerRight: () => (
+              <View style={[styles.badge, { backgroundColor: theme.secondary }]}>
+                <Icon name={ADMIN_BADGE} size={13} color={theme.mutedForeground} />
+                <ThemedText type="micro" themeColor="mutedForeground">
+                  {sv.profile.adminBadge}
+                </ThemedText>
+              </View>
+            ),
+          }}
+        />
+      ) : null}
 
       <View style={styles.form}>
         <ImageUpload
@@ -217,7 +214,6 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',

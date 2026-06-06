@@ -17,7 +17,9 @@ import { sv } from '@/lib/i18n/sv';
 const { Trigger } = NativeTabs;
 
 // Default tab when entering the group at "/". `anchor` is the SDK 54+ key.
-export const unstable_settings = { anchor: 'index' };
+// The feed tab is the `(home)` group (a nested Stack so it gets a native title);
+// `new` and `profile` are likewise Stack-wrapped folders.
+export const unstable_settings = { anchor: '(home)' };
 
 export default function TabsLayout() {
   const theme = useTheme();
@@ -53,7 +55,7 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs {...barProps} screenListeners={screenListeners}>
-      <Trigger name="index">
+      <Trigger name="(home)">
         <Trigger.Label>{sv.bottomNav.feed}</Trigger.Label>
         {Platform.OS === 'ios' ? (
           <Trigger.Icon sf="house.fill" />

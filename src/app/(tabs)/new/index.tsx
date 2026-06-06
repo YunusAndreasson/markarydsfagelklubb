@@ -1,19 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '@/components/screen';
-import { SectionHeader } from '@/components/section-header';
 import {
   ObservationForm,
   formToInput,
   type ObservationFormValue,
 } from '@/components/observation-form';
-import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
-import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { createObservation, type FeedObservation } from '@/lib/query/observations';
@@ -27,7 +23,6 @@ import { type Species } from '@/lib/query/species';
 // primitive — web parity minus sonner). The tab stays mounted, so the form is
 // reset by remounting via a bumped `key`.
 export default function NewObservationScreen() {
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [formKey, setFormKey] = useState(0);
 
@@ -62,12 +57,7 @@ export default function NewObservationScreen() {
   });
 
   return (
-    <Screen
-      contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={{ paddingTop: insets.top + Spacing.three }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <SectionHeader title={sv.observation.titleNew} level="card" />
+    <Screen keyboardShouldPersistTaps="handled">
       <ObservationForm
         key={formKey}
         mode="create"

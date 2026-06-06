@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useMemo, type ReactNode } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ALERT, TRAY } from '@/components/icon';
 import { ObservationCard } from '@/components/observation-card';
@@ -23,9 +22,10 @@ import { feedQueryOptions } from '@/lib/query/observations';
 
 // Flöde (feed) — the app's home tab and first data-driven screen: the club's
 // last-14-days observations, grouped by Stockholm calendar day, newest first.
-// The "dashboard" IS the feed (web parity — no stats). NativeTabs render no JS
-// header, so the SectionHeader is the visible title (tab-root grammar) and the
-// top safe-area inset is applied manually.
+// The "dashboard" IS the feed (web parity — no stats). The tab nests a native
+// Stack (see `(home)/_layout.tsx`), so the "Flöde" title is the native (large,
+// on iOS) header; the in-content SectionHeaders here are the per-day group
+// labels. `Screen`'s default `automatic` inset drives the large-title collapse.
 const BUCKETS: { key: FeedBucket; label: string }[] = [
   { key: 'today', label: sv.feed.today },
   { key: 'yesterday', label: sv.feed.yesterday },
@@ -34,7 +34,6 @@ const BUCKETS: { key: FeedBucket; label: string }[] = [
 ];
 
 export default function FeedScreen() {
-  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { user } = useAuth();
   const { motion } = useMotion();
@@ -98,13 +97,10 @@ export default function FeedScreen() {
 
   return (
     <Screen
-      contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={{ paddingTop: insets.top + Spacing.three }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
-      <SectionHeader title={sv.feed.title} caption={sv.app.tagline} level="card" />
       {body}
     </Screen>
   );
