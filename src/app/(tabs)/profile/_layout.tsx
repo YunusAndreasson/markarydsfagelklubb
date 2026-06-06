@@ -17,6 +17,11 @@ export default function ProfileTabLayout() {
         headerStyle: { backgroundColor: theme.background },
         headerLargeStyle: { backgroundColor: theme.background },
         headerTintColor: theme.foreground,
+        // Force the title color: without this RNScreens lets the iOS large title
+        // fall back to the system label color (dark in a light-mode device),
+        // which is invisible on the app's themed header background.
+        headerTitleStyle: { color: theme.foreground },
+        headerLargeTitleStyle: { color: theme.foreground },
         contentStyle: { backgroundColor: theme.background },
       }}
     >
