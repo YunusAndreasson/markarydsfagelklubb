@@ -1,18 +1,17 @@
 /**
- * Appearance section — System / Ljust / Mörkt as a segmented control bound to the
- * app-wide theme mode. Mirrors the web's `ThemePicker`, but the native app adds
- * the `system` option (follow the OS) that the web omits. Persistence + native
- * propagation live in `useThemeMode`; this is purely the control surface.
+ * Appearance group — System / Ljust / Mörkt as checkmark rows inside a settings
+ * card (the row-based grammar of the 2026 grouped-settings refresh). Mirrors the
+ * web's appearance control but adds the native `system` option (follow the OS).
+ * Persistence + native propagation live in `useThemeMode`; this is purely the
+ * control surface.
  */
-import { View, StyleSheet } from 'react-native';
-
-import { SectionHeader } from '@/components/section-header';
-import { SegmentedPicker, type SegmentedOption } from '@/components/segmented-picker';
-import { Spacing } from '@/constants/theme';
+import { type IconName } from '@/components/icon';
+import { SettingsGroup } from '@/components/settings/settings-group';
+import { SettingsRow } from '@/components/settings/settings-row';
 import { useThemeMode, type ThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 
-const THEME_OPTIONS: readonly SegmentedOption<ThemeMode>[] = [
+const THEME_OPTIONS: readonly { value: ThemeMode; label: string; icon: IconName }[] = [
   { value: 'system', label: sv.theme.system, icon: { sf: 'circle.lefthalf.filled', material: 'contrast' } },
   { value: 'light', label: sv.theme.light, icon: { sf: 'sun.max', material: 'light-mode' } },
   { value: 'dark', label: sv.theme.dark, icon: { sf: 'moon', material: 'dark-mode' } },
@@ -21,18 +20,17 @@ const THEME_OPTIONS: readonly SegmentedOption<ThemeMode>[] = [
 export function ThemePicker() {
   const { mode, setMode } = useThemeMode();
   return (
-    <View style={styles.section}>
-      <SectionHeader title={sv.theme.sectionTitle} caption={sv.theme.sectionDescription} />
-      <SegmentedPicker
-        options={THEME_OPTIONS}
-        value={mode}
-        onChange={setMode}
-        ariaLabel={sv.theme.sectionTitle}
-      />
-    </View>
+    <SettingsGroup title={sv.theme.sectionTitle} caption={sv.theme.sectionDescription}>
+      {THEME_OPTIONS.map((opt) => (
+        <SettingsRow
+          key={opt.value}
+          icon={opt.icon}
+          label={opt.label}
+          accessory="check"
+          selected={mode === opt.value}
+          onPress={() => setMode(opt.value)}
+        />
+      ))}
+    </SettingsGroup>
   );
 }
-
-const styles = StyleSheet.create({
-  section: { gap: Spacing.two },
-});

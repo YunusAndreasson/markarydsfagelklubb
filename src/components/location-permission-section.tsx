@@ -1,24 +1,18 @@
 /**
- * Location-permission section for the Profil screen — the native equivalent of
- * the web `location-permission-section.tsx`. Three states:
- *   • granted  → a quiet confirmation line.
- *   • prompt   → an "Aktivera platsdelning" button that triggers the OS prompt.
- *   • blocked  → a StateBlock that opens the device settings (the OS won't
- *                re-prompt once denied — mirrors edenmind's settings-alert flow).
+ * Location-permission row for the Profil screen — a single `SettingsRow` meant to
+ * sit inside the "Aviseringar och plats" settings card. The trailing value shows
+ * the current state (På / Av / Blockerad); the chevron triggers the OS prompt
+ * when not yet granted, or deep-links to device settings once granted/blocked (the
+ * OS won't re-prompt after a denial, and can't be un-granted from inside the app).
  *
- * Permission state is read on mount and re-checked whenever the app returns to
- * the foreground (see `watchGeoPermission`), so flipping it in Settings reflects
- * back without a manual refresh.
+ * Permission state is read on mount and re-checked whenever the app returns to the
+ * foreground (see `watchGeoPermission`), so flipping it in Settings reflects back.
  */
 import { useEffect, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking } from 'react-native';
 
-import { Button } from '@/components/button';
 import { LOCATION } from '@/components/icon';
-import { SectionHeader } from '@/components/section-header';
-import { StateBlock } from '@/components/state-block';
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { SettingsRow } from '@/components/settings/settings-row';
 import { getCurrentPosition, watchGeoPermission, type GeoPermission } from '@/lib/geo';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
@@ -41,33 +35,29 @@ export function LocationPermissionSection() {
     }
   }
 
+  const value = busy
+    ? '…'
+    : status === 'granted'
+      ? sv.profile.status.on
+      : status === 'denied'
+        ? sv.profile.status.blocked
+        : sv.profile.status.off;
+
+  // Granted/blocked → manage in device settings (can't un-grant in-app, no
+  // re-prompt after a denial); otherwise the chevron triggers the OS prompt.
+  const onPress =
+    status === 'granted' || status === 'denied'
+      ? () => void Linking.openSettings()
+      : () => void onEnable();
+
   return (
-    <View style={styles.section}>
-      <SectionHeader title={sv.profile.location.title} caption={sv.profile.location.description} />
-      {status === 'granted' ? (
-        <ThemedText type="small" themeColor="primary">
-          {sv.profile.location.grantedLabel}
-        </ThemedText>
-      ) : status === 'denied' ? (
-        <StateBlock
-          icon={LOCATION}
-          tone="error"
-          title={sv.profile.location.blockedLabel}
-          message={sv.profile.location.blockedHelpNative}
-          action={{ label: sv.profile.location.openSettings, onPress: () => void Linking.openSettings() }}
-        />
-      ) : (
-        <Button
-          title={busy ? sv.profile.location.enabling : sv.profile.location.enableButton}
-          variant="secondary"
-          loading={busy}
-          onPress={() => void onEnable()}
-        />
-      )}
-    </View>
+    <SettingsRow
+      icon={LOCATION}
+      label={sv.profile.location.title}
+      value={value}
+      accessory="chevron"
+      onPress={onPress}
+      disabled={busy}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  section: { gap: Spacing.two },
-});

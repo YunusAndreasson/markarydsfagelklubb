@@ -1,25 +1,16 @@
 /**
- * Push-notification section for the Profil screen — the native equivalent of the
- * web `push-notification-toggle`. Three states:
- *   • on      → a quiet "Notiser är på" line + a "Stäng av notiser" button.
- *   • prompt  → an "Aktivera notiser" button that requests OS permission and
- *               registers this device's Expo token.
- *   • blocked → a StateBlock that opens device settings (the OS won't re-prompt
- *               once denied).
- *
- * "Off" can't un-grant the OS permission, so it records an opt-out
- * (`push-prefs`) and drops this device's token — the auto-registration hook
- * honours the flag so a cold start doesn't silently re-subscribe.
+ * Push-notification row for the Profil screen — a single `SettingsRow` meant to
+ * sit inside the "Aviseringar och plats" settings card. A `Switch` reflects the
+ * on/off state (granted *and* not opted-out); flipping it requests OS permission
+ * + registers this device's Expo token, or records an opt-out and drops the
+ * token. When the OS permission is blocked, the row becomes a chevron that deep-
+ * links to device settings (the OS won't re-prompt once denied).
  */
 import { useEffect, useState } from 'react';
-import { AppState, Linking, StyleSheet, View } from 'react-native';
+import { AppState, Linking } from 'react-native';
 
-import { Button } from '@/components/button';
-import { ALERT } from '@/components/icon';
-import { SectionHeader } from '@/components/section-header';
-import { StateBlock } from '@/components/state-block';
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { BELL } from '@/components/icon';
+import { SettingsRow } from '@/components/settings/settings-row';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import {
@@ -95,47 +86,26 @@ export function NotificationPermissionSection() {
     setBusy(false);
   }
 
-  return (
-    <View style={styles.section}>
-      <SectionHeader
-        title={sv.profile.notifications.title}
-        caption={sv.profile.notifications.description}
+  if (permission === 'denied') {
+    return (
+      <SettingsRow
+        icon={BELL}
+        label={sv.profile.notifications.title}
+        sublabel={sv.profile.status.blocked}
+        accessory="chevron"
+        onPress={() => void Linking.openSettings()}
       />
-      {permission === 'denied' ? (
-        <StateBlock
-          icon={ALERT}
-          tone="error"
-          title={sv.profile.notifications.blockedLabel}
-          message={sv.profile.notifications.blockedHelpNative}
-          action={{
-            label: sv.profile.notifications.openSettings,
-            onPress: () => void Linking.openSettings(),
-          }}
-        />
-      ) : enabled ? (
-        <View style={styles.section}>
-          <ThemedText type="small" themeColor="primary">
-            {sv.profile.notifications.enabledLabel}
-          </ThemedText>
-          <Button
-            title={busy ? sv.profile.notifications.disabling : sv.profile.notifications.disableButton}
-            variant="secondary"
-            loading={busy}
-            onPress={() => void onDisable()}
-          />
-        </View>
-      ) : (
-        <Button
-          title={busy ? sv.profile.notifications.enabling : sv.profile.notifications.enableButton}
-          variant="secondary"
-          loading={busy}
-          onPress={() => void onEnable()}
-        />
-      )}
-    </View>
+    );
+  }
+
+  return (
+    <SettingsRow
+      icon={BELL}
+      label={sv.profile.notifications.title}
+      accessory="switch"
+      switchValue={enabled}
+      onSwitchChange={(next) => void (next ? onEnable() : onDisable())}
+      disabled={busy}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  section: { gap: Spacing.two },
-});

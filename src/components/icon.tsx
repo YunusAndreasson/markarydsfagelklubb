@@ -67,6 +67,12 @@ export const MY_LOCATION: IconName = { sf: 'location.fill', material: 'my-locati
 /** Maximize affordance — expand an inline map to fullscreen. */
 export const EXPAND: IconName = { sf: 'arrow.up.left.and.arrow.down.right', material: 'fullscreen' };
 
+/** Bell — the push-notification (fågelnotiser) settings row. */
+export const BELL: IconName = { sf: 'bell', material: 'notifications-none' };
+
+/** Door-out — the sign-out settings row. */
+export const SIGN_OUT: IconName = { sf: 'rectangle.portrait.and.arrow.right', material: 'logout' };
+
 /**
  * A one-shot bounce for peak/celebration glyphs. `repeating: false` plays the
  * effect once when the symbol mounts. iOS-only (SF Symbols); Android falls back
