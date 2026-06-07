@@ -33,6 +33,8 @@ export type FeedObservation = {
   speciesId: number;
   speciesSwedishName: string;
   speciesScientificName: string;
+  /** MaFk larmlista rarity (0 = rarest → 5 = most common); null for unlisted. */
+  speciesRarity: number | null;
   locationId: number | null;
   locationName: string | null;
   locationLatitude: number | null;
@@ -57,7 +59,7 @@ export type MemberProfile = {
 // user_id and merge (see `toFeedObservations`).
 const OBSERVATION_SELECT =
   'id,user_id,observed_at,count,comment,latitude,longitude,image_path,activity,created_at,' +
-  'species_id,species(swedish_name,scientific_name),' +
+  'species_id,species(swedish_name,scientific_name,rarity),' +
   'location_id,locations(name,latitude,longitude)';
 
 type RawObservationRow = {
@@ -72,7 +74,7 @@ type RawObservationRow = {
   activity: string | null;
   created_at: string;
   species_id: number;
-  species: { swedish_name: string; scientific_name: string } | null;
+  species: { swedish_name: string; scientific_name: string; rarity: number | null } | null;
   location_id: number | null;
   locations: { name: string; latitude: number | null; longitude: number | null } | null;
 };
@@ -124,6 +126,7 @@ async function toFeedObservations(rows: RawObservationRow[]): Promise<FeedObserv
       speciesId: row.species_id,
       speciesSwedishName: row.species?.swedish_name ?? '',
       speciesScientificName: row.species?.scientific_name ?? '',
+      speciesRarity: row.species?.rarity ?? null,
       locationId: row.location_id,
       locationName: row.locations?.name ?? null,
       locationLatitude: row.locations?.latitude ?? null,

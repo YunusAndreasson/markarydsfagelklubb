@@ -118,6 +118,7 @@ function buildOptimisticRow(value: ObservationFormValue, userId: string): FeedOb
     speciesId: value.speciesId,
     speciesSwedishName: species?.swedishName ?? '…',
     speciesScientificName: species?.scientificName ?? '',
+    speciesRarity: species?.rarity ?? null,
     locationId: value.location.kind === 'saved' ? value.location.id : null,
     locationName: value.location.kind === 'saved' ? value.location.name : null,
     locationLatitude: null,

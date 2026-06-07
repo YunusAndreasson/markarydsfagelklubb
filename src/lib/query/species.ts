@@ -9,6 +9,8 @@ export type Species = {
   scientificName: string;
   family: string | null;
   sortOrder: number;
+  /** MaFk larmlista rarity (0 = rarest → 5 = most common); null for unlisted. */
+  rarity: number | null;
 };
 
 type RawSpeciesRow = {
@@ -17,13 +19,14 @@ type RawSpeciesRow = {
   scientific_name: string;
   family: string | null;
   sort_order: number;
+  rarity: number | null;
 };
 
 /** All species, ordered like the web (`listSpeciesFn`): sort_order, then name. */
 export async function listSpecies(): Promise<Species[]> {
   const { data, error } = await supabase
     .from('species')
-    .select('id,swedish_name,scientific_name,family,sort_order')
+    .select('id,swedish_name,scientific_name,family,sort_order,rarity')
     .order('sort_order', { ascending: true })
     .order('swedish_name', { ascending: true });
   if (error) throw error;
@@ -33,6 +36,7 @@ export async function listSpecies(): Promise<Species[]> {
     scientificName: row.scientific_name,
     family: row.family,
     sortOrder: row.sort_order,
+    rarity: row.rarity,
   }));
 }
 

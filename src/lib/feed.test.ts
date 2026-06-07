@@ -15,6 +15,7 @@ function obs(observedAt: Date, idSuffix = ''): FeedObservation {
     speciesId: 1,
     speciesSwedishName: 'Talgoxe',
     speciesScientificName: 'Parus major',
+    speciesRarity: 5,
     locationId: null,
     locationName: null,
     locationLatitude: null,

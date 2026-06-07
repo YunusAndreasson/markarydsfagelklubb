@@ -209,6 +209,7 @@ export type Database = {
           created_at: string
           family: string | null
           id: number
+          rarity: number | null
           scientific_name: string
           sort_order: number
           swedish_name: string
@@ -217,6 +218,7 @@ export type Database = {
           created_at?: string
           family?: string | null
           id?: number
+          rarity?: number | null
           scientific_name: string
           sort_order?: number
           swedish_name: string
@@ -225,6 +227,7 @@ export type Database = {
           created_at?: string
           family?: string | null
           id?: number
+          rarity?: number | null
           scientific_name?: string
           sort_order?: number
           swedish_name?: string

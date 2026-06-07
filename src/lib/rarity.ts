@@ -4,11 +4,10 @@
  * feed card's rarity badge (a color-coded chip showing the number) via the
  * `RarityScale` heat ramp.
  *
- * NOTE: per-species rarity does not exist in the schema yet, so {@link rarityFor}
- * is a placeholder that reports 5 (most common — the sensible default when
- * unknown) for every observation. When the `species.rarity` column lands it
- * becomes a one-line change (see the TODO) — every consumer already reads rarity
- * through this module, so nothing else moves.
+ * Per-species rarity lives in `species.rarity` (the MaFk larmlista "prefix",
+ * 0–5), selected into `FeedObservation.speciesRarity`. {@link rarityFor} reads
+ * it, falling back to 5 (most common — the safe default) for the rare unlisted
+ * species that carry no prefix.
  */
 import { RarityScale } from '@/constants/theme';
 import { type FeedObservation } from '@/lib/query/observations';
@@ -22,16 +21,11 @@ type Scheme = keyof typeof RarityScale;
 export type RarityStyle = { background: string; foreground: string };
 
 /**
- * The rarity level for an observation.
- *
- * PLACEHOLDER: there is no per-species rarity in the schema yet, so every
- * observation reports level 5 (most common — the safe default when unknown).
- * TODO(rarity): once `species.rarity` exists and is selected into
- * `FeedObservation`, replace the body with the real value, e.g.
- *   return (observation.speciesRarity as RarityLevel) ?? 5;
+ * The rarity level for an observation, from its species' larmlista prefix.
+ * Unlisted species (no prefix) fall back to 5 (most common — the safe default).
  */
-export function rarityFor(_observation: FeedObservation): RarityLevel {
-  return 5;
+export function rarityFor(observation: FeedObservation): RarityLevel {
+  return (observation.speciesRarity ?? 5) as RarityLevel;
 }
 
 /** Resolve a rarity level + active scheme to its badge chip colors. */
