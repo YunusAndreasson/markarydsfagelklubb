@@ -1,12 +1,14 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { Icon, SIGN_OUT, type IconName } from '@/components/icon';
-import { ImageUpload } from '@/components/image-upload';
+import { Avatar } from '@/components/avatar';
+import { SIGN_OUT, type IconName } from '@/components/icon';
+import { ImageUpload, type ImageUploadHandle } from '@/components/image-upload';
 import { LocationPermissionSection } from '@/components/location-permission-section';
 import { NotificationPermissionSection } from '@/components/notification-permission-section';
+import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SettingsFormInput } from '@/components/settings/settings-form-input';
 import { SettingsGroup } from '@/components/settings/settings-group';
@@ -14,10 +16,8 @@ import { SettingsRow } from '@/components/settings/settings-row';
 import { ThemePicker } from '@/components/theme-picker';
 import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
-import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { useTheme } from '@/hooks/use-theme';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -29,17 +29,17 @@ const ADMIN_BADGE: IconName = { sf: 'checkmark.shield.fill', material: 'verified
 
 type Persisted = { displayName: string; phone: string | null; avatarPath: string | null };
 
-// Profil — the user's own profile + settings, restyled to the app's grouped-
-// settings grammar (avatar hero + bordered SettingsGroup cards of rows). Name /
-// phone / avatar **autosave** on commit (field blur or avatar pick) — there is no
-// standalone Save button: the screen reads as settings, not a form. Read-only
-// email + admin badge, appearance, the device-permission rows (M8 location · M14
-// push), and sign-out round it out. The tab nests a native Stack
-// (`profile/_layout.tsx`), so "Profil" is the native header title.
+// Profil — the user's own profile + settings in the app's grouped-settings grammar
+// (bordered SettingsGroup cards of rows). The **avatar lives in the native header**
+// (top-right) and opens the source chooser on tap — driven via the headless
+// `ImageUpload` host mounted below. Name / phone / avatar **autosave** on commit
+// (field blur or avatar pick); there is no Save button. Email is a read-only row;
+// appearance, the device-permission rows (M8 location · M14 push), and sign-out
+// round it out. The tab nests a native Stack (`profile/_layout.tsx`).
 export default function ProfileScreen() {
-  const theme = useTheme();
   const { signOut, user } = useAuth();
   const { data: profile } = useQuery(myProfileQueryOptions());
+  const uploadRef = useRef<ImageUploadHandle>(null);
 
   const [name, setName] = useState(profile?.displayName ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -61,10 +61,10 @@ export default function ProfileScreen() {
   const mutation = useMutation({
     mutationFn: (input: Persisted) => upsertMyProfile(input),
     onSuccess: (result) => {
-      // Seed the shared profile query so the gate / other readers see the update
-      // without a refetch, and advance the persisted snapshot. The editable
-      // fields are intentionally NOT overwritten here — they already hold the
-      // user's input, and rewriting them would clobber a parallel edit.
+      // Seed the shared profile query so the gate / header avatar / other readers
+      // see the update without a refetch, and advance the persisted snapshot. The
+      // editable fields are intentionally NOT overwritten here — they already hold
+      // the user's input, and rewriting them would clobber a parallel edit.
       queryClient.setQueryData(queryKeys.profile, result);
       setSaved({
         displayName: result.displayName,
@@ -129,38 +129,33 @@ export default function ProfileScreen() {
 
   return (
     <Screen keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-      {profile?.isAdmin ? (
-        <Stack.Screen
-          options={{
-            headerRight: () => (
-              <View style={[styles.badge, { backgroundColor: theme.secondary }]}>
-                <Icon name={ADMIN_BADGE} size={13} color={theme.mutedForeground} />
-                <ThemedText type="micro" themeColor="mutedForeground">
-                  {sv.profile.adminBadge}
-                </ThemedText>
-              </View>
-            ),
-          }}
-        />
-      ) : null}
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <PressableScale
+              variant="icon"
+              onPress={() => uploadRef.current?.open()}
+              accessibilityRole="button"
+              accessibilityLabel={sv.profile.avatarLabel}
+            >
+              <Avatar name={name || saved.displayName} uri={profile?.avatarUrl ?? null} size="md" />
+            </PressableScale>
+          ),
+        }}
+      />
 
-      <View style={styles.hero}>
-        <ImageUpload
-          value={avatarPath}
-          previewUrl={profile?.avatarUrl ?? null}
-          onChange={onChangeAvatar}
-          purpose="avatar"
-          shape="square"
-        />
-        <View style={styles.heroText}>
-          <ThemedText type="title" numberOfLines={1}>
-            {name.trim() || saved.displayName || '—'}
-          </ThemedText>
-          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1}>
-            {user?.email ?? sv.profile.changePhoto}
-          </ThemedText>
-        </View>
-      </View>
+      {/* Headless host: owns the source chooser + upload pipeline for the header
+          avatar (no inline preview). Renders only the chooser sheet (and any
+          error / camera-blocked notice). */}
+      <ImageUpload
+        ref={uploadRef}
+        headless
+        value={avatarPath}
+        previewUrl={profile?.avatarUrl ?? null}
+        onChange={onChangeAvatar}
+        purpose="avatar"
+        shape="square"
+      />
 
       <SettingsGroup title={sv.profile.detailsSection} footer={sv.profile.phoneHelp}>
         <SettingsFormInput
@@ -193,6 +188,12 @@ export default function ProfileScreen() {
           maxLength={30}
           returnKeyType="done"
         />
+        <View style={styles.readonlyRow}>
+          <ThemedText type="small" themeColor="mutedForeground">
+            {sv.profile.emailLabel}
+          </ThemedText>
+          <ThemedText type="default">{user?.email ?? '—'}</ThemedText>
+        </View>
       </SettingsGroup>
 
       <ThemePicker />
@@ -203,6 +204,9 @@ export default function ProfileScreen() {
       </SettingsGroup>
 
       <SettingsGroup title={sv.profile.accountSection}>
+        {profile?.isAdmin ? (
+          <SettingsRow icon={ADMIN_BADGE} label={sv.profile.adminBadge} />
+        ) : null}
         <SettingsRow
           icon={SIGN_OUT}
           label={sv.profile.signOut}
@@ -215,17 +219,13 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Generous rhythm between the hero and each settings group so the screen reads
-  // as distinct sections, not one dense list.
   content: { gap: Spacing.four },
-  hero: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.two },
-  heroText: { alignItems: 'center', gap: Spacing.half },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Read-only field styled to match the SettingsFormInput rows it sits beside.
+  readonlyRow: {
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
     gap: Spacing.half,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.half,
-    borderRadius: SurfaceRadius.pill,
+    minHeight: 52,
   },
 });

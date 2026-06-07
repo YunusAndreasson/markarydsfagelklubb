@@ -9,11 +9,15 @@
  * `onChange`. The parent persists that path (the avatar saves with the profile
  * form; M12 saves it with the observation).
  *
+ * `headless` mode renders no inline preview — only the chooser sheet (+ error /
+ * camera-blocked notices). Pair it with an imperative `ref.open()` to drive the
+ * picker from elsewhere (e.g. a tappable avatar in the native header on Profil).
+ *
  * Display priority: the just-picked local file (instant) → a signed URL minted
  * from `value` (or the `previewUrl` seed the parent already has, e.g.
  * `profile.avatarUrl`).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
@@ -45,6 +49,9 @@ const SQUARE_SIZE = 96;
 
 type Busy = 'idle' | 'compressing' | 'uploading' | 'removing';
 
+/** Imperative handle for `headless` use — open the source chooser from outside. */
+export type ImageUploadHandle = { open: () => void };
+
 export type ImageUploadProps = {
   /** The stored object path, or null when empty. */
   value: string | null;
@@ -58,18 +65,24 @@ export type ImageUploadProps = {
   previewUrl?: string | null;
   invalid?: boolean;
   disabled?: boolean;
+  /** Render only the chooser sheet (no inline preview/links). Drive via `ref.open()`. */
+  headless?: boolean;
 };
 
-export function ImageUpload({
-  value,
-  onChange,
-  purpose,
-  draftId: propDraftId,
-  shape = 'rectangle',
-  previewUrl,
-  invalid,
-  disabled,
-}: ImageUploadProps) {
+export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(function ImageUpload(
+  {
+    value,
+    onChange,
+    purpose,
+    draftId: propDraftId,
+    shape = 'rectangle',
+    previewUrl,
+    invalid,
+    disabled,
+    headless = false,
+  },
+  ref,
+) {
   const theme = useTheme();
   const { reduced } = useMotion();
   const isSquare = shape === 'square';
@@ -111,6 +124,20 @@ export function ImageUpload({
     setError(null);
     setChooserOpen(true);
   }
+
+  // Let a parent (e.g. the header avatar on Profil) open the chooser without
+  // rendering this component's own preview.
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: () => {
+        if (disabled || busy !== 'idle') return;
+        setError(null);
+        setChooserOpen(true);
+      },
+    }),
+    [disabled, busy],
+  );
 
   async function runPick(source: 'camera' | 'library') {
     setChooserOpen(false);
@@ -234,12 +261,7 @@ export function ImageUpload({
   );
 
   const replaceLink = (
-    <PressableScale
-      variant="link"
-      onPress={openChooser}
-      disabled={locked}
-      accessibilityRole="button"
-    >
+    <PressableScale variant="link" onPress={openChooser} disabled={locked} accessibilityRole="button">
       <ThemedText type="smallBold" themeColor="tint">
         {sv.image.replace}
       </ThemedText>
@@ -265,6 +287,72 @@ export function ImageUpload({
       </ThemedText>
     </PressableScale>
   );
+
+  // Shared chrome — reused by both the inline and headless renders.
+  const blockedBlock = cameraBlocked ? (
+    <View style={[styles.blocked, { backgroundColor: theme.muted }]}>
+      <Icon name={CAMERA} size={18} color={theme.mutedForeground} />
+      <View style={styles.blockedBody}>
+        <ThemedText type="small" themeColor="mutedForeground">
+          {sv.image.permissionBlocked}
+        </ThemedText>
+        <PressableScale
+          variant="link"
+          onPress={() => void Linking.openSettings()}
+          accessibilityRole="button"
+        >
+          <ThemedText type="smallBold" themeColor="tint">
+            {sv.image.openSettings}
+          </ThemedText>
+        </PressableScale>
+      </View>
+    </View>
+  ) : null;
+
+  const errorBlock = error ? (
+    <ThemedText type="small" themeColor="destructive">
+      {error}
+    </ThemedText>
+  ) : null;
+
+  const chooser = (
+    <PickerSheet visible={chooserOpen} title={sv.image.chooseSource} onClose={() => setChooserOpen(false)}>
+      <View style={styles.sheetBody}>
+        <PressableScale
+          variant="row"
+          haptic="select"
+          onPress={() => void runPick('camera')}
+          style={[styles.sheetRow, { borderColor: theme.border }]}
+          accessibilityRole="button"
+          accessibilityLabel={sv.image.takePhoto}
+        >
+          <Icon name={CAMERA} size={22} color={theme.foreground} />
+          <ThemedText type="default">{sv.image.takePhoto}</ThemedText>
+        </PressableScale>
+        <PressableScale
+          variant="row"
+          haptic="select"
+          onPress={() => void runPick('library')}
+          style={[styles.sheetRow, { borderColor: theme.border }]}
+          accessibilityRole="button"
+          accessibilityLabel={sv.image.chooseFromLibrary}
+        >
+          <Icon name={IMAGE} size={22} color={theme.foreground} />
+          <ThemedText type="default">{sv.image.chooseFromLibrary}</ThemedText>
+        </PressableScale>
+      </View>
+    </PickerSheet>
+  );
+
+  if (headless) {
+    return (
+      <>
+        {blockedBlock}
+        {errorBlock}
+        {chooser}
+      </>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -297,65 +385,12 @@ export function ImageUpload({
         </>
       )}
 
-      {cameraBlocked ? (
-        <View style={[styles.blocked, { backgroundColor: theme.muted }]}>
-          <Icon name={CAMERA} size={18} color={theme.mutedForeground} />
-          <View style={styles.blockedBody}>
-            <ThemedText type="small" themeColor="mutedForeground">
-              {sv.image.permissionBlocked}
-            </ThemedText>
-            <PressableScale
-              variant="link"
-              onPress={() => void Linking.openSettings()}
-              accessibilityRole="button"
-            >
-              <ThemedText type="smallBold" themeColor="tint">
-                {sv.image.openSettings}
-              </ThemedText>
-            </PressableScale>
-          </View>
-        </View>
-      ) : null}
-
-      {error ? (
-        <ThemedText type="small" themeColor="destructive">
-          {error}
-        </ThemedText>
-      ) : null}
-
-      <PickerSheet
-        visible={chooserOpen}
-        title={sv.image.chooseSource}
-        onClose={() => setChooserOpen(false)}
-      >
-        <View style={styles.sheetBody}>
-          <PressableScale
-            variant="row"
-            haptic="select"
-            onPress={() => void runPick('camera')}
-            style={[styles.sheetRow, { borderColor: theme.border }]}
-            accessibilityRole="button"
-            accessibilityLabel={sv.image.takePhoto}
-          >
-            <Icon name={CAMERA} size={22} color={theme.foreground} />
-            <ThemedText type="default">{sv.image.takePhoto}</ThemedText>
-          </PressableScale>
-          <PressableScale
-            variant="row"
-            haptic="select"
-            onPress={() => void runPick('library')}
-            style={[styles.sheetRow, { borderColor: theme.border }]}
-            accessibilityRole="button"
-            accessibilityLabel={sv.image.chooseFromLibrary}
-          >
-            <Icon name={IMAGE} size={22} color={theme.foreground} />
-            <ThemedText type="default">{sv.image.chooseFromLibrary}</ThemedText>
-          </PressableScale>
-        </View>
-      </PickerSheet>
+      {blockedBlock}
+      {errorBlock}
+      {chooser}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.two },

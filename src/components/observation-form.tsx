@@ -237,14 +237,6 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
         />
       </View>
 
-      {/* On create, the club is notified — say so where the user commits, rather
-          than fanning out a silent push to every member. */}
-      {mode === 'create' ? (
-        <ThemedText type="small" themeColor="mutedForeground">
-          {sv.observation.alertCaption}
-        </ThemedText>
-      ) : null}
-
       {/* The primary submit lives in the nav header when `submitInHeader`; the
           inline button is the fallback (and keeps the form usable on its own). */}
       {!submitInHeader ? (
