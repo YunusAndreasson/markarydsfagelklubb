@@ -257,3 +257,9 @@ update public.species set rarity = 4 where swedish_name = 'Duvhök';
 update public.species set rarity = 2 where swedish_name = 'Järpe';
 update public.species set rarity = 5 where swedish_name = 'Mindre strandpipare';
 update public.species set rarity = 5 where swedish_name = 'Tamduva';
+
+-- Sheet anomalies corrected: both have very high report counts (855 / 468) but
+-- were prefixed 1, while every other 400+-report species is 5. Set to 5 to match
+-- (otherwise a common woodpecker/dipper shows as the rarest tier on the card).
+update public.species set rarity = 5 where swedish_name = 'Större hackspett';
+update public.species set rarity = 5 where swedish_name = 'Strömstare';
