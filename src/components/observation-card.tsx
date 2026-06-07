@@ -33,7 +33,6 @@ import Animated, {
 
 import { Avatar } from '@/components/avatar';
 import { Badge } from '@/components/badge';
-import { Icon, LOCATION } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Curve, Duration } from '@/constants/motion';
@@ -157,17 +156,9 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           </View>
 
           {locationLabel ? (
-            <View style={styles.locationRow}>
-              <Icon name={LOCATION} size={16} color={theme.mutedForeground} />
-              <ThemedText
-                type="smallBold"
-                themeColor="foreground"
-                numberOfLines={1}
-                style={styles.flex}
-              >
-                {locationLabel}
-              </ThemedText>
-            </View>
+            <ThemedText type="smallBold" themeColor="foreground" numberOfLines={1}>
+              {locationLabel}
+            </ThemedText>
           ) : null}
 
           <View style={styles.badges}>
@@ -241,7 +232,6 @@ const styles = StyleSheet.create({
   rarityNum: { fontWeight: '700' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   flex: { flex: 1 },
   // Full-bleed photo: no horizontal margin (touches the clipped edges, inset only
