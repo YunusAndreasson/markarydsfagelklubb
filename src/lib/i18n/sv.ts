@@ -90,20 +90,20 @@ export const sv = {
     refreshed: 'Observationerna uppdaterade',
     count: (n: number) => (n === 1 ? '1 individ' : `${n} individer`),
     timeOnly: (d: Date) => d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
-    // Ultrakort relativ tid (X-stil) för kortens hörn: "nu", "5m", "2h", "3d",
-    // "8v", "1år". Kompakt så artnamnet (kortets hjälte) får plats; exakt tid
-    // finns kvar via `title`/håll på <time> samt `fullDateTime`.
+    // Kort relativ tid för kortens hörn: "nu", "5m sedan", "2h sedan", "3d sedan",
+    // "8v sedan", "1år sedan". "sedan" gör det tydligare att det är förfluten tid;
+    // exakt tid finns kvar via `timeFriendly` / `fullDateTime`.
     timeAgo: (d: Date, now: Date = new Date()) => {
       const sec = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 1000))
       if (sec < 60) return 'nu'
       const min = Math.floor(sec / 60)
-      if (min < 60) return `${min}m`
+      if (min < 60) return `${min}m sedan`
       const hr = Math.floor(min / 60)
-      if (hr < 24) return `${hr}h`
+      if (hr < 24) return `${hr}h sedan`
       const day = Math.floor(hr / 24)
-      if (day < 7) return `${day}d`
-      if (day < 365) return `${Math.floor(day / 7)}v`
-      return `${Math.floor(day / 365)}år`
+      if (day < 7) return `${day}d sedan`
+      if (day < 365) return `${Math.floor(day / 7)}v sedan`
+      return `${Math.floor(day / 365)}år sedan`
     },
     weekday: (d: Date) =>
       d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' }),
@@ -384,7 +384,6 @@ export const sv = {
   theme: {
     toggle: 'Växla tema',
     sectionTitle: 'Utseende',
-    sectionDescription: 'System, ljust eller mörkt utseende.',
     system: 'System',
     light: 'Ljust',
     dark: 'Mörkt',

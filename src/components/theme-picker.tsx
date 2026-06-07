@@ -20,7 +20,7 @@ const THEME_OPTIONS: readonly { value: ThemeMode; label: string; icon: IconName 
 export function ThemePicker() {
   const { mode, setMode } = useThemeMode();
   return (
-    <SettingsGroup title={sv.theme.sectionTitle} caption={sv.theme.sectionDescription}>
+    <SettingsGroup title={sv.theme.sectionTitle}>
       {THEME_OPTIONS.map((opt) => (
         <SettingsRow
           key={opt.value}

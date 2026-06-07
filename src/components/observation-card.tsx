@@ -134,7 +134,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           <View style={styles.header}>
             <View style={styles.hero}>
               {/* Rarity badge in its own leading column, centered on the name's
-                  first line, so the name + scientific name align cleanly. */}
+                  first line. */}
               <View style={styles.badgeColumn}>
                 <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
                   <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
@@ -146,16 +146,6 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
                 <ThemedText type="heading" numberOfLines={1}>
                   {observation.speciesSwedishName}
                 </ThemedText>
-                {observation.speciesScientificName ? (
-                  <ThemedText
-                    type="small"
-                    themeColor="mutedForeground"
-                    numberOfLines={1}
-                    style={styles.scientific}
-                  >
-                    {observation.speciesScientificName}
-                  </ThemedText>
-                ) : null}
               </View>
             </View>
             <View style={styles.timeRow}>
@@ -249,7 +239,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rarityNum: { fontWeight: '700' },
-  scientific: { fontStyle: 'italic' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   dot: { width: 6, height: 6, borderRadius: 3 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
