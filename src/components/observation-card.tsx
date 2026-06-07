@@ -32,7 +32,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/avatar';
-import { Badge } from '@/components/badge';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Curve, Duration } from '@/constants/motion';
@@ -50,7 +49,7 @@ const VERY_RECENT_MS = 60 * 60 * 1000;
 
 export type ObservationCardProps = {
   observation: FeedObservation;
-  /** Current user id — drives the "Min" badge. */
+  /** Current user id — marks an own observation in the spoken a11y label ("Min"). */
   currentUserId?: string | null;
   /** Injectable clock for deterministic time-ago / very-recent in tests/demos. */
   now?: Date;
@@ -97,6 +96,16 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
   const locationLabel =
     named ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
+  // Count is always present; activity is optional. Join them into one muted,
+  // dot-separated meta line instead of pills — plain text shares the same flush-
+  // left margin as the name and location, so nothing reads as misaligned.
+  const meta = [
+    sv.feed.count(observation.count),
+    observation.activity ? sv.observation.activity[observation.activity] : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   // A container with an `accessibilityLabel` is read as a single element and its
   // children are suppressed — so compose the whole card (rarity, species, count,
   // activity, when, where, who) into one spoken label. The rarity badge's number
@@ -130,10 +139,15 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           tint show through the text. */}
       <View style={[SurfaceStyles.clippedCard, styles.clip, { borderColor: theme.border }]}>
         <View style={styles.content}>
-          {/* Name leads the flush-left text column — name, location and badges all
-              share the content's left margin. Time + rarity badge sit top-right,
-              the badge anchoring the corner (so the right margin is even too). */}
+          {/* The rarity badge prefixes the species name — the number is glued to
+              the bird it grades. The name fills the row and truncates; the time
+              sits top-right. Name, location and meta share the left margin. */}
           <View style={styles.header}>
+            <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
+              <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
+                {level}
+              </ThemedText>
+            </View>
             <ThemedText type="heading" numberOfLines={1} style={styles.flex}>
               {observation.speciesSwedishName}
             </ThemedText>
@@ -142,11 +156,6 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
               <ThemedText type="smallBold" themeColor={veryRecent ? 'primary' : 'mutedForeground'}>
                 {sv.feed.timeAgo(observation.observedAt, clock)}
               </ThemedText>
-              <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
-                <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
-                  {level}
-                </ThemedText>
-              </View>
             </View>
           </View>
 
@@ -156,13 +165,9 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
             </ThemedText>
           ) : null}
 
-          <View style={styles.badges}>
-            <Badge label={sv.feed.count(observation.count)} tone="neutral" />
-            {observation.activity ? (
-              <Badge label={sv.observation.activity[observation.activity]} tone="outline" />
-            ) : null}
-            {mine ? <Badge label={sv.feed.mine} tone="primary" /> : null}
-          </View>
+          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1}>
+            {meta}
+          </ThemedText>
         </View>
 
         {observation.imageUrl ? (
@@ -222,10 +227,9 @@ const styles = StyleSheet.create({
   rarityNum: { fontWeight: '700' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   flex: { flex: 1 },
-  // Full-bleed photo: no horizontal margin (touches the clipped edges, inset only
-  // by the rarity spine on the left); a gap above separates it from the text block.
+  // Full-bleed photo: no horizontal margin (touches the clipped edges); a gap
+  // above separates it from the text block.
   image: { width: '100%', aspectRatio: 4 / 3, marginTop: Spacing.three },
   footer: {
     flexDirection: 'row',
