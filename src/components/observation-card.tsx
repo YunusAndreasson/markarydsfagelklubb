@@ -130,28 +130,23 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           tint show through the text. */}
       <View style={[SurfaceStyles.clippedCard, styles.clip, { borderColor: theme.border }]}>
         <View style={styles.content}>
+          {/* Name leads the flush-left text column — name, location and badges all
+              share the content's left margin. Time + rarity badge sit top-right,
+              the badge anchoring the corner (so the right margin is even too). */}
           <View style={styles.header}>
-            <View style={styles.hero}>
-              {/* Rarity badge in its own leading column, centered on the name's
-                  first line. */}
-              <View style={styles.badgeColumn}>
-                <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
-                  <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
-                    {level}
-                  </ThemedText>
-                </View>
-              </View>
-              <View style={styles.headerText}>
-                <ThemedText type="heading" numberOfLines={1}>
-                  {observation.speciesSwedishName}
-                </ThemedText>
-              </View>
-            </View>
+            <ThemedText type="heading" numberOfLines={1} style={styles.flex}>
+              {observation.speciesSwedishName}
+            </ThemedText>
             <View style={styles.timeRow}>
               {veryRecent ? <PulsingDot /> : null}
               <ThemedText type="smallBold" themeColor={veryRecent ? 'primary' : 'mutedForeground'}>
                 {sv.feed.timeAgo(observation.observedAt, clock)}
               </ThemedText>
+              <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
+                <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
+                  {level}
+                </ThemedText>
+              </View>
             </View>
           </View>
 
@@ -214,12 +209,7 @@ const styles = StyleSheet.create({
   // Padded text column. The full-bleed image and footer are siblings with their
   // own spacing, so this only pads the top block.
   content: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
-  hero: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
-  // Leading column for the rarity badge — its height matches the `heading` line
-  // height so `justifyContent: center` aligns the badge with the species name.
-  badgeColumn: { height: 24, justifyContent: 'center' },
-  headerText: { flex: 1, minWidth: 0, gap: Spacing.one },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   // Rarity badge — a small color-coded chip holding the rarity number (0–5).
   rarityBadge: {
     minWidth: 20,
@@ -230,7 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rarityNum: { fontWeight: '700' },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   flex: { flex: 1 },
