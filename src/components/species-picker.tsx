@@ -25,9 +25,11 @@ import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius, SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { speciesQueryOptions, type Species } from '@/lib/query/species';
+import { rarityStyle, type RarityLevel } from '@/lib/rarity';
 
 const ROW_HEIGHT = 64;
 
@@ -43,6 +45,7 @@ export function SpeciesPicker({
   error?: string | null;
 }) {
   const theme = useTheme();
+  const { colorScheme } = useThemeMode();
   const { height: winH } = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -85,6 +88,7 @@ export function SpeciesPicker({
 
   function renderRow({ item }: { item: Species }) {
     const selected = item.id === value;
+    const rarity = item.rarity != null ? rarityStyle(item.rarity as RarityLevel, colorScheme) : null;
     return (
       <PressableScale
         variant="row"
@@ -94,6 +98,15 @@ export function SpeciesPicker({
         accessibilityState={{ selected }}
         style={[styles.row, selected && { backgroundColor: theme.muted }]}
       >
+        {/* Rarity prefix — same color-coded number chip as the Obsar card, so the
+            grade is visible while scanning the art-lista (read-only, never edited). */}
+        {rarity ? (
+          <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
+            <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
+              {item.rarity}
+            </ThemedText>
+          </View>
+        ) : null}
         <View style={styles.rowText}>
           <ThemedText type="smallBold" numberOfLines={1} themeColor={selected ? 'tint' : 'foreground'}>
             {item.swedishName}
@@ -229,5 +242,15 @@ const styles = StyleSheet.create({
     borderRadius: SurfaceRadius.sm,
   },
   rowText: { flex: 1, gap: Spacing.half },
+  // Matches the Obsar card's rarity chip so the prefix reads identically everywhere.
+  rarityBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: SurfaceRadius.xs,
+    paddingHorizontal: Spacing.one,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rarityNum: { fontWeight: '700' },
   empty: { paddingVertical: Spacing.four, textAlign: 'center' },
 });
