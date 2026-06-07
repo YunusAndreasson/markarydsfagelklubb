@@ -105,8 +105,10 @@ const styles = StyleSheet.create({
   close: {
     position: 'absolute',
     right: Spacing.three,
-    width: 40,
-    height: 40,
+    // ≥44pt visible target (Apple HIG / Material), independent of the icon
+    // variant's hitSlop — the modal's primary dismiss control should be easy to hit.
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: SurfaceRadius.pill,

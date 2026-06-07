@@ -1,6 +1,6 @@
 /**
  * The shared observation form (M12) — the native port of the web
- * `observation-form.tsx`. One component drives both **create** (the Rapportera
+ * `observation-form.tsx`. One component drives both **create** (the Larm
  * tab) and **edit** (the owner-only modal): it composes the M9 field pickers
  * (species/count/time/location/activity), a multiline comment, and the M10
  * `ImageUpload`, then hands a validated `ObservationFormValue` back to the route,
@@ -11,8 +11,8 @@
  * border + a one-shot `hapticError`, both built into `PickerField` — matching the
  * app's own Profile form (M7), not the web's scroll-to-error.
  */
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { Alert, findNodeHandle, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityPicker } from '@/components/activity-picker';
 import { Button } from '@/components/button';
@@ -23,6 +23,7 @@ import { LocationPicker, type LocationValue } from '@/components/location-picker
 import { SpeciesPicker } from '@/components/species-picker';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
+import { showToast } from '@/components/toast';
 import { Spacing } from '@/constants/theme';
 import { hapticWarning } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
@@ -73,15 +74,11 @@ export function formToInput(value: ObservationFormValue): CreateObservationInput
   };
 }
 
-export function ObservationForm({
-  initial,
-  mode,
-  onSubmit,
-  onDelete,
-  submitting,
-  deleting,
-  observationId,
-}: {
+/** Imperative handle so a nav-bar action can drive the form's own validate +
+ *  submit (the inline submit button is hidden when `submitInHeader`). */
+export type ObservationFormHandle = { submit: () => void };
+
+export type ObservationFormProps = {
   initial?: ObservationFormValue;
   mode: 'create' | 'edit';
   onSubmit: (value: ObservationFormValue) => void;
@@ -91,10 +88,29 @@ export function ObservationForm({
   /** The observation id (edit) — used as the image `draftId` so a replaced photo
    *  overwrites `…/observations/{id}.jpg` in place. */
   observationId?: string;
-}) {
+  /** The enclosing `Screen`'s ScrollView — lets an invalid submit scroll the
+   *  first errored field into view (it may be off-screen on this tall form).
+   *  Structurally typed so any ref object (Mutable/RefObject) is accepted. */
+  scrollRef?: { current: ScrollView | null };
+  /** When the route hosts the primary submit in the nav header, hide the inline
+   *  submit button (the destructive delete stays inline). */
+  submitInHeader?: boolean;
+};
+
+export const ObservationForm = forwardRef<ObservationFormHandle, ObservationFormProps>(
+  function ObservationForm(
+    { initial, mode, onSubmit, onDelete, submitting, deleting, observationId, scrollRef, submitInHeader },
+    ref,
+  ) {
   const [value, setValue] = useState<ObservationFormValue>(initial ?? emptyObservation());
   const [showErrors, setShowErrors] = useState(false);
   const busy = !!submitting || !!deleting;
+
+  // Wrappers around the three fields that can fail validation, so an invalid
+  // submit can scroll the first one into view.
+  const speciesRef = useRef<View>(null);
+  const locationRef = useRef<View>(null);
+  const activityRef = useRef<View>(null);
 
   function update<K extends keyof ObservationFormValue>(key: K, next: ObservationFormValue[K]) {
     setValue((v) => ({ ...v, [key]: next }));
@@ -105,15 +121,52 @@ export function ObservationForm({
   const activityError =
     showErrors && value.activity === null ? sv.observation.errors.activityMissing : null;
 
+  // Bring the first invalid field into view. The PickerFields buzz red on their
+  // own; on a form this tall the offending field is often off-screen (especially
+  // when submitting from the nav header), so a buzz alone leaves the user hunting.
+  function scrollToFirstError() {
+    const target = !value.speciesId
+      ? speciesRef.current
+      : value.location.kind === 'none'
+        ? locationRef.current
+        : value.activity === null
+          ? activityRef.current
+          : null;
+    const scroller = scrollRef?.current;
+    if (!target || !scroller) return;
+    const scrollNode = findNodeHandle(scroller);
+    if (scrollNode == null) return;
+    target.measureLayout(
+      scrollNode,
+      (_x, y) => scroller.scrollTo({ y: Math.max(0, y - Spacing.three), animated: true }),
+      () => {},
+    );
+  }
+
   function handleSubmit() {
     if (!value.speciesId || value.location.kind === 'none' || value.activity === null) {
       // The invalid PickerFields flip red and each buzz once (PickerField owns the
-      // error haptic). No scroll-to-error — inline, like the Profile form (M7).
+      // error haptic), then we scroll the first one into view. A summary toast
+      // names what's missing so the user isn't left with just a vibration when the
+      // red field (often Plats — set by tapping the map) is off-screen.
       setShowErrors(true);
+      const missing = [
+        !value.speciesId ? sv.observation.speciesLabel : null,
+        value.location.kind === 'none' ? sv.observation.locationLabel : null,
+        value.activity === null ? sv.observation.activityLabel : null,
+      ].filter(Boolean) as string[];
+      showToast(sv.observation.errors.fillRequired(missing), 'error');
+      requestAnimationFrame(scrollToFirstError);
       return;
     }
     onSubmit(value);
   }
+
+  // A stable submit() that always runs the latest handleSubmit (which closes over
+  // the current value + callbacks) — driven by the nav-header action.
+  const submitRef = useRef(handleSubmit);
+  submitRef.current = handleSubmit;
+  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), []);
 
   function confirmDelete() {
     // A destructive confirmation is appearing — let it be felt (HIG warning).
@@ -126,29 +179,36 @@ export function ObservationForm({
 
   return (
     <View style={styles.form}>
-      <SpeciesPicker
-        value={value.speciesId}
-        onChange={(id) => update('speciesId', id)}
-        invalid={!!speciesError}
-        error={speciesError}
-      />
+      <View ref={speciesRef}>
+        <SpeciesPicker
+          value={value.speciesId}
+          onChange={(id) => update('speciesId', id)}
+          invalid={!!speciesError}
+          error={speciesError}
+        />
+      </View>
 
       <CountStepper value={value.count} onChange={(n) => update('count', n)} />
 
       <DateTimePicker value={value.observedAt} onChange={(d) => update('observedAt', d)} />
 
-      <LocationPicker
-        value={value.location}
-        onChange={(loc) => update('location', loc)}
-        invalid={locationInvalid}
-      />
+      <View ref={locationRef}>
+        <LocationPicker
+          value={value.location}
+          onChange={(loc) => update('location', loc)}
+          invalid={locationInvalid}
+          error={locationInvalid ? sv.observation.errors.locationMissing : null}
+        />
+      </View>
 
-      <ActivityPicker
-        value={value.activity}
-        onChange={(a) => update('activity', a)}
-        invalid={!!activityError}
-        error={activityError}
-      />
+      <View ref={activityRef}>
+        <ActivityPicker
+          value={value.activity}
+          onChange={(a) => update('activity', a)}
+          invalid={!!activityError}
+          error={activityError}
+        />
+      </View>
 
       <TextField
         label={sv.observation.commentLabel}
@@ -177,13 +237,25 @@ export function ObservationForm({
         />
       </View>
 
-      <Button
-        title={mode === 'create' ? sv.observation.submitNew : sv.observation.submitEdit}
-        onPress={handleSubmit}
-        loading={submitting}
-        disabled={deleting}
-        haptic="commit"
-      />
+      {/* On create, the club is notified — say so where the user commits, rather
+          than fanning out a silent push to every member. */}
+      {mode === 'create' ? (
+        <ThemedText type="small" themeColor="mutedForeground">
+          {sv.observation.alertCaption}
+        </ThemedText>
+      ) : null}
+
+      {/* The primary submit lives in the nav header when `submitInHeader`; the
+          inline button is the fallback (and keeps the form usable on its own). */}
+      {!submitInHeader ? (
+        <Button
+          title={mode === 'create' ? sv.observation.submitNew : sv.observation.submitEdit}
+          onPress={handleSubmit}
+          loading={submitting}
+          disabled={deleting}
+          haptic="commit"
+        />
+      ) : null}
 
       {mode === 'edit' && onDelete ? (
         <Button
@@ -197,7 +269,7 @@ export function ObservationForm({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   form: { gap: Spacing.three },

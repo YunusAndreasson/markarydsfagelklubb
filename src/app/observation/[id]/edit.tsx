@@ -1,17 +1,20 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
-import { type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useRef, type ReactNode } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { HeaderButton } from '@/components/header-button';
 import { ALERT } from '@/components/icon';
 import {
   ObservationForm,
   formToInput,
+  type ObservationFormHandle,
   type ObservationFormValue,
 } from '@/components/observation-form';
 import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
+import { showToast } from '@/components/toast';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -37,6 +40,8 @@ export default function ObservationEditScreen() {
   const { user } = useAuth();
   const q = useQuery(observationQueryOptions(id));
   const obs = q.data;
+  const formRef = useRef<ObservationFormHandle>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const updateMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => updateObservation({ id, ...formToInput(value) }),
@@ -54,6 +59,7 @@ export default function ObservationEditScreen() {
     },
     onSuccess: (_data, value) => {
       hapticSuccess();
+      showToast(sv.observation.updated, 'success');
       // The photo path is deterministic on edit (`draftId = id`), so a replace
       // overwrites in place. Only a path that genuinely changed (e.g. the old row
       // had a random create-time path) leaves an orphan to clean up.
@@ -69,6 +75,7 @@ export default function ObservationEditScreen() {
       if (context?.previousFeed) queryClient.setQueryData(queryKeys.feed, context.previousFeed);
       if (context) queryClient.setQueryData(queryKeys.observation(id), context.previousObs);
       hapticError();
+      showToast(sv.observation.saveFailed, 'error');
     },
   });
 
@@ -84,6 +91,7 @@ export default function ObservationEditScreen() {
     },
     onSuccess: () => {
       hapticSuccess();
+      showToast(sv.observation.deleted, 'success');
       if (obs?.imagePath) void deleteUpload(obs.imagePath).catch(() => {});
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
       // Drop the now-deleted row from the owner's member-profile feed too.
@@ -92,6 +100,7 @@ export default function ObservationEditScreen() {
     onError: (_err, _value, context) => {
       if (context?.previousFeed) queryClient.setQueryData(queryKeys.feed, context.previousFeed);
       hapticError();
+      showToast(sv.observation.saveFailed, 'error');
     },
   });
 
@@ -146,9 +155,12 @@ export default function ObservationEditScreen() {
 
     body = (
       <ObservationForm
+        ref={formRef}
         mode="edit"
         initial={initial}
         observationId={obs.id}
+        scrollRef={scrollRef}
+        submitInHeader
         onSubmit={(v) => {
           updateMutation.mutate(v);
           router.back();
@@ -163,10 +175,28 @@ export default function ObservationEditScreen() {
     );
   }
 
+  const canEdit = !!obs && !!user && obs.userId === user.id;
+
   return (
-    <Screen inset="sub" keyboardShouldPersistTaps="handled">
-      {body}
-    </Screen>
+    <>
+      {canEdit ? (
+        <Stack.Screen
+          options={{
+            headerRight: () => (
+              <HeaderButton
+                title={sv.observation.submitEdit}
+                onPress={() => formRef.current?.submit()}
+                loading={updateMutation.isPending}
+                disabled={deleteMutation.isPending}
+              />
+            ),
+          }}
+        />
+      ) : null}
+      <Screen ref={scrollRef} inset="sub" keyboardShouldPersistTaps="handled">
+        {body}
+      </Screen>
+    </>
   );
 }
 

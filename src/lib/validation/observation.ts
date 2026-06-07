@@ -50,7 +50,11 @@ const baseObservationFields = {
     .string()
     .trim()
     .max(2000, 'Kommentar får vara högst 2000 tecken')
-    .optional()
+    // `.nullish()` (= nullable + optional) so the empty-comment case the form
+    // sends as `null` is accepted — like the other optional fields (imagePath,
+    // latitude, longitude). Without it, every report without a comment was
+    // rejected client-side ("Kunde inte spara observationen").
+    .nullish()
     .transform((v) => (v ? v : null)),
   imagePath: imagePathSchema.nullable().optional(),
   // Aktivitet är obligatorisk — ett medvetet val, inget tyst förval.

@@ -12,6 +12,7 @@ import { Screen } from '@/components/screen';
 import { TextField } from '@/components/text-field';
 import { ThemePicker } from '@/components/theme-picker';
 import { ThemedText } from '@/components/themed-text';
+import { showToast } from '@/components/toast';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -40,8 +41,6 @@ export default function ProfileScreen() {
   const [avatarPath, setAvatarPath] = useState(profile?.avatarPath ?? null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [saveFailed, setSaveFailed] = useState(false);
 
   // Fields initialize from the profile, which is cache-warm: the root gate only
   // mounts `(tabs)` once `hasProfile` is true, so `useQuery` returns the row
@@ -57,14 +56,14 @@ export default function ProfileScreen() {
       setName(result.displayName);
       setPhone(result.phone ?? '');
       setAvatarPath(result.avatarPath);
-      setSaved(true);
       hapticSuccess();
+      showToast(sv.profile.saved, 'success');
       // The feed embeds the observer's display name — refresh it (no-op until M11).
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
     },
     onError: () => {
-      setSaveFailed(true);
       hapticError();
+      showToast(sv.profile.saveFailed, 'error');
     },
   });
 
@@ -88,8 +87,6 @@ export default function ProfileScreen() {
       nextPhone = parsedPhone.data;
     }
     setPhoneError(null);
-    setSaved(false);
-    setSaveFailed(false);
     // Persist the staged avatar alongside name/phone — `upsertMyProfile` writes
     // `avatarPath` unconditionally, so the picked image (already uploaded) lands on
     // the row here (M10).
@@ -103,17 +100,15 @@ export default function ProfileScreen() {
   function onChangeName(next: string) {
     setName(next);
     setNameError(null);
-    setSaved(false);
   }
 
   function onChangePhone(next: string) {
     setPhone(next);
     setPhoneError(null);
-    setSaved(false);
   }
 
   return (
-    <Screen keyboardShouldPersistTaps="handled">
+    <Screen keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       {profile?.isAdmin ? (
         <Stack.Screen
           options={{
@@ -182,16 +177,6 @@ export default function ProfileScreen() {
           loading={mutation.isPending}
           haptic="commit"
         />
-        {saved ? (
-          <ThemedText type="small" themeColor="primary">
-            {sv.profile.saved}
-          </ThemedText>
-        ) : null}
-        {saveFailed ? (
-          <ThemedText type="small" themeColor="destructive">
-            {sv.profile.saveFailed}
-          </ThemedText>
-        ) : null}
       </View>
 
       <ThemePicker />
@@ -222,6 +207,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.half,
     borderRadius: SurfaceRadius.pill,
   },
+  // Major groups (identity form · appearance · location · notifications · sign
+  // out) need clear separation so the screen reads as distinct settings groups
+  // rather than one dense list. The form's own fields stay tighter (form.gap).
+  content: { gap: Spacing.five },
   form: { gap: Spacing.three },
   field: { gap: Spacing.one },
 });

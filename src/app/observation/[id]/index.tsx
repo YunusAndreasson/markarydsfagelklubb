@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Badge } from '@/components/badge';
-import { Button } from '@/components/button';
+import { HeaderButton } from '@/components/header-button';
 import { ALERT, CLOCK, Icon, LOCATION } from '@/components/icon';
 import { ObservationMap } from '@/components/observation-map';
 import { PressableScale } from '@/components/pressable-scale';
@@ -79,16 +79,6 @@ export default function ObservationDetailScreen() {
           {obs.activity ? <Badge label={sv.observation.activity[obs.activity]} tone="outline" /> : null}
           {mine ? <Badge label={sv.feed.mine} tone="primary" /> : null}
         </View>
-        {mine ? (
-          <Button
-            title={sv.observation.editButton}
-            variant="secondary"
-            size="compact"
-            style={styles.editButton}
-            onPress={() => router.push({ pathname: '/observation/[id]/edit', params: { id } })}
-          />
-        ) : null}
-
         <View style={styles.metaRow}>
           <Icon name={CLOCK} size={16} color={theme.mutedForeground} />
           <ThemedText type="small" themeColor="mutedForeground">
@@ -143,7 +133,25 @@ export default function ObservationDetailScreen() {
     );
   }
 
-  return <Screen inset="sub">{body}</Screen>;
+  const canEdit = !!q.data && !!user && q.data.userId === user.id;
+
+  return (
+    <>
+      {canEdit ? (
+        <Stack.Screen
+          options={{
+            headerRight: () => (
+              <HeaderButton
+                title={sv.observation.editButton}
+                onPress={() => router.push({ pathname: '/observation/[id]/edit', params: { id } })}
+              />
+            ),
+          }}
+        />
+      ) : null}
+      <Screen inset="sub">{body}</Screen>
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -151,7 +159,6 @@ const styles = StyleSheet.create({
   headerText: { gap: Spacing.half },
   scientific: { fontStyle: 'italic' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  editButton: { alignSelf: 'flex-start' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   flex: { flex: 1 },
   image: { width: '100%', aspectRatio: 4 / 3, borderRadius: SurfaceRadius.md },

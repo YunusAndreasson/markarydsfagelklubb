@@ -14,7 +14,7 @@
  * `profile.avatarUrl`).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
 
@@ -115,6 +115,12 @@ export function ImageUpload({
   async function runPick(source: 'camera' | 'library') {
     setChooserOpen(false);
     setError(null);
+
+    // iOS: the chooser is a JS `Modal`; presenting the system camera/photo picker
+    // while that sheet is still sliding away silently fails (UIKit refuses to
+    // present over an in-flight dismissal). Wait out the sheet's dismiss animation
+    // before launching, so "Välj från galleri" reliably opens the picker.
+    if (Platform.OS === 'ios') await new Promise((resolve) => setTimeout(resolve, 350));
 
     let asset: RawAsset | null = null;
     try {

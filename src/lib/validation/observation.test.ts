@@ -91,6 +91,29 @@ describe('createObservationInput', () => {
     expect(r.success).toBe(true)
     if (r.success) expect(r.data.comment).toBeNull()
   })
+
+  // Regression: `formToInput` sends `comment: value.comment.trim() || null`, i.e.
+  // an explicit `null` for the (common) no-comment case. The schema must accept it
+  // — when it only had `.optional()`, every commentless report was rejected
+  // client-side ("Kunde inte spara observationen").
+  it('accepts an explicit null comment (the no-comment report)', () => {
+    const r = createObservationInput.safeParse({ ...validBase, comment: null })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.comment).toBeNull()
+  })
+
+  it('accepts a null comment alongside coords (typical GPS report)', () => {
+    const { locationId: _omit, ...noLocation } = validBase
+    const r = createObservationInput.safeParse({
+      ...noLocation,
+      latitude: 56.488,
+      longitude: 13.644,
+      comment: null,
+      imagePath: null,
+      alertRequested: true,
+    })
+    expect(r.success).toBe(true)
+  })
 })
 
 describe('updateObservationInput', () => {

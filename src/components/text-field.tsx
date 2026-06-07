@@ -53,6 +53,10 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       <TextInput
         ref={ref}
         accessibilityLabel={label}
+        // Honor Dynamic Type but cap it like the app's body text (ThemedText
+        // `default` = 1.6) so the input never outgrows its fixed-height surface.
+        // Overridable: callers can pass their own multiplier via `rest`.
+        maxFontSizeMultiplier={1.6}
         // When the field is invalid, the error reason is read out as the hint so
         // VoiceOver announces *why*, not just "invalid".
         accessibilityHint={error ?? accessibilityHint}

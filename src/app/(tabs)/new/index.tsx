@@ -1,30 +1,37 @@
 import { useMutation } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, Stack } from 'expo-router';
+import { useRef, useState } from 'react';
+import { ScrollView } from 'react-native';
 
+import { HeaderButton } from '@/components/header-button';
 import { Screen } from '@/components/screen';
 import {
   ObservationForm,
   formToInput,
+  type ObservationFormHandle,
   type ObservationFormValue,
 } from '@/components/observation-form';
+import { showToast } from '@/components/toast';
 import { useAuth } from '@/hooks/use-auth';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
+import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { createObservation, type FeedObservation } from '@/lib/query/observations';
 import { requestBirdAlert } from '@/lib/query/push-tokens';
 import { type Species } from '@/lib/query/species';
 
-// Rapportera — the center "new observation" tab. Composes the M9 pickers + M10
+// Larm — the center "new observation" tab. Composes the M9 pickers + M10
 // image into the shared `ObservationForm` and inserts directly (M3
-// `createObservation`). The feed updates optimistically and we jump to Flöde
+// `createObservation`). The feed updates optimistically and we jump to Obsar
 // immediately; a failure rolls the row back with a `hapticError` (no toast
 // primitive — web parity minus sonner). The tab stays mounted, so the form is
 // reset by remounting via a bumped `key`.
 export default function NewObservationScreen() {
   const { user } = useAuth();
   const [formKey, setFormKey] = useState(0);
+  const formRef = useRef<ObservationFormHandle>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const createMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => createObservation(formToInput(value)),
@@ -42,6 +49,7 @@ export default function NewObservationScreen() {
     },
     onSuccess: (newId, value) => {
       hapticSuccess();
+      showToast(sv.observation.reported, 'success');
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
       // The reporter's own member-profile feed embeds this row too — refresh it
       // so a previously-visited profile screen doesn't show stale data.
@@ -53,22 +61,39 @@ export default function NewObservationScreen() {
     onError: (_err, _value, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.feed, context.previous);
       hapticError();
+      showToast(sv.observation.saveFailed, 'error');
     },
   });
 
   return (
-    <Screen keyboardShouldPersistTaps="handled">
-      <ObservationForm
-        key={formKey}
-        mode="create"
-        onSubmit={(v) => {
-          createMutation.mutate(v);
-          setFormKey((k) => k + 1);
-          router.navigate('/');
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <HeaderButton
+              title={sv.observation.submitNew}
+              onPress={() => formRef.current?.submit()}
+              loading={createMutation.isPending}
+            />
+          ),
         }}
-        submitting={createMutation.isPending}
       />
-    </Screen>
+      <Screen ref={scrollRef} keyboardShouldPersistTaps="handled">
+        <ObservationForm
+          key={formKey}
+          ref={formRef}
+          mode="create"
+          scrollRef={scrollRef}
+          submitInHeader
+          onSubmit={(v) => {
+            createMutation.mutate(v);
+            setFormKey((k) => k + 1);
+            router.navigate('/');
+          }}
+          submitting={createMutation.isPending}
+        />
+      </Screen>
+    </>
   );
 }
 

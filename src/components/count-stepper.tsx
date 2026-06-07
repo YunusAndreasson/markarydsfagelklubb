@@ -67,6 +67,9 @@ export function CountStepper({
             maxLength={4}
             autoFocus
             selectTextOnFocus
+            // Match the displayed value's cap (ThemedText `subtitle` = 1.3) so editing
+            // doesn't overflow the fixed 56px stepper row.
+            maxFontSizeMultiplier={1.3}
             style={[styles.input, { color: theme.foreground }]}
             accessibilityLabel={sv.observation.countLabel}
           />
@@ -82,7 +85,7 @@ export function CountStepper({
             accessibilityLabel={sv.observation.countEditHint}
             style={styles.countWrap}
           >
-            <ThemedText type="title">{value}</ThemedText>
+            <ThemedText type="subtitle">{value}</ThemedText>
           </PressableScale>
         )}
 
@@ -126,9 +129,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 56,
     textAlign: 'center',
-    // Concrete fontSize — TextInput isn't a ThemedText so the title token can't
-    // apply. Tracks the `title` ladder size so editing doesn't shift the layout.
-    fontSize: 22,
-    fontWeight: '700',
+    // Concrete fontSize — TextInput isn't a ThemedText so the type token can't
+    // apply. Matches the `subtitle` display size so editing doesn't shift the layout.
+    fontSize: 32,
+    fontWeight: '600',
   },
 });

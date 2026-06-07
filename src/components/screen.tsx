@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { forwardRef, type ReactElement, type ReactNode } from 'react';
 import { ScrollView, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { sharedStyles } from '@/constants/shared-styles';
@@ -28,18 +28,15 @@ export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
   children: ReactNode;
 };
 
-export function Screen({
-  inset = 'tab',
-  refreshControl,
-  contentContainerStyle,
-  style,
-  children,
-  ...rest
-}: ScreenProps) {
+export const Screen = forwardRef<ScrollView, ScreenProps>(function Screen(
+  { inset = 'tab', refreshControl, contentContainerStyle, style, children, ...rest },
+  ref,
+) {
   const theme = useTheme();
   const base = inset === 'sub' ? sharedStyles.scrollContentInset : sharedStyles.scrollContent;
   return (
     <ScrollView
+      ref={ref}
       style={[sharedStyles.flex, { backgroundColor: theme.background }, style]}
       contentInsetAdjustmentBehavior="automatic"
       // Keep a focused input (comment, profile name/phone) above the keyboard:
@@ -55,4 +52,4 @@ export function Screen({
       {children}
     </ScrollView>
   );
-}
+});

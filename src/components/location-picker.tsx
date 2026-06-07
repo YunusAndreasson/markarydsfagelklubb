@@ -9,14 +9,17 @@
  */
 import { useRef, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { Icon, LOCATION } from '@/components/icon';
 import { Map } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
+import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
+import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { getCurrentPosition } from '@/lib/geo';
 import { hapticSelect } from '@/lib/haptics';
@@ -33,12 +36,17 @@ export function LocationPicker({
   value,
   onChange,
   invalid,
+  error,
 }: {
   value: LocationValue;
   onChange: (v: LocationValue) => void;
   invalid?: boolean;
+  /** Validation message shown (destructive) in place of the hint when required-but-empty.
+   *  No own haptic — the sibling PickerFields already buzz on the same submit. */
+  error?: string | null;
 }) {
   const theme = useTheme();
+  const { motion } = useMotion();
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -121,9 +129,17 @@ export function LocationPicker({
         />
       </View>
 
-      <ThemedText type="small" themeColor="mutedForeground">
-        {point ? sv.observation.locationDragHint : sv.observation.locationPickHint}
-      </ThemedText>
+      {error ? (
+        <Animated.View entering={motion(FadeInDown.duration(Duration.quick))}>
+          <ThemedText type="small" themeColor="destructive">
+            {error}
+          </ThemedText>
+        </Animated.View>
+      ) : (
+        <ThemedText type="small" themeColor="mutedForeground">
+          {point ? sv.observation.locationDragHint : sv.observation.locationPickHint}
+        </ThemedText>
+      )}
       {point && accuracy != null ? (
         <ThemedText type="small" themeColor="mutedForeground">
           {sv.observation.locationAccuracy(accuracy)}

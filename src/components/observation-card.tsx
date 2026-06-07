@@ -75,12 +75,28 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
   const clock = now ?? new Date();
   const veryRecent = clock.getTime() - observation.observedAt.getTime() < VERY_RECENT_MS;
 
+  // A container with an `accessibilityLabel` is read as a single element and its
+  // children are suppressed — so compose the whole card (species, count, activity,
+  // when, where, who) into one spoken label instead of just the species name. The
+  // readable time form ("Idag 14:30") is used here, not the visual "2h" shorthand.
+  const a11yLabel = [
+    observation.speciesSwedishName,
+    sv.feed.count(observation.count),
+    observation.activity ? sv.observation.activity[observation.activity] : null,
+    sv.observation.timeFriendly(observation.observedAt, clock),
+    observation.locationName,
+    observation.observerDisplayName ? sv.feed.reportedBy(observation.observerDisplayName) : null,
+    mine ? sv.feed.mine : null,
+  ]
+    .filter(Boolean)
+    .join('. ');
+
   return (
     <PressableScale
       variant="card"
       onPress={() => router.push({ pathname: '/observation/[id]', params: { id: observation.id } })}
       accessibilityRole="button"
-      accessibilityLabel={observation.speciesSwedishName}
+      accessibilityLabel={a11yLabel}
       restingBackgroundColor={theme.card}
       pressedBackgroundColor={theme.backgroundSelected}
       style={[SurfaceStyles.raisedCard, styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}

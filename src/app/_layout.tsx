@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ALERT } from '@/components/icon';
 import { StateBlock } from '@/components/state-block';
+import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
@@ -144,7 +145,7 @@ function ThemedNavigation() {
           <Stack.Screen name="onboarding" />
         </Stack.Protected>
         {/* Signed in + onboarded: the app. `(tabs)` is the bottom-tab shell
-            (Flöde · Rapportera · Profil) and owns "/"; observation/member routes
+            (Obsar · Larm · Profil) and owns "/"; observation/member routes
             push over it; `kitchensink` is the M2 primitives showcase, gated to
             `__DEV__` in the screen itself so it can't be reached in production. */}
         <Stack.Protected guard={!!session && hasProfile}>
@@ -164,6 +165,9 @@ function ThemedNavigation() {
           <Stack.Screen name="kitchensink" />
         </Stack.Protected>
       </Stack>
+      {/* Root-mounted so a toast fired from a mutation callback survives the
+          originating screen unmounting (e.g. report → navigate to Obsar). */}
+      <ToastHost />
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );

@@ -26,9 +26,8 @@ export type SectionHeaderProps = {
    */
   level?: 'card';
   /**
-   * Container override. The default carries a small horizontal inset so the
-   * label aligns with card edges when it floats over the screen background; pass
-   * `{ marginHorizontal: 0 }` when rendering inside a card's own padding.
+   * Container override. The label aligns to the screen content column by default;
+   * pass `{ marginHorizontal }` to nudge it (e.g. to a card's own inner padding).
    */
   style?: StyleProp<ViewStyle>;
 };
@@ -50,5 +49,8 @@ export function SectionHeader({ title, caption, level, style }: SectionHeaderPro
 }
 
 const styles = StyleSheet.create({
-  header: { gap: Spacing.half, marginHorizontal: Spacing.one },
+  // No horizontal inset: the label aligns to the screen's content column (and the
+  // card/field/button left edge) so section headers line up with the controls they
+  // group. (Callers can still pass `style` to nudge it inside a card's own padding.)
+  header: { gap: Spacing.one },
 });

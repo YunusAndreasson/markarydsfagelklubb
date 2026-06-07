@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { type ComponentProps } from 'react';
@@ -12,7 +13,7 @@ import { sv } from '@/lib/i18n/sv';
 // Material bottom navigation on Android. Icons are platform-native — SF Symbols
 // on iOS (`sf`, no assets), @expo/vector-icons Material glyphs on Android via an
 // image `src`. Mirrors edenmind's tab shell; here the three triggers are the
-// mafk IA: Flöde · Rapportera · Profil. "Rapportera" is an ordinary center tab
+// mafk IA: Obsar · Larm · Profil. "Larm" is an ordinary center tab
 // (not a FAB) — the create form lands on it in M12.
 const { Trigger } = NativeTabs;
 
@@ -57,18 +58,25 @@ export default function TabsLayout() {
     <NativeTabs {...barProps} screenListeners={screenListeners}>
       <Trigger name="(home)">
         <Trigger.Label>{sv.bottomNav.feed}</Trigger.Label>
+        {/* Kikare = "titta på fynd" — on-brand for a bird club, and avoids the
+            "bell = notifications inbox" misread. SF Symbols has binoculars; on
+            Android it lives in MaterialCommunityIcons (not MaterialIcons). */}
         {Platform.OS === 'ios' ? (
-          <Trigger.Icon sf="house.fill" />
+          <Trigger.Icon sf="binoculars.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="home" />} />
+          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialCommunityIcons} name="binoculars" />} />
         )}
       </Trigger>
       <Trigger name="new">
         <Trigger.Label>{sv.bottomNav.newObservation}</Trigger.Label>
+        {/* "Larm" = alert the club to a fynd — the bell sits on the *action*
+            (which fires the push fan-out), where it reads right; on a content tab
+            it would misread as a notifications inbox. `notifications` is already in
+            MaterialIcons (no extra font, unlike the binoculars glyph). */}
         {Platform.OS === 'ios' ? (
-          <Trigger.Icon sf="plus.circle.fill" />
+          <Trigger.Icon sf="bell.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="add-circle" />} />
+          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="notifications" />} />
         )}
       </Trigger>
       <Trigger name="profile">

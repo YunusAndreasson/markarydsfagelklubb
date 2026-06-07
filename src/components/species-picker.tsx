@@ -129,6 +129,9 @@ export function SpeciesPicker({
             autoCapitalize="none"
             returnKeyType="search"
             clearButtonMode="while-editing"
+            // Cap Dynamic Type like the app's body text so the search row (fixed
+            // 48px) keeps the text vertically centered at large accessibility sizes.
+            maxFontSizeMultiplier={1.6}
             style={[styles.searchInput, { color: theme.foreground }]}
             accessibilityLabel={sv.observation.speciesSearch}
           />

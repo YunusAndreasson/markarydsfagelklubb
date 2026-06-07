@@ -40,21 +40,33 @@ export async function getCurrentPosition(timeoutMs = 15000): Promise<GeoResult> 
     if (!perm.granted) {
       return { ok: false, denied: perm.status === Location.PermissionStatus.DENIED, error: ERR_DENIED };
     }
+    // Fast path: a recent cached fix selects the pin (near-)instantly. A cold
+    // high-accuracy GPS fix takes several seconds on iOS — too slow when the user
+    // just wants a starting point they can then drag to refine. Accept a fix up to
+    // 2 min old and ≤200 m accurate; `getLastKnownPositionAsync` returns null if
+    // none qualifies, so we only use it when it's genuinely good enough.
+    const cached = await Location.getLastKnownPositionAsync({ maxAge: 120_000, requiredAccuracy: 200 });
+    if (cached) return { ok: true, position: toPosition(cached) };
+
+    // No usable cached fix → take a live one. `Balanced` (~100 m, wifi/cell-assisted)
+    // resolves far quicker than `High` and is plenty for "roughly where I am"; the
+    // draggable pin covers the rest.
     const pos = await Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs)),
     ]);
-    return {
-      ok: true,
-      position: {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy ?? 0,
-      },
-    };
+    return { ok: true, position: toPosition(pos) };
   } catch {
     return { ok: false, denied: false, error: ERR_GENERIC };
   }
+}
+
+function toPosition(pos: Location.LocationObject): GeoPosition {
+  return {
+    latitude: pos.coords.latitude,
+    longitude: pos.coords.longitude,
+    accuracy: pos.coords.accuracy ?? 0,
+  };
 }
 
 /**
