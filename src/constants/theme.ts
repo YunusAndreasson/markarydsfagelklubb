@@ -98,6 +98,36 @@ export const SurfaceOverlay = {
 } as const;
 
 /**
+ * Rarity "heat" ramp for the feed card's rarity indicator (left accent spine +
+ * a dot by the species name). A 0–5 scale: 0 is calm/common (a quiet slate), the
+ * ramp warms through gold → amber → orange and peaks at red (5 = a true rarity).
+ * Color is the only encoder by design — no words — so the hue progression must
+ * read as escalating rarity at a glance. Hues stay clear of the brand green so
+ * the indicator never reads as a primary/own-observation marker. Kept off
+ * `Colors` (like {@link SurfaceOverlay}) so it doesn't widen `ThemeColor`;
+ * resolved with the active scheme by `@/lib/rarity`. Dark values are lifted for
+ * contrast against the dark card surface.
+ */
+export const RarityScale = {
+  light: {
+    0: '#9AA0A6',
+    1: '#D8A93A',
+    2: '#E0922C',
+    3: '#E0741E',
+    4: '#D44E1C',
+    5: '#C42A20',
+  },
+  dark: {
+    0: '#828A91',
+    1: '#E6C44F',
+    2: '#ECA53F',
+    3: '#ED8439',
+    4: '#E8603C',
+    5: '#EF5A4C',
+  },
+} as const;
+
+/**
  * Elevation recipe table. Names map to intent (resting card vs. sheet vs.
  * floating tray), not the raw shadow values. iOS gets a soft, color-quiet shadow;
  * Android relies on the `elevation` prop so we zero `shadowOpacity` there. Spread

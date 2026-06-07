@@ -19,8 +19,10 @@ import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 import { observationQueryOptions } from '@/lib/query/observations';
+import { rarityColor, rarityFor } from '@/lib/rarity';
 
 // Observation detail — the full record, pushed over the tabs from a feed card
 // (M11). The "Read" of CRUD; the owner additionally gets an edit button that
@@ -31,6 +33,7 @@ import { observationQueryOptions } from '@/lib/query/observations';
 export default function ObservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const { colorScheme } = useThemeMode();
   const { user } = useAuth();
   const q = useQuery(observationQueryOptions(id));
 
@@ -62,16 +65,26 @@ export default function ObservationDetailScreen() {
     const lat = obs.latitude ?? obs.locationLatitude;
     const lng = obs.longitude ?? obs.locationLongitude;
     const mine = !!user && obs.userId === user.id;
+    const rarity = rarityColor(rarityFor(obs), colorScheme);
+    const locationLabel =
+      obs.locationName ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
     body = (
       <View style={styles.body}>
-        <View style={styles.headerText}>
-          <ThemedText type="card">{obs.speciesSwedishName}</ThemedText>
-          {obs.speciesScientificName ? (
-            <ThemedText type="default" themeColor="mutedForeground" style={styles.scientific}>
-              {obs.speciesScientificName}
-            </ThemedText>
-          ) : null}
+        <View style={styles.titleRow}>
+          {/* Rarity dot in its own leading column, centered on the title's first
+              line, so the title + scientific name align cleanly. */}
+          <View style={styles.dotColumn}>
+            <View style={[styles.rarityDot, { backgroundColor: rarity }]} />
+          </View>
+          <View style={styles.titleText}>
+            <ThemedText type="card">{obs.speciesSwedishName}</ThemedText>
+            {obs.speciesScientificName ? (
+              <ThemedText type="default" themeColor="mutedForeground" style={styles.scientific}>
+                {obs.speciesScientificName}
+              </ThemedText>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.badges}>
@@ -86,11 +99,11 @@ export default function ObservationDetailScreen() {
           </ThemedText>
         </View>
 
-        {obs.locationName ? (
+        {locationLabel ? (
           <View style={styles.metaRow}>
             <Icon name={LOCATION} size={16} color={theme.mutedForeground} />
             <ThemedText type="small" themeColor="mutedForeground" style={styles.flex} numberOfLines={1}>
-              {obs.locationName}
+              {locationLabel}
             </ThemedText>
           </View>
         ) : null}
@@ -156,7 +169,13 @@ export default function ObservationDetailScreen() {
 
 const styles = StyleSheet.create({
   body: { gap: Spacing.three },
-  headerText: { gap: Spacing.half },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  // Leading column for the rarity dot — height matches the `card` title line
+  // height so `justifyContent: center` aligns the dot with the title.
+  dotColumn: { height: 36, justifyContent: 'center' },
+  titleText: { flex: 1, minWidth: 0, gap: Spacing.half },
+  // Rarity heat dot beside the title — color-only, mirrors the feed card.
+  rarityDot: { width: 10, height: 10, borderRadius: 5 },
   scientific: { fontStyle: 'italic' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },

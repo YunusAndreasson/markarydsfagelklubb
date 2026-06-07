@@ -145,6 +145,11 @@ export const sv = {
     empty: 'Inga rapporter de senaste 14 dagarna.',
     notFound: 'Medlemmen hittades inte.',
   },
+  // Rariteten visas enbart med färg (ingen text) i gränssnittet; den här frasen
+  // finns för skärmläsare så att raritetsnivån ändå annonseras. Skala 0–5.
+  rarity: {
+    a11y: (level: number) => `Raritetsnivå ${level} av 5`,
+  },
   observation: {
     titleNew: 'Larm',
     titleEdit: 'Redigera',
