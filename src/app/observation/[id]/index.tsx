@@ -18,11 +18,12 @@ import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 import { observationQueryOptions } from '@/lib/query/observations';
-import { rarityColor, rarityFor } from '@/lib/rarity';
+import { rarityFor, rarityStyle } from '@/lib/rarity';
 
 // Observation detail — the full record, pushed over the tabs from a feed card
 // (M11). The "Read" of CRUD; the owner additionally gets an edit button that
@@ -36,6 +37,16 @@ export default function ObservationDetailScreen() {
   const { colorScheme } = useThemeMode();
   const { user } = useAuth();
   const q = useQuery(observationQueryOptions(id));
+
+  // Reverse-geocode a pin-drop observation (no named location) to a place name —
+  // computed at the top level so the hook runs unconditionally (rules of hooks).
+  const data = q.data;
+  const geoLat = data ? (data.latitude ?? data.locationLatitude) : null;
+  const geoLng = data ? (data.longitude ?? data.locationLongitude) : null;
+  const geocoded = useReverseGeocode(
+    data?.locationName ? null : geoLat,
+    data?.locationName ? null : geoLng,
+  );
 
   let body: ReactNode;
   if (q.isLoading) {
@@ -65,17 +76,22 @@ export default function ObservationDetailScreen() {
     const lat = obs.latitude ?? obs.locationLatitude;
     const lng = obs.longitude ?? obs.locationLongitude;
     const mine = !!user && obs.userId === user.id;
-    const rarity = rarityColor(rarityFor(obs), colorScheme);
+    const level = rarityFor(obs);
+    const rarity = rarityStyle(level, colorScheme);
     const locationLabel =
-      obs.locationName ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
+      obs.locationName ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
     body = (
       <View style={styles.body}>
         <View style={styles.titleRow}>
-          {/* Rarity dot in its own leading column, centered on the title's first
+          {/* Rarity badge in its own leading column, centered on the title's first
               line, so the title + scientific name align cleanly. */}
-          <View style={styles.dotColumn}>
-            <View style={[styles.rarityDot, { backgroundColor: rarity }]} />
+          <View style={styles.badgeColumn}>
+            <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
+              <ThemedText type="small" style={[styles.rarityNum, { color: rarity.foreground }]}>
+                {level}
+              </ThemedText>
+            </View>
           </View>
           <View style={styles.titleText}>
             <ThemedText type="card">{obs.speciesSwedishName}</ThemedText>
@@ -170,12 +186,21 @@ export default function ObservationDetailScreen() {
 const styles = StyleSheet.create({
   body: { gap: Spacing.three },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
-  // Leading column for the rarity dot — height matches the `card` title line
-  // height so `justifyContent: center` aligns the dot with the title.
-  dotColumn: { height: 36, justifyContent: 'center' },
+  // Leading column for the rarity badge — height matches the `card` title line
+  // height so `justifyContent: center` aligns the badge with the title.
+  badgeColumn: { height: 36, justifyContent: 'center' },
   titleText: { flex: 1, minWidth: 0, gap: Spacing.half },
-  // Rarity heat dot beside the title — color-only, mirrors the feed card.
-  rarityDot: { width: 10, height: 10, borderRadius: 5 },
+  // Rarity badge beside the title — a color-coded chip with the rarity number,
+  // mirrors the feed card (sized up for the larger title).
+  rarityBadge: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: SurfaceRadius.xs,
+    paddingHorizontal: Spacing.one,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rarityNum: { fontWeight: '700' },
   scientific: { fontStyle: 'italic' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },

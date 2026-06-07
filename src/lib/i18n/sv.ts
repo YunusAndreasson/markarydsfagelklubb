@@ -145,10 +145,10 @@ export const sv = {
     empty: 'Inga rapporter de senaste 14 dagarna.',
     notFound: 'Medlemmen hittades inte.',
   },
-  // Rariteten visas enbart med färg (ingen text) i gränssnittet; den här frasen
-  // finns för skärmläsare så att raritetsnivån ändå annonseras. Skala 0–5.
+  // Rariteten visas som en färgad sifferbricka (0–5, där 0 = mest sällsynt och
+  // 5 = allmän). Den här frasen finns för skärmläsare så att nivån annonseras.
   rarity: {
-    a11y: (level: number) => `Raritetsnivå ${level} av 5`,
+    a11y: (level: number) => `Raritetsnivå ${level}`,
   },
   observation: {
     titleNew: 'Larm',

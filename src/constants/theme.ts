@@ -98,32 +98,32 @@ export const SurfaceOverlay = {
 } as const;
 
 /**
- * Rarity "heat" ramp for the feed card's rarity indicator (left accent spine +
- * a dot by the species name). A 0–5 scale: 0 is calm/common (a quiet slate), the
- * ramp warms through gold → amber → orange and peaks at red (5 = a true rarity).
- * Color is the only encoder by design — no words — so the hue progression must
- * read as escalating rarity at a glance. Hues stay clear of the brand green so
- * the indicator never reads as a primary/own-observation marker. Kept off
- * `Colors` (like {@link SurfaceOverlay}) so it doesn't widen `ThemeColor`;
- * resolved with the active scheme by `@/lib/rarity`. Dark values are lifted for
- * contrast against the dark card surface.
+ * Rarity "heat" tints for the feed card's rarity badge — a small chip showing
+ * the rarity number 0–5. The scale runs 0 = rarest (a true rarity) → 5 = most
+ * common, so the color cools that way: red/0 → orange → amber → grey/5. Each
+ * level is a `{ background, foreground }` pair — a soft tinted chip with a
+ * legible number. Hues stay clear of the brand green so the badge never reads as
+ * a primary/own-observation marker. Kept off `Colors` (like {@link
+ * SurfaceOverlay}) so it doesn't widen `ThemeColor`; resolved with the active
+ * scheme by `@/lib/rarity`. Light = pale tint + dark number; dark = translucent
+ * fill + bright number, lifted for contrast against the dark card surface.
  */
 export const RarityScale = {
   light: {
-    0: '#9AA0A6',
-    1: '#D8A93A',
-    2: '#E0922C',
-    3: '#E0741E',
-    4: '#D44E1C',
-    5: '#C42A20',
+    0: { background: '#FBE1DF', foreground: '#C42A20' },
+    1: { background: '#FBE7D8', foreground: '#BC530E' },
+    2: { background: '#F9EFD8', foreground: '#946E08' },
+    3: { background: '#F4F1E9', foreground: '#867457' },
+    4: { background: '#EEEFF1', foreground: '#6B727B' },
+    5: { background: '#F2F2F2', foreground: '#6F6F6F' },
   },
   dark: {
-    0: '#828A91',
-    1: '#E6C44F',
-    2: '#ECA53F',
-    3: '#ED8439',
-    4: '#E8603C',
-    5: '#EF5A4C',
+    0: { background: 'rgba(255,90,76,0.18)', foreground: '#FF877F' },
+    1: { background: 'rgba(245,130,55,0.18)', foreground: '#F5A968' },
+    2: { background: 'rgba(240,180,60,0.16)', foreground: '#EBC063' },
+    3: { background: 'rgba(205,190,150,0.14)', foreground: '#CDBE93' },
+    4: { background: 'rgba(255,255,255,0.09)', foreground: '#AAB1B8' },
+    5: { background: 'rgba(255,255,255,0.07)', foreground: '#9AA49D' },
   },
 } as const;
 

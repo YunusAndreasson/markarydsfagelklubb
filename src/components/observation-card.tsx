@@ -2,15 +2,14 @@
  * A single observation, rendered as a compact, scannable feed card — the native
  * port of the web `observation-card.tsx`, trimmed for a phone list. The hero is
  * the species name; the three things a birder scans for — name, when, where —
- * form the top block. A color-coded rarity heat spine runs down the card's left
- * edge (mirrored by a dot beside the name) so rare fynd pop while scrolling, and
+ * form the top block. A color-coded rarity badge (the rarity number 0–5, tinted
+ * by how rare the bird is — red = rare/0, grey = common/5) leads the name, and
  * the photo (when present) runs full-bleed to the card's rounded edges.
  *
  * Card structure: an OUTER pressable carries the shadow + rounded fill (and the
  * press tint), an INNER clip view (`clippedCard`, overflow hidden) holds the
  * content and clips the full-bleed image to the corners — a single view can't
- * both cast a shadow and clip rounded children. The rarity spine is the inner
- * view's thick left border, so it respects the corner radius for free.
+ * both cast a shadow and clip rounded children.
  *
  * Deliberately NO inline map: the web reuses one rich card in both the feed and
  * the detail view, but mounting a `react-native-maps` MapView per row would be a
@@ -41,11 +40,12 @@ import { Curve, Duration } from '@/constants/motion';
 import { elevationStyle, SurfaceRadius, SurfaceStyles } from '@/constants/surface';
 import { Elevation, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
+import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 import { type FeedObservation } from '@/lib/query/observations';
-import { rarityColor, rarityFor } from '@/lib/rarity';
+import { rarityFor, rarityStyle } from '@/lib/rarity';
 
 const VERY_RECENT_MS = 60 * 60 * 1000;
 
@@ -78,15 +78,6 @@ function PulsingDot() {
   return <Animated.View style={[styles.dot, { backgroundColor: theme.primary }, animatedStyle]} />;
 }
 
-/** The location line's text: the named location, else "På karta" when only raw
- *  coordinates exist, else nothing. Mirrors the detail screen's coordinate fallback. */
-function locationFor(observation: FeedObservation): string | null {
-  if (observation.locationName) return observation.locationName;
-  const lat = observation.latitude ?? observation.locationLatitude;
-  const lng = observation.longitude ?? observation.locationLongitude;
-  return lat != null && lng != null ? sv.feed.locationOnMap : null;
-}
-
 export function ObservationCard({ observation, currentUserId, now }: ObservationCardProps) {
   const theme = useTheme();
   const { colorScheme } = useThemeMode();
@@ -95,14 +86,23 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
   const veryRecent = clock.getTime() - observation.observedAt.getTime() < VERY_RECENT_MS;
 
   const level = rarityFor(observation);
-  const rarity = rarityColor(level, colorScheme);
-  const locationLabel = locationFor(observation);
+  const rarity = rarityStyle(level, colorScheme);
+
+  // Location matters — show a real name. Named locations use their name; pin-drop
+  // observations (no name, raw coords) are reverse-geocoded to a place name, with
+  // "På karta" as the fallback while that resolves or if the geocoder is unavailable.
+  const named = observation.locationName;
+  const lat = observation.latitude ?? observation.locationLatitude;
+  const lng = observation.longitude ?? observation.locationLongitude;
+  const geocoded = useReverseGeocode(named ? null : lat, named ? null : lng);
+  const locationLabel =
+    named ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
   // A container with an `accessibilityLabel` is read as a single element and its
   // children are suppressed — so compose the whole card (rarity, species, count,
-  // activity, when, where, who) into one spoken label. The rarity is color-only
-  // on screen, so it MUST be spoken here or it's lost; the readable time form
-  // ("Idag 14:30") is used, not the visual "2h" shorthand.
+  // activity, when, where, who) into one spoken label. The rarity badge's number
+  // MUST be spoken here or it's lost; the readable time form ("Idag 14:30") is
+  // used, not the visual "2h" shorthand.
   const a11yLabel = [
     sv.rarity.a11y(level),
     observation.speciesSwedishName,
@@ -126,23 +126,21 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
       pressedBackgroundColor={theme.backgroundSelected}
       style={[styles.cardShadow, { backgroundColor: theme.card }]}
     >
-      {/* Inner clip: hairline border on three sides, the rarity heat spine on the
-          left, and overflow hidden so the full-bleed image clips to the corners.
-          Transparent so the outer card fill + press tint show through the text. */}
-      <View
-        style={[
-          SurfaceStyles.clippedCard,
-          styles.clip,
-          { borderColor: theme.border, borderLeftColor: rarity },
-        ]}
-      >
+      {/* Inner clip: hairline border + overflow hidden so the full-bleed image
+          clips to the rounded corners. Transparent so the outer card fill + press
+          tint show through the text. */}
+      <View style={[SurfaceStyles.clippedCard, styles.clip, { borderColor: theme.border }]}>
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.hero}>
-              {/* Rarity dot in its own leading column, centered on the name's
+              {/* Rarity badge in its own leading column, centered on the name's
                   first line, so the name + scientific name align cleanly. */}
-              <View style={styles.dotColumn}>
-                <View style={[styles.rarityDot, { backgroundColor: rarity }]} />
+              <View style={styles.badgeColumn}>
+                <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
+                  <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
+                    {level}
+                  </ThemedText>
+                </View>
               </View>
               <View style={styles.headerText}>
                 <ThemedText type="heading" numberOfLines={1}>
@@ -230,20 +228,27 @@ const styles = StyleSheet.create({
   // no overflow (an iOS shadow needs overflow visible to render).
   cardShadow: { borderRadius: SurfaceRadius.md, ...elevationStyle(Elevation.raised) },
   // Inner: clips the full-bleed image to the rounded corners; transparent so the
-  // outer card fill + press tint show through. The 4px left border is the rarity
-  // spine (color set inline); the other sides keep the hairline from clippedCard.
-  clip: { borderLeftWidth: 4, backgroundColor: 'transparent' },
+  // outer card fill + press tint show through the text.
+  clip: { backgroundColor: 'transparent' },
   // Padded text column. The full-bleed image and footer are siblings with their
   // own spacing, so this only pads the top block.
   content: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
   hero: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
-  // Leading column for the rarity dot — its height matches the `heading` line
-  // height so `justifyContent: center` aligns the dot with the species name.
-  dotColumn: { height: 24, justifyContent: 'center' },
+  // Leading column for the rarity badge — its height matches the `heading` line
+  // height so `justifyContent: center` aligns the badge with the species name.
+  badgeColumn: { height: 24, justifyContent: 'center' },
   headerText: { flex: 1, minWidth: 0, gap: Spacing.one },
-  // Rarity dot beside the name — same heat color as the left spine.
-  rarityDot: { width: 8, height: 8, borderRadius: 4 },
+  // Rarity badge — a small color-coded chip holding the rarity number (0–5).
+  rarityBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: SurfaceRadius.xs,
+    paddingHorizontal: Spacing.one,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rarityNum: { fontWeight: '700' },
   scientific: { fontStyle: 'italic' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   dot: { width: 6, height: 6, borderRadius: 3 },
