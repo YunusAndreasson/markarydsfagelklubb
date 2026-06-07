@@ -8,14 +8,16 @@
  * Composes the M8 `Map` (tap/drag → `onPick`, token-keyed recenter) and `geo`.
  */
 import { useRef, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Modal, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
-import { Icon, LOCATION } from '@/components/icon';
+import { CLOSE, EXPAND, Icon, LOCATION } from '@/components/icon';
 import { Map } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
@@ -31,6 +33,7 @@ export type LocationValue =
   | { kind: 'coords'; latitude: number; longitude: number; accuracy?: number };
 
 const MARKARYD = { latitude: 56.46, longitude: 13.6 };
+const MAP_HEIGHT = 260;
 
 export function LocationPicker({
   value,
@@ -47,6 +50,8 @@ export function LocationPicker({
 }) {
   const theme = useTheme();
   const { motion } = useMotion();
+  const insets = useSafeAreaInsets();
+  const [expanded, setExpanded] = useState(false);
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -63,6 +68,14 @@ export function LocationPicker({
 
   function setPoint(latitude: number, longitude: number, acc?: number) {
     onChange({ kind: 'coords', latitude, longitude, accuracy: acc });
+  }
+
+  // A deliberate tap/drag to set the point — buzz like the other pickers. (Not
+  // inside `setPoint`, which the GPS path also calls — no double buzz.) Shared by
+  // the inline map and the fullscreen one.
+  function handlePick(latitude: number, longitude: number) {
+    hapticSelect();
+    setPoint(latitude, longitude);
   }
 
   function recenterTo(latitude: number, longitude: number) {
@@ -99,6 +112,8 @@ export function LocationPicker({
       ]
     : [];
 
+  const hint = point ? sv.observation.locationDragHint : sv.observation.locationPickHint;
+
   return (
     <View style={styles.container}>
       <ThemedText type="smallBold" themeColor="mutedForeground">
@@ -117,16 +132,22 @@ export function LocationPicker({
           markers={markers}
           center={point ?? MARKARYD}
           zoom={point ? 14 : 11}
-          height={220}
+          height={MAP_HEIGHT}
           markerDraggable
-          onPick={(lat, lng) => {
-            // A deliberate tap/drag to set the point — buzz like the other pickers.
-            // (Not inside `setPoint`, which the GPS path also calls — no double buzz.)
-            hapticSelect();
-            setPoint(lat, lng);
-          }}
+          onPick={handlePick}
           recenter={recenter}
         />
+        {/* Expand to a fullscreen canvas for precise placement. A small corner
+            button (not a full overlay) so the inline map stays tap-to-set. */}
+        <PressableScale
+          variant="icon"
+          onPress={() => setExpanded(true)}
+          accessibilityRole="button"
+          accessibilityLabel={sv.observation.mapExpand}
+          style={[styles.expandBadge, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <Icon name={EXPAND} size={16} color={theme.foreground} />
+        </PressableScale>
       </View>
 
       {error ? (
@@ -137,7 +158,7 @@ export function LocationPicker({
         </Animated.View>
       ) : (
         <ThemedText type="small" themeColor="mutedForeground">
-          {point ? sv.observation.locationDragHint : sv.observation.locationPickHint}
+          {hint}
         </ThemedText>
       )}
       {point && accuracy != null ? (
@@ -178,6 +199,57 @@ export function LocationPicker({
           </View>
         </View>
       ) : null}
+
+      {/* Fullscreen canvas — same interactive map (tap/drag → onChange) on a
+          full screen for precise placement, plus GPS and the live hint. State is
+          shared, so a point set here is already applied when the modal closes. */}
+      <Modal
+        visible={expanded}
+        animationType="slide"
+        onRequestClose={() => setExpanded(false)}
+        statusBarTranslucent
+      >
+        <ThemedView style={styles.full}>
+          {expanded ? (
+            <Map
+              markers={markers}
+              center={point ?? MARKARYD}
+              zoom={point ? 15 : 11}
+              markerDraggable
+              onPick={handlePick}
+              recenter={recenter}
+              style={styles.fullMap}
+            />
+          ) : null}
+
+          <PressableScale
+            variant="icon"
+            onPress={() => setExpanded(false)}
+            accessibilityRole="button"
+            accessibilityLabel={sv.observation.mapClose}
+            style={[
+              styles.close,
+              { top: insets.top + Spacing.two, backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
+            <Icon name={CLOSE} size={20} color={theme.foreground} />
+          </PressableScale>
+
+          <View style={[styles.fullBottom, { bottom: insets.bottom + Spacing.three }]}>
+            <View style={[styles.hintPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <ThemedText type="small" themeColor="mutedForeground">
+                {hint}
+              </ThemedText>
+            </View>
+            <Button
+              title={sv.observation.locationCurrent}
+              variant="secondary"
+              loading={pending}
+              onPress={() => void requestMyPosition()}
+            />
+          </View>
+        </ThemedView>
+      </Modal>
     </View>
   );
 }
@@ -187,6 +259,40 @@ const styles = StyleSheet.create({
   mapWrap: {
     borderRadius: SurfaceRadius.md,
     overflow: 'hidden',
+  },
+  // Small expand affordance in the inline map's corner — sits above the MapView
+  // so its tap opens fullscreen while the rest of the map stays tap-to-set.
+  expandBadge: {
+    position: 'absolute',
+    top: Spacing.two,
+    right: Spacing.two,
+    minWidth: 36,
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: SurfaceRadius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  full: { flex: 1 },
+  // Override the Map's default fixed height so it fills the flex parent.
+  fullMap: { flex: 1, height: '100%' },
+  close: {
+    position: 'absolute',
+    right: Spacing.three,
+    // ≥44pt visible target (Apple HIG / Material) for the primary dismiss control.
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: SurfaceRadius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  fullBottom: { position: 'absolute', left: Spacing.three, right: Spacing.three, gap: Spacing.two },
+  hintPill: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: SurfaceRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   blocked: {
     flexDirection: 'row',
