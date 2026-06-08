@@ -172,12 +172,17 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
 
         {observation.imageUrl ? (
           <Image
-            source={{ uri: observation.imageUrl }}
+            // Key the disk/memory cache by the stable storage PATH, not the signed
+            // URL — the URL's token rotates on every refetch/cold start, which would
+            // otherwise force a re-download of an identical photo. The path only
+            // changes when the photo is actually replaced (fresh draftId). Big win
+            // on bad networks: once seen, a photo loads from disk instantly.
+            source={{ uri: observation.imageUrl, cacheKey: observation.imagePath ?? undefined }}
             style={[styles.image, { backgroundColor: theme.muted }]}
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={Duration.quick}
-            recyclingKey={observation.id}
+            recyclingKey={observation.imagePath ?? observation.id}
           />
         ) : null}
 

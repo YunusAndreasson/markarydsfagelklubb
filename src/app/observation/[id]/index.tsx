@@ -131,7 +131,9 @@ export default function ObservationDetailScreen() {
 
         {obs.imageUrl ? (
           <Image
-            source={{ uri: obs.imageUrl }}
+            // Cache by the stable storage path, not the rotating signed URL (see
+            // ObservationCard) — so the full photo survives refetches + restarts.
+            source={{ uri: obs.imageUrl, cacheKey: obs.imagePath ?? undefined }}
             style={[styles.image, { backgroundColor: theme.muted }]}
             contentFit="cover"
             cachePolicy="memory-disk"
