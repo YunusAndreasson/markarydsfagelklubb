@@ -73,6 +73,12 @@ export const BELL: IconName = { sf: 'bell', material: 'notifications-none' };
 /** Door-out — the sign-out settings row. */
 export const SIGN_OUT: IconName = { sf: 'rectangle.portrait.and.arrow.right', material: 'logout' };
 
+/** Overflow — opens the report/block menu on another member's content. */
+export const MORE: IconName = { sf: 'ellipsis.circle', material: 'more-horiz' };
+
+/** Blocked member — the hidden-content state on a blocked member's profile. */
+export const BLOCKED: IconName = { sf: 'hand.raised.fill', material: 'block' };
+
 /**
  * A one-shot bounce for peak/celebration glyphs. `repeating: false` plays the
  * effect once when the symbol mounts. iOS-only (SF Symbols); Android falls back

@@ -56,6 +56,12 @@ type AuthContextValue = {
   /** Redeem the `?code=` from the `mafk://auth/callback` deep link (PKCE). */
   exchangeMagicLinkCode: (code: string) => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
+  /**
+   * Permanently delete the account + all personal data (Apple 5.1.1(v) / Google
+   * data-deletion). Calls the `delete-account` edge function, then clears the
+   * local session. Resolves with `{ error }` on failure (nothing is destroyed).
+   */
+  deleteAccount: () => Promise<AuthActionResult>;
 };
 
 const [AuthContext, useAuth] = createStrictContext<AuthContextValue>('useAuth');
@@ -184,6 +190,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deleteAccount = useCallback(async (): Promise<AuthActionResult> => {
+    // Best-effort: stop this device receiving alerts BEFORE the account (and its
+    // owner-scoped RLS rights) is gone.
+    await unregisterCurrentDeviceToken().catch(() => {});
+    // The edge function reads the user id from the forwarded JWT and deletes all
+    // personal data + the auth user with the service role. A non-2xx surfaces as
+    // `error` and nothing local is cleared, so the user stays signed in.
+    const { error } = await supabase.functions.invoke('delete-account');
+    if (error) return { error: sv.profile.deleteAccount.failed };
+    // Account is gone. Clear the now-orphaned local session (local scope — the
+    // server token is already invalid) + the cached profile; the auth listener
+    // then routes back to sign-in.
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    queryClient.removeQueries({ queryKey: queryKeys.profile });
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // No native Google session — nothing to clear.
+    }
+    return {};
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -194,6 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendMagicLink,
       exchangeMagicLinkCode,
       signOut,
+      deleteAccount,
     }),
     [
       session,
@@ -203,6 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendMagicLink,
       exchangeMagicLinkCode,
       signOut,
+      deleteAccount,
     ],
   );
 

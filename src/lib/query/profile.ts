@@ -48,6 +48,35 @@ export function myProfileQueryOptions() {
   return queryOptions({ queryKey: queryKeys.profile, queryFn: fetchMyProfile });
 }
 
+export type MemberSummary = { userId: string; displayName: string | null; avatarUrl: string | null };
+
+/**
+ * Resolve display names (+ avatars) for a set of user ids — used by the blocked-
+ * members management screen, where we only persist ids locally. Order follows the
+ * input; ids with no profile row still appear (name null) so they remain
+ * unblockable.
+ */
+export async function fetchProfilesByIds(userIds: string[]): Promise<MemberSummary[]> {
+  if (userIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('user_id,display_name,avatar_path')
+    .in('user_id', userIds);
+  if (error) throw error;
+  const rows = (data ?? []) as { user_id: string; display_name: string | null; avatar_path: string | null }[];
+  const byId = new Map(rows.map((r) => [r.user_id, r]));
+  return Promise.all(
+    userIds.map(async (userId) => {
+      const row = byId.get(userId);
+      return {
+        userId,
+        displayName: row?.display_name ?? null,
+        avatarUrl: row ? await signedUrlFor(row.avatar_path) : null,
+      };
+    }),
+  );
+}
+
 /**
  * Create/update the user's own profile (`upsertMyProfileFn`). `is_admin` is
  * never set here (kept on conflict, defaults false on insert). Old-avatar

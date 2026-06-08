@@ -10,6 +10,7 @@ import { HeaderButton } from '@/components/header-button';
 import { ALERT, CLOCK, Icon, LOCATION } from '@/components/icon';
 import { ObservationMap } from '@/components/observation-map';
 import { PressableScale } from '@/components/pressable-scale';
+import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
@@ -162,22 +163,28 @@ export default function ObservationDetailScreen() {
     );
   }
 
-  const canEdit = !!q.data && !!user && q.data.userId === user.id;
+  const isMine = !!data && !!user && data.userId === user.id;
+  // The owner edits; everyone else gets the report/block overflow (Apple 1.2).
+  const headerRight = isMine
+    ? () => (
+        <HeaderButton
+          title={sv.observation.editButton}
+          onPress={() => router.push({ pathname: '/observation/[id]/edit', params: { id } })}
+        />
+      )
+    : data
+      ? () => (
+          <ReportBlockButton
+            userId={data.userId}
+            displayName={data.observerDisplayName}
+            reportRef={sv.moderation.reportObservationRef(id)}
+          />
+        )
+      : undefined;
 
   return (
     <>
-      {canEdit ? (
-        <Stack.Screen
-          options={{
-            headerRight: () => (
-              <HeaderButton
-                title={sv.observation.editButton}
-                onPress={() => router.push({ pathname: '/observation/[id]/edit', params: { id } })}
-              />
-            ),
-          }}
-        />
-      ) : null}
+      <Stack.Screen options={{ headerRight }} />
       <Screen inset="sub">{body}</Screen>
     </>
   );

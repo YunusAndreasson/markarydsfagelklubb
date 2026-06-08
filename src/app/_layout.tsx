@@ -145,7 +145,7 @@ function ThemedNavigation() {
           <Stack.Screen name="onboarding" />
         </Stack.Protected>
         {/* Signed in + onboarded: the app. `(tabs)` is the bottom-tab shell
-            (Obsar · Larm · Profil) and owns "/"; observation/member routes
+            (Hem · Larm · Profil) and owns "/"; observation/member routes
             push over it; `kitchensink` is the M2 primitives showcase, gated to
             `__DEV__` in the screen itself so it can't be reached in production. */}
         <Stack.Protected guard={!!session && hasProfile}>
@@ -161,6 +161,10 @@ function ThemedNavigation() {
           <Stack.Screen
             name="member/[userId]"
             options={{ headerShown: true, title: sv.member.title }}
+          />
+          <Stack.Screen
+            name="blocked"
+            options={{ headerShown: true, title: sv.blockedMembers.title }}
           />
           <Stack.Screen name="kitchensink" />
         </Stack.Protected>

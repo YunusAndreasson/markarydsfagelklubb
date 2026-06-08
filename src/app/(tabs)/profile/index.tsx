@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import Constants from 'expo-constants';
+import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { SIGN_OUT, type IconName } from '@/components/icon';
+import { SIGN_OUT, TRASH, type IconName } from '@/components/icon';
 import { ImageUpload, type ImageUploadHandle } from '@/components/image-upload';
 import { LocationPermissionSection } from '@/components/location-permission-section';
 import { NotificationPermissionSection } from '@/components/notification-permission-section';
@@ -16,8 +17,10 @@ import { SettingsRow } from '@/components/settings/settings-row';
 import { ThemePicker } from '@/components/theme-picker';
 import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/legal';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useBlockedUsers } from '@/lib/blocks';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -37,9 +40,13 @@ type Persisted = { displayName: string; phone: string | null; avatarPath: string
 // appearance, the device-permission rows (M8 location · M14 push), and sign-out
 // round it out. The tab nests a native Stack (`profile/_layout.tsx`).
 export default function ProfileScreen() {
-  const { signOut, user } = useAuth();
+  const { signOut, deleteAccount, user } = useAuth();
   const { data: profile } = useQuery(myProfileQueryOptions());
   const uploadRef = useRef<ImageUploadHandle>(null);
+  const [deleting, setDeleting] = useState(false);
+  // Only surface the block-management row once a block exists — no clutter for the
+  // (typical) member who never needs it.
+  const hasBlocked = useBlockedUsers().size > 0;
 
   const [name, setName] = useState(profile?.displayName ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -127,6 +134,38 @@ export default function ProfileScreen() {
     ]);
   }
 
+  // Permanent account deletion (Apple 5.1.1(v) / Google). Irreversible, so it's
+  // gated behind an explicit destructive confirm; on success the session clears
+  // and the root gate routes back to sign-in (this screen unmounts).
+  function confirmDeleteAccount() {
+    Alert.alert(
+      sv.profile.deleteAccount.confirmTitle,
+      sv.profile.deleteAccount.confirmMessage,
+      [
+        { text: sv.common.cancel, style: 'cancel' },
+        {
+          text: sv.profile.deleteAccount.confirm,
+          style: 'destructive',
+          onPress: () => {
+            setDeleting(true);
+            void deleteAccount().then((res) => {
+              if (res.error) {
+                setDeleting(false);
+                hapticError();
+                showToast(res.error, 'error');
+              }
+              // On success the screen unmounts with the session — no cleanup.
+            });
+          },
+        },
+      ],
+    );
+  }
+
+  function openLegal(url: string) {
+    void Linking.openURL(url);
+  }
+
   return (
     <Screen keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Stack.Screen
@@ -212,6 +251,39 @@ export default function ProfileScreen() {
           label={sv.profile.signOut}
           accessory="chevron"
           onPress={confirmSignOut}
+          disabled={deleting}
+        />
+        <SettingsRow
+          icon={TRASH}
+          label={deleting ? sv.profile.deleteAccount.working : sv.profile.deleteAccount.row}
+          destructive
+          accessory="chevron"
+          onPress={confirmDeleteAccount}
+          disabled={deleting}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title={sv.profile.aboutSection}>
+        {hasBlocked ? (
+          <SettingsRow
+            label={sv.profile.blockedMembers}
+            accessory="chevron"
+            onPress={() => router.push('/blocked')}
+          />
+        ) : null}
+        <SettingsRow
+          label={sv.profile.privacyPolicy}
+          accessory="chevron"
+          onPress={() => openLegal(PRIVACY_POLICY_URL)}
+        />
+        <SettingsRow
+          label={sv.profile.termsOfService}
+          accessory="chevron"
+          onPress={() => openLegal(TERMS_URL)}
+        />
+        <SettingsRow
+          label={sv.profile.appVersion}
+          value={Constants.expoConfig?.version ?? '1.0.0'}
         />
       </SettingsGroup>
     </Screen>

@@ -1,6 +1,6 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -8,6 +8,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/legal';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { sharedStyles } from '@/constants/shared-styles';
@@ -203,6 +204,29 @@ export default function SignInScreen() {
                 </PressableScale>
               </View>
             )}
+
+            {/* Standard terms/privacy consent line (Apple requires an agreement for
+                apps with user-generated content). Small + muted; links open in the
+                browser. Shown in every mode so it's always present at sign-in. */}
+            <ThemedText type="small" themeColor="mutedForeground" style={styles.legal}>
+              {sv.login.legalPrefix}
+              <ThemedText
+                type="small"
+                themeColor="tint"
+                onPress={() => void Linking.openURL(TERMS_URL)}
+              >
+                {sv.login.legalTerms}
+              </ThemedText>
+              {sv.login.legalAnd}
+              <ThemedText
+                type="small"
+                themeColor="tint"
+                onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+              >
+                {sv.login.legalPrivacy}
+              </ThemedText>
+              {sv.login.legalSuffix}
+            </ThemedText>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -221,6 +245,7 @@ const styles = StyleSheet.create({
   form: { gap: Spacing.three },
   appleButton: { height: 52 },
   centerText: { textAlign: 'center' },
+  legal: { textAlign: 'center', paddingHorizontal: Spacing.two },
   linkRow: { alignItems: 'center', paddingVertical: Spacing.two },
   divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   rule: { flex: 1, height: StyleSheet.hairlineWidth },

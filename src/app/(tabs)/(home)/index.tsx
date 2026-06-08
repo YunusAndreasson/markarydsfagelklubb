@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useMotion } from '@/hooks/use-motion';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
+import { useBlockedUsers } from '@/lib/blocks';
 import { groupFeed, type FeedBucket } from '@/lib/feed';
 import {
   activeFilterCount,
@@ -32,10 +33,10 @@ import { sv } from '@/lib/i18n/sv';
 import { listEntrance } from '@/lib/motion';
 import { feedQueryOptions } from '@/lib/query/observations';
 
-// Obsar — the app's home tab and first data-driven screen: the club's
+// Hem — the app's home tab and first data-driven screen: the club's
 // last-14-days observations, grouped by Stockholm calendar day, newest first.
 // The "dashboard" IS this list (web parity — no stats). The tab nests a native
-// Stack (see `(home)/_layout.tsx`), so the "Obsar" title is the native (large,
+// Stack (see `(home)/_layout.tsx`), so the "Hem" title is the native (large,
 // on iOS) header; the in-content SectionHeaders here are the per-day group
 // labels. `Screen`'s default `automatic` inset drives the large-title collapse.
 //
@@ -60,7 +61,13 @@ export default function FeedScreen() {
   const [filter, setFilter] = useState<FeedFilter>(EMPTY_FILTER);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const data = useMemo(() => feed.data ?? [], [feed.data]);
+  // Blocked members (Apple 1.2) drop out before anything else, so they're absent
+  // from the list, the filter options, and the counts alike.
+  const blocked = useBlockedUsers();
+  const data = useMemo(
+    () => (feed.data ?? []).filter((o) => !blocked.has(o.userId)),
+    [feed.data, blocked],
+  );
   const options = useMemo(() => deriveFilterOptions(data), [data]);
   const filtered = useMemo(() => applyFeedFilter(data, filter, user?.id), [data, filter, user?.id]);
   const grouped = useMemo(() => groupFeed(filtered), [filtered]);

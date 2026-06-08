@@ -19,7 +19,7 @@
       "package": "nu.markarydsfagelklubb.mafk",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#137D41"
+        "backgroundColor": "#000000"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [

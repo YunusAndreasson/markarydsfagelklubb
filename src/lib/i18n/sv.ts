@@ -21,7 +21,7 @@ export const sv = {
     logOut: 'Logga ut',
   },
   bottomNav: {
-    feed: 'Obsar',
+    feed: 'Hem',
     newObservation: 'Larm',
     locations: 'Lokaler',
     profile: 'Profil',
@@ -50,6 +50,13 @@ export const sv = {
     sentHelp: 'Öppna länken på den här enheten. Du kan stänga sidan.',
     sentSpamHint: 'Hittar du inget mejl? Kolla skräpposten — det kan ta någon minut.',
     useDifferentEmail: 'Använd en annan e-post',
+    // Liten samtyckesrad (App Store kräver villkor/integritetspolicy för appar med
+    // innehåll som användare skapar). Delarna sätts ihop till klickbara länkar.
+    legalPrefix: 'Genom att logga in godkänner du våra ',
+    legalTerms: 'användarvillkor',
+    legalAnd: ' och ',
+    legalPrivacy: 'integritetspolicy',
+    legalSuffix: '.',
     signedIn: 'Inloggad.',
     verifying: 'Verifierar inloggningslänk…',
     tryAgain: 'Försök igen',
@@ -78,13 +85,13 @@ export const sv = {
     error: 'Kunde inte spara. Försök igen.',
   },
   feed: {
-    title: 'Obsar',
+    title: 'Hem',
     empty: 'Inga observationer ännu. Bli den första att larma!',
     today: 'Idag',
     yesterday: 'Igår',
     thisWeek: 'Denna vecka',
     earlier: 'Tidigare',
-    newObservation: 'Larm',
+    newObservation: 'Larma',
     mine: 'Min',
     locationOnMap: 'På karta',
     refreshed: 'Observationerna uppdaterade',
@@ -144,6 +151,35 @@ export const sv = {
     reportedHeading: 'Rapporterat',
     empty: 'Inga rapporter de senaste 14 dagarna.',
     notFound: 'Medlemmen hittades inte.',
+    blockedTitle: 'Du har blockerat den här medlemmen',
+    blockedMessage: 'Du ser inte deras fynd. Tryck för att ångra.',
+  },
+  // Anmälan/blockering av innehåll (krävs av App Store för innehåll som
+  // användare skapar). Anmälan öppnar e-post till klubben; blockering döljer en
+  // medlems innehåll lokalt på enheten.
+  moderation: {
+    actionsLabel: 'Fler val',
+    report: 'Anmäl innehåll',
+    block: (name: string) => `Blockera ${name}`,
+    unblock: 'Avblockera',
+    blockConfirmTitle: (name: string) => `Blockera ${name}?`,
+    blockConfirmMessage:
+      'Du ser inte längre den här medlemmens fynd. Du kan ångra det under Profil → Blockerade medlemmar.',
+    blockConfirm: 'Blockera',
+    blocked: 'Medlemmen blockerades.',
+    unblocked: 'Blockeringen togs bort.',
+    reportSubject: (ref: string) => `Anmälan av innehåll (${ref})`,
+    reportBody: (ref: string) =>
+      `Jag vill anmäla följande innehåll i Markaryds Fågelklubb-appen: ${ref}\n\nBeskriv vad som är olämpligt:\n`,
+    reportFailed: 'Kunde inte öppna e-post för anmälan.',
+    reportObservationRef: (id: string) => `observation ${id}`,
+    reportMemberRef: (name: string) => `medlem ${name}`,
+  },
+  blockedMembers: {
+    title: 'Blockerade medlemmar',
+    empty: 'Du har inte blockerat någon.',
+    help: 'Blockerade medlemmars fynd döljs i flödet. Tryck på en medlem för att ångra.',
+    unblock: 'Avblockera',
   },
   // Rariteten visas som en färgad sifferbricka (0–5, där 0 = mest sällsynt och
   // 5 = allmän). Den här frasen finns för skärmläsare så att nivån annonseras.
@@ -151,7 +187,7 @@ export const sv = {
     a11y: (level: number) => `Raritetsnivå ${level}`,
   },
   observation: {
-    titleNew: 'Larm',
+    titleNew: 'Nytt larm',
     titleEdit: 'Redigera',
     titleDetail: 'Observation',
     speciesLabel: 'Art',
@@ -215,7 +251,7 @@ export const sv = {
       'Platsdelning är avstängd. Slå på den i enhetens inställningar — eller markera fyndplatsen direkt på kartan.',
     commentLabel: 'Kommentar',
     commentPlaceholder: 'T.ex. beteende, miljö, antal hanar/honor…',
-    submitNew: 'Skicka',
+    submitNew: 'Larma',
     submitEdit: 'Spara ändringar',
     submitting: 'Sparar…',
     deleteButton: 'Radera',
@@ -321,6 +357,22 @@ export const sv = {
     status: { on: 'På', off: 'Av', blocked: 'Blockerad' },
     signOutConfirmTitle: 'Logga ut?',
     signOutConfirmMessage: 'Du kan logga in igen när som helst.',
+    // Permanent account deletion (krävs av App Store / Google Play).
+    deleteAccount: {
+      row: 'Radera konto',
+      confirmTitle: 'Radera ditt konto?',
+      confirmMessage:
+        'Det här går inte att ångra. Ditt konto, din profil, dina fynd och dina foton raderas permanent.',
+      confirm: 'Radera permanent',
+      working: 'Raderar konto…',
+      failed: 'Kunde inte radera kontot. Försök igen.',
+    },
+    // "Om appen" — länkar som öppnas i webbläsaren.
+    aboutSection: 'Om appen',
+    blockedMembers: 'Blockerade medlemmar',
+    privacyPolicy: 'Integritetspolicy',
+    termsOfService: 'Användarvillkor',
+    appVersion: 'Version',
     installSection: 'Lägg till på hemskärm',
     installPrompt: 'Öppna appen direkt från hemskärmen.',
     installButton: 'Lägg till',

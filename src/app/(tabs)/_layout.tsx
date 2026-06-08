@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { type ComponentProps } from 'react';
@@ -13,8 +12,9 @@ import { sv } from '@/lib/i18n/sv';
 // Material bottom navigation on Android. Icons are platform-native — SF Symbols
 // on iOS (`sf`, no assets), @expo/vector-icons Material glyphs on Android via an
 // image `src`. Mirrors edenmind's tab shell; here the three triggers are the
-// mafk IA: Obsar · Larm · Profil. "Larm" is an ordinary center tab
-// (not a FAB) — the create form lands on it in M12.
+// mafk IA: Hem · Larm · Profil — all nouns (destinations). "Larm" is an ordinary
+// center tab (not a FAB) where the create form lands; the action verb ("Larma")
+// lives on that form's submit button, not on the tab.
 const { Trigger } = NativeTabs;
 
 // Default tab when entering the group at "/". `anchor` is the SDK 54+ key.
@@ -58,25 +58,25 @@ export default function TabsLayout() {
     <NativeTabs {...barProps} screenListeners={screenListeners}>
       <Trigger name="(home)">
         <Trigger.Label>{sv.bottomNav.feed}</Trigger.Label>
-        {/* Kikare = "titta på fynd" — on-brand for a bird club, and avoids the
-            "bell = notifications inbox" misread. SF Symbols has binoculars; on
-            Android it lives in MaterialCommunityIcons (not MaterialIcons). */}
+        {/* "Hem" = the landing/feed. A house makes the home tab unmistakable and
+            keeps the hierarchy clear (Hem = content, Larm = the action). */}
         {Platform.OS === 'ios' ? (
-          <Trigger.Icon sf="binoculars.fill" />
+          <Trigger.Icon sf="house.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialCommunityIcons} name="binoculars" />} />
+          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="home" />} />
         )}
       </Trigger>
       <Trigger name="new">
         <Trigger.Label>{sv.bottomNav.newObservation}</Trigger.Label>
-        {/* "Larm" = alert the club to a fynd — the bell sits on the *action*
-            (which fires the push fan-out), where it reads right; on a content tab
-            it would misread as a notifications inbox. `notifications` is already in
-            MaterialIcons (no extra font, unlike the binoculars glyph). */}
+        {/* "Larm" stays a noun (a destination, like Hem/Profil). A megaphone =
+            "announce a fynd to the club" — it reads as broadcasting, not the
+            notifications inbox a bell implies. The action verb ("Larma") lives on
+            the form's submit button, not here. MaterialIcons `campaign` is the
+            megaphone glyph — same font as home/person, so no extra font ships. */}
         {Platform.OS === 'ios' ? (
-          <Trigger.Icon sf="bell.fill" />
+          <Trigger.Icon sf="megaphone.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="notifications" />} />
+          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="campaign" />} />
         )}
       </Trigger>
       <Trigger name="profile">
