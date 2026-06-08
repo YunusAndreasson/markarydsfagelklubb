@@ -76,8 +76,10 @@ export const SIGN_OUT: IconName = { sf: 'rectangle.portrait.and.arrow.right', ma
 /** Overflow — opens the report/block menu on another member's content. */
 export const MORE: IconName = { sf: 'ellipsis.circle', material: 'more-horiz' };
 
-/** Blocked member — the hidden-content state on a blocked member's profile. */
-export const BLOCKED: IconName = { sf: 'hand.raised.fill', material: 'block' };
+/** Hidden member — the "their fynd are hidden" state on a member's profile.
+ *  (User-facing wording is "dölj/visa", so an eye-slash reads softer than a
+ *  raised hand.) */
+export const BLOCKED: IconName = { sf: 'eye.slash', material: 'visibility-off' };
 
 /**
  * A one-shot bounce for peak/celebration glyphs. `repeating: false` plays the

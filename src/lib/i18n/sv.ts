@@ -151,35 +151,35 @@ export const sv = {
     reportedHeading: 'Rapporterat',
     empty: 'Inga rapporter de senaste 14 dagarna.',
     notFound: 'Medlemmen hittades inte.',
-    blockedTitle: 'Du har blockerat den här medlemmen',
-    blockedMessage: 'Du ser inte deras fynd. Tryck för att ångra.',
+    blockedTitle: 'Du har dolt den här medlemmens fynd',
+    blockedMessage: 'Du ser inte deras fynd just nu. Tryck för att visa igen.',
   },
-  // Anmälan/blockering av innehåll (krävs av App Store för innehåll som
-  // användare skapar). Anmälan öppnar e-post till klubben; blockering döljer en
-  // medlems innehåll lokalt på enheten.
+  // Mjukt formulerad moderering (App Store kräver att man kan dölja innehåll och
+  // höra av sig om olämpligt innehåll — även i en liten klubb). "Dölj" göms
+  // lokalt på enheten; "Meddela klubben" öppnar e-post till klubben.
   moderation: {
     actionsLabel: 'Fler val',
-    report: 'Anmäl innehåll',
-    block: (name: string) => `Blockera ${name}`,
-    unblock: 'Avblockera',
-    blockConfirmTitle: (name: string) => `Blockera ${name}?`,
+    report: 'Meddela klubben',
+    block: (name: string) => `Dölj fynd från ${name}`,
+    unblock: 'Visa igen',
+    blockConfirmTitle: (name: string) => `Dölj fynd från ${name}?`,
     blockConfirmMessage:
-      'Du ser inte längre den här medlemmens fynd. Du kan ångra det under Profil → Blockerade medlemmar.',
-    blockConfirm: 'Blockera',
-    blocked: 'Medlemmen blockerades.',
-    unblocked: 'Blockeringen togs bort.',
-    reportSubject: (ref: string) => `Anmälan av innehåll (${ref})`,
+      'Du slutar se den här medlemmens fynd i flödet. Du kan visa dem igen när som helst under Profil → Dolda medlemmar.',
+    blockConfirm: 'Dölj',
+    blocked: 'Medlemmens fynd döljs nu.',
+    unblocked: 'Medlemmens fynd visas igen.',
+    reportSubject: (ref: string) => `Synpunkt på innehåll (${ref})`,
     reportBody: (ref: string) =>
-      `Jag vill anmäla följande innehåll i Markaryds Fågelklubb-appen: ${ref}\n\nBeskriv vad som är olämpligt:\n`,
-    reportFailed: 'Kunde inte öppna e-post för anmälan.',
+      `Jag vill uppmärksamma klubben på följande innehåll i appen: ${ref}\n\nVad gäller det?\n`,
+    reportFailed: 'Kunde inte öppna e-post.',
     reportObservationRef: (id: string) => `observation ${id}`,
     reportMemberRef: (name: string) => `medlem ${name}`,
   },
   blockedMembers: {
-    title: 'Blockerade medlemmar',
-    empty: 'Du har inte blockerat någon.',
-    help: 'Blockerade medlemmars fynd döljs i flödet. Tryck på en medlem för att ångra.',
-    unblock: 'Avblockera',
+    title: 'Dolda medlemmar',
+    empty: 'Du har inte dolt någon.',
+    help: 'Dolda medlemmars fynd visas inte i flödet. Tryck på en medlem för att visa igen.',
+    unblock: 'Visa igen',
   },
   // Rariteten visas som en färgad sifferbricka (0–5, där 0 = mest sällsynt och
   // 5 = allmän). Den här frasen finns för skärmläsare så att nivån annonseras.
@@ -369,7 +369,7 @@ export const sv = {
     },
     // "Om appen" — länkar som öppnas i webbläsaren.
     aboutSection: 'Om appen',
-    blockedMembers: 'Blockerade medlemmar',
+    blockedMembers: 'Dolda medlemmar',
     privacyPolicy: 'Integritetspolicy',
     termsOfService: 'Användarvillkor',
     appVersion: 'Version',
