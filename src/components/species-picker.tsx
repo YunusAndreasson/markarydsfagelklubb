@@ -171,6 +171,17 @@ export function SpeciesPicker({
                 accessibilityState={{ selected: unlisted.id === value }}
                 style={[styles.unlisted, unlisted.id === value && { backgroundColor: theme.muted }]}
               >
+                {/* Same chip-style badge as every other row (so it isn't missed),
+                    but a markedly red "0" — an unlisted/new species is the rarest
+                    find (rarity 0), the most notable thing to larma. */}
+                <View style={[styles.rarityBadge, { backgroundColor: theme.destructive }]}>
+                  <ThemedText
+                    type="micro"
+                    style={[styles.rarityNum, { color: theme.badgeForeground }]}
+                  >
+                    0
+                  </ThemedText>
+                </View>
                 <View style={styles.rowText}>
                   <ThemedText
                     type="smallBold"
