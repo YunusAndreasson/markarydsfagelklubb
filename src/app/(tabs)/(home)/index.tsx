@@ -21,6 +21,7 @@ import { useMotion } from '@/hooks/use-motion';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { useBlockedUsers } from '@/lib/blocks';
+import { errorCopy } from '@/lib/errors';
 import { groupFeed, type FeedBucket } from '@/lib/feed';
 import {
   activeFilterCount,
@@ -128,8 +129,7 @@ export default function FeedScreen() {
       <StateBlock
         tone="error"
         icon={ALERT}
-        title={sv.errors.somethingWrong}
-        message={sv.errors.somethingWrongHelp}
+        {...errorCopy(feed.error)}
         action={{ label: sv.errors.tryAgain, onPress: () => void feed.refetch(), loading: feed.isFetching }}
       />
     );

@@ -21,6 +21,7 @@ import { useMotion } from '@/hooks/use-motion';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { unblockUser, useBlockedUsers } from '@/lib/blocks';
+import { errorCopy } from '@/lib/errors';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { listEntrance } from '@/lib/motion';
@@ -84,8 +85,7 @@ export default function MemberScreen() {
       <StateBlock
         tone="error"
         icon={ALERT}
-        title={sv.errors.somethingWrong}
-        message={sv.errors.somethingWrongHelp}
+        {...errorCopy(q.error)}
         action={{ label: sv.errors.tryAgain, onPress: () => void q.refetch(), loading: q.isFetching }}
       />
     );

@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode } from '@/hooks/use-theme-mode';
+import { errorCopy } from '@/lib/errors';
 import { sv } from '@/lib/i18n/sv';
 import { observationQueryOptions } from '@/lib/query/observations';
 import { rarityFor, rarityStyle } from '@/lib/rarity';
@@ -65,8 +66,7 @@ export default function ObservationDetailScreen() {
       <StateBlock
         tone="error"
         icon={ALERT}
-        title={sv.errors.somethingWrong}
-        message={sv.errors.somethingWrongHelp}
+        {...errorCopy(q.error)}
         action={{ label: sv.errors.tryAgain, onPress: () => void q.refetch(), loading: q.isFetching }}
       />
     );

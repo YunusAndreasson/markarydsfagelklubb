@@ -432,6 +432,10 @@ export const sv = {
     somethingWrong: 'Något gick fel',
     somethingWrongHelp:
       'Vi kunde inte visa sidan just nu. Försök igen — funkar det inte, gå tillbaka till start.',
+    // Visas när felet ser ut att bero på nätverket (vanligast vid dålig täckning).
+    offline: 'Ingen anslutning',
+    offlineHelp:
+      'Vi når inte servern just nu. Kontrollera din uppkoppling och försök igen.',
   },
   theme: {
     toggle: 'Växla tema',
