@@ -1,4 +1,5 @@
-import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -18,7 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemeModeProvider, useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 import { configureNotificationHandler } from '@/lib/notifications';
-import { queryClient } from '@/lib/query-client';
+import { persister, PERSIST_BUSTER, PERSIST_MAX_AGE, queryClient } from '@/lib/query-client';
 import { myProfileQueryOptions } from '@/lib/query/profile';
 
 // Hold the splash until auth + profile resolve, so a warm start with a persisted
@@ -35,13 +36,18 @@ export default function RootLayout() {
     // later milestones (maps, sheets, swipes) receives native touch events.
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeModeProvider>
-        <QueryClientProvider client={queryClient}>
+        {/* Persist the query cache to disk so the app opens to the last-known
+            feed/profile offline, then refetches when online. */}
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, maxAge: PERSIST_MAX_AGE, buster: PERSIST_BUSTER }}
+        >
           <AuthProvider>
             <SafeAreaProvider>
               <ThemedNavigation />
             </SafeAreaProvider>
           </AuthProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </ThemeModeProvider>
     </GestureHandlerRootView>
   );

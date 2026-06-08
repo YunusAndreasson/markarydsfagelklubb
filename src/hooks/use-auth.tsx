@@ -28,8 +28,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 
 import { sv } from '@/lib/i18n/sv';
 import { createStrictContext } from '@/lib/create-strict-context';
-import { queryClient } from '@/lib/query-client';
-import { queryKeys } from '@/lib/query/keys';
+import { persister, queryClient } from '@/lib/query-client';
 import { unregisterCurrentDeviceToken } from '@/lib/query/push-tokens';
 import { supabase } from '@/lib/supabase';
 import { emailInput } from '@/lib/validation/auth';
@@ -178,9 +177,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // needs the user's auth).
     await unregisterCurrentDeviceToken().catch(() => {});
     await supabase.auth.signOut();
-    // Drop the previous user's cached profile so the gate + screens never show
-    // it to whoever signs in next on this device.
-    queryClient.removeQueries({ queryKey: queryKeys.profile });
+    // Drop ALL cached + persisted data so the previous user's feed/profile is
+    // never shown (or rehydrated from disk) to whoever signs in next on this
+    // device. `clear()` empties memory; `removeClient()` wipes the on-disk cache.
+    queryClient.clear();
+    void persister.removeClient();
     // Best-effort: also clear the native Google session so the account picker
     // reappears next time instead of silently reusing the last account.
     try {
@@ -200,10 +201,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.functions.invoke('delete-account');
     if (error) return { error: sv.profile.deleteAccount.failed };
     // Account is gone. Clear the now-orphaned local session (local scope — the
-    // server token is already invalid) + the cached profile; the auth listener
-    // then routes back to sign-in.
+    // server token is already invalid) + all cached/persisted data; the auth
+    // listener then routes back to sign-in.
     await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-    queryClient.removeQueries({ queryKey: queryKeys.profile });
+    queryClient.clear();
+    void persister.removeClient();
     try {
       await GoogleSignin.signOut();
     } catch {
