@@ -107,7 +107,7 @@ export default function KitchenSink() {
   if (!__DEV__) return <Redirect href="/" />;
 
   return (
-    <Screen>
+    <Screen keyboardAware>
       <SectionHeader
         title="Markaryds Fågelklubb"
         caption="Designsystem — tema, typografi och komponenter (M2)"

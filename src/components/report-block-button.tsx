@@ -81,9 +81,9 @@ export function ReportBlockButton({
       accessibilityRole="button"
       accessibilityLabel={sv.moderation.actionsLabel}
     >
-      {/* Deliberately understated: a muted overflow glyph, not a brand-tinted CTA —
-          moderation is a safety affordance, not a feature to advertise. */}
-      <Icon name={MORE} size={20} color={theme.mutedForeground} />
+      {/* Understated in COLOR (muted, not a brand-tinted CTA) but sized like a
+          normal nav-bar glyph so it's comfortably tappable on the iOS glass bar. */}
+      <Icon name={MORE} size={26} color={theme.mutedForeground} />
     </PressableScale>
   );
 }

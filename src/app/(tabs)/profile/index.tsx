@@ -167,7 +167,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <Screen keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+    <Screen keyboardAware keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Stack.Screen
         options={{
           headerRight: () => (
