@@ -6,19 +6,19 @@
  * objectionable content. These point at the club's web presence
  * (markarydsfagelklubb.nu).
  *
- * ⚠️ Before submitting to the App Store / Play Store, make sure
- * `PRIVACY_POLICY_URL` and `TERMS_URL` resolve to real, published pages — a
- * 404 here is itself a rejection cause. Confirm the exact paths with the club.
+ * These point at the club's published pages (verified live 2026-06-09). If the
+ * club moves them, update the slugs below — a 404 here is itself a store
+ * rejection cause.
  */
 
 /** Club website root. */
-export const CLUB_WEBSITE_URL = 'https://www.markarydsfagelklubb.nu';
+export const CLUB_WEBSITE_URL = 'https://markarydsfagelklubb.nu';
 
 /** Published privacy policy (store-required). */
-export const PRIVACY_POLICY_URL = `${CLUB_WEBSITE_URL}/integritetspolicy`;
+export const PRIVACY_POLICY_URL = `${CLUB_WEBSITE_URL}/integritetspolicy-markaryds-fagelklubb-appen/`;
 
 /** Terms of use / EULA (Apple UGC apps need an agreement). */
-export const TERMS_URL = `${CLUB_WEBSITE_URL}/anvandarvillkor`;
+export const TERMS_URL = `${CLUB_WEBSITE_URL}/anvandarvillkor-markaryds-fagelklubb-appen/`;
 
 /**
  * Where user reports of objectionable content + abuse are sent. A mailto is an

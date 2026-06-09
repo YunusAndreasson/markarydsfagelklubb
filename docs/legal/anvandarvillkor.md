@@ -37,7 +37,7 @@ kan även dölja enskilda medlemmars fynd direkt i appen.
 ## 5. Personuppgifter
 
 Behandlingen av personuppgifter beskrivs i vår
-[Integritetspolicy](https://www.markarydsfagelklubb.nu/integritetspolicy).
+[Integritetspolicy](https://markarydsfagelklubb.nu/integritetspolicy-markaryds-fagelklubb-appen/).
 
 ## 6. Tillgänglighet och ansvar
 
