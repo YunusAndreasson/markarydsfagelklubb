@@ -182,9 +182,22 @@ export const sv = {
     unblock: 'Visa igen',
   },
   // Rariteten visas som en färgad sifferbricka (0–5, där 0 = mest sällsynt och
-  // 5 = allmän). Den här frasen finns för skärmläsare så att nivån annonseras.
+  // 5 = allmän). `a11y` annonserar nivån för skärmläsare; `levelLabel` ger
+  // sifferbrickan ett ord i flödesfiltret (annars vore en färgad siffra kryptisk).
   rarity: {
+    label: 'Raritet',
     a11y: (level: number) => `Raritetsnivå ${level}`,
+    levelLabel: (level: number) =>
+      (
+        [
+          'Mycket sällsynt',
+          'Sällsynt',
+          'Ovanlig',
+          'Mindre allmän',
+          'Ganska allmän',
+          'Allmän',
+        ] as const
+      )[level] ?? `Nivå ${level}`,
   },
   observation: {
     titleNew: 'Nytt larm',

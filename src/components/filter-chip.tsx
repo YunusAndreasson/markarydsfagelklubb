@@ -8,6 +8,7 @@
  * Pill geometry mirrors `Badge` (rounded-pill, token spacing) but with a press
  * target ≥ the row's tap minimum.
  */
+import { type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { CLOSE, Icon } from '@/components/icon';
@@ -23,6 +24,8 @@ export type FilterChipProps = {
   selected?: boolean;
   /** Optional trailing count, e.g. "· 3". */
   count?: number;
+  /** Optional leading element (e.g. the rarity prefix badge). */
+  leading?: ReactNode;
   onPress?: () => void;
   /** Removable mode: shows a trailing ✕ and makes the chip a remove target. */
   onRemove?: () => void;
@@ -33,6 +36,7 @@ export function FilterChip({
   label,
   selected = false,
   count,
+  leading,
   onPress,
   onRemove,
   accessibilityLabel,
@@ -54,6 +58,7 @@ export function FilterChip({
       accessibilityLabel={accessibilityLabel ?? label}
       style={[styles.pill, { backgroundColor: fill }]}
     >
+      {leading}
       <ThemedText type="smallBold" numberOfLines={1} style={{ color: textColor }}>
         {label}
       </ThemedText>

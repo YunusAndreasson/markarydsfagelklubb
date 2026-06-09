@@ -1,29 +1,28 @@
 /**
  * The Obsar feed filter — a bottom sheet over `PickerSheet`. Four dimensions:
- * scope (Alla/Mina), aktivitet, plats, art. Filters apply *live* to the parent's
- * state as chips toggle (no Apply step); the footer's primary button just closes
- * the sheet and doubles as result-count feedback ("Visa N träffar").
+ * scope (Alla/Mina), raritet, aktivitet, plats. Filters apply *live* to the
+ * parent's state as chips toggle (no Apply step); the footer's primary button
+ * just closes the sheet and doubles as result-count feedback ("Visa N träffar").
  *
- * Section labels reuse `observation.*Label`. Options are derived from the feed
- * (see `deriveFilterOptions`), so every chip yields ≥1 result. The body is a
- * single `ScrollView` (no FlatList) — species can be many but is bounded by the
- * 14-day feed and narrowed by the search row.
+ * Section labels reuse `observation.*Label` (+ `rarity.label`). Options are
+ * derived from the feed (see `deriveFilterOptions`), so every chip yields ≥1
+ * result. The body is a single `ScrollView` (no FlatList) — the dimensions are
+ * small (rarity is ≤6 levels, activities/locations bounded by the 14-day feed).
  */
-import { useDeferredValue, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { useMemo } from 'react';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { FilterChip } from '@/components/filter-chip';
-import { Icon, SEARCH } from '@/components/icon';
 import { PickerSheet } from '@/components/picker-sheet';
+import { RarityBadge } from '@/components/rarity-badge';
 import { SectionHeader } from '@/components/section-header';
 import { SegmentedPicker } from '@/components/segmented-picker';
-import { SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import type { FeedFilter, FilterOptions } from '@/lib/feed-filter';
 import { activeFilterCount } from '@/lib/feed-filter';
 import { sv } from '@/lib/i18n/sv';
+import type { RarityLevel } from '@/lib/rarity';
 import type { Activity } from '@/lib/validation/observation';
 
 type Scope = 'all' | 'mine';
@@ -56,9 +55,7 @@ export function FeedFilterSheet({
   onClear,
   onClose,
 }: FeedFilterSheetProps) {
-  const theme = useTheme();
   const { height: winH } = useWindowDimensions();
-  const [query, setQuery] = useState('');
 
   // Activities carry only their raw value from the feed; resolve labels here and
   // sort alphabetically by label (sv), matching the activity picker.
@@ -69,13 +66,6 @@ export function FeedFilterSheet({
         .sort((a, b) => a.label.localeCompare(b.label, 'sv')),
     [options.activities],
   );
-
-  const deferred = useDeferredValue(query);
-  const speciesOptions = useMemo(() => {
-    const q = deferred.trim().toLowerCase();
-    if (!q) return options.species;
-    return options.species.filter((s) => s.swedishName.toLowerCase().includes(q));
-  }, [options.species, deferred]);
 
   const count = activeFilterCount(filter);
 
@@ -97,6 +87,30 @@ export function FeedFilterSheet({
             ariaLabel={sv.filter.scopeLabel}
           />
         </View>
+
+        {options.rarities.length > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title={sv.rarity.label} />
+            <View style={styles.chips}>
+              {options.rarities.map((r) => {
+                const label = sv.rarity.levelLabel(r.level);
+                return (
+                  <FilterChip
+                    key={r.level}
+                    label={label}
+                    count={r.count}
+                    leading={<RarityBadge level={r.level} />}
+                    selected={filter.rarities.includes(r.level)}
+                    accessibilityLabel={`${sv.rarity.a11y(r.level)}, ${label}`}
+                    onPress={() =>
+                      onChange({ ...filter, rarities: toggle<RarityLevel>(filter.rarities, r.level) })
+                    }
+                  />
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
 
         {activityOptions.length > 0 ? (
           <View style={styles.section}>
@@ -138,41 +152,6 @@ export function FeedFilterSheet({
             </View>
           </View>
         ) : null}
-
-        {options.species.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader title={sv.observation.speciesLabel} />
-            <View style={[styles.search, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <Icon name={SEARCH} size={18} color={theme.mutedForeground} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder={sv.observation.speciesSearch}
-                placeholderTextColor={theme.mutedForeground}
-                autoCorrect={false}
-                autoCapitalize="none"
-                returnKeyType="search"
-                clearButtonMode="while-editing"
-                maxFontSizeMultiplier={1.6}
-                style={[styles.searchInput, { color: theme.foreground }]}
-                accessibilityLabel={sv.observation.speciesSearch}
-              />
-            </View>
-            <View style={styles.chips}>
-              {speciesOptions.map((s) => (
-                <FilterChip
-                  key={s.id}
-                  label={s.swedishName}
-                  count={s.count}
-                  selected={filter.speciesIds.includes(s.id)}
-                  onPress={() =>
-                    onChange({ ...filter, speciesIds: toggle(filter.speciesIds, s.id) })
-                  }
-                />
-              ))}
-            </View>
-          </View>
-        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -198,15 +177,6 @@ const styles = StyleSheet.create({
   scroll: { gap: Spacing.four, paddingBottom: Spacing.two },
   section: { gap: Spacing.two },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  search: {
-    ...SurfaceStyles.inputSurface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    minHeight: 48,
-  },
-  searchInput: { flex: 1, paddingVertical: Spacing.two, fontSize: 16 },
   footer: { flexDirection: 'row', gap: Spacing.two, paddingTop: Spacing.two },
   footerButton: { flex: 1 },
 });

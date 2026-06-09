@@ -10,6 +10,7 @@ import { HeaderButton } from '@/components/header-button';
 import { ALERT, TRAY } from '@/components/icon';
 import { ObservationCard } from '@/components/observation-card';
 import { PressableScale } from '@/components/pressable-scale';
+import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SkeletonCard } from '@/components/skeleton';
@@ -77,7 +78,6 @@ export default function FeedScreen() {
   const count = activeFilterCount(filter);
 
   const clearFilter = () => setFilter(EMPTY_FILTER);
-  const speciesName = (id: number) => options.species.find((s) => s.id === id)?.swedishName;
   const locationName = (id: number) => options.locations.find((l) => l.id === id)?.name;
 
   let body: ReactNode;
@@ -177,18 +177,19 @@ export default function FeedScreen() {
                 accessibilityLabel={sv.filter.removeChip(sv.filter.scopeMine)}
               />
             ) : null}
-            {filter.speciesIds.map((id) => {
-              const name = speciesName(id);
-              return name ? (
+            {filter.rarities.map((level) => {
+              const name = sv.rarity.levelLabel(level);
+              return (
                 <FilterChip
-                  key={`s-${id}`}
+                  key={`r-${level}`}
                   label={name}
+                  leading={<RarityBadge level={level} />}
                   onRemove={() =>
-                    setFilter((f) => ({ ...f, speciesIds: f.speciesIds.filter((x) => x !== id) }))
+                    setFilter((f) => ({ ...f, rarities: f.rarities.filter((x) => x !== level) }))
                   }
                   accessibilityLabel={sv.filter.removeChip(name)}
                 />
-              ) : null;
+              );
             })}
             {filter.activities.map((a) => (
               <FilterChip

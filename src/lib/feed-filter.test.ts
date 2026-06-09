@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedObservation } from '@/lib/query/observations'
+import type { RarityLevel } from '@/lib/rarity'
 import type { Activity } from '@/lib/validation/observation'
 import { activeFilterCount, applyFeedFilter, deriveFilterOptions, EMPTY_FILTER } from './feed-filter'
 
@@ -39,10 +40,17 @@ describe('applyFeedFilter', () => {
     expect(applyFeedFilter(data, EMPTY_FILTER)).toHaveLength(2)
   })
 
-  it('filters by species (OR within the dimension)', () => {
-    const data = [obs({ speciesId: 1 }), obs({ speciesId: 2 }), obs({ speciesId: 3 })]
-    const r = applyFeedFilter(data, { ...EMPTY_FILTER, speciesIds: [1, 3] })
-    expect(r.map((o) => o.speciesId).sort()).toEqual([1, 3])
+  it('filters by rarity (OR within the dimension)', () => {
+    const data = [obs({ speciesRarity: 0 }), obs({ speciesRarity: 1 }), obs({ speciesRarity: 5 })]
+    const r = applyFeedFilter(data, { ...EMPTY_FILTER, rarities: [0, 5] })
+    expect(r.map((o) => o.speciesRarity).sort()).toEqual([0, 5])
+  })
+
+  it('treats unlisted species (null rarity) as level 5', () => {
+    const data = [obs({ speciesRarity: null }), obs({ speciesRarity: 0 })]
+    const r = applyFeedFilter(data, { ...EMPTY_FILTER, rarities: [5] })
+    expect(r).toHaveLength(1)
+    expect(r[0]?.speciesRarity).toBeNull()
   })
 
   it('filters by activity and excludes null-activity obs when constrained', () => {
@@ -77,14 +85,14 @@ describe('applyFeedFilter', () => {
 
   it('ANDs across dimensions', () => {
     const data = [
-      obs({ speciesId: 1, activity: 'rastande', userId: 'me' }),
-      obs({ speciesId: 1, activity: 'häckande', userId: 'me' }),
-      obs({ speciesId: 2, activity: 'rastande', userId: 'me' }),
-      obs({ speciesId: 1, activity: 'rastande', userId: 'other' }),
+      obs({ speciesRarity: 0, activity: 'rastande', userId: 'me' }),
+      obs({ speciesRarity: 0, activity: 'häckande', userId: 'me' }),
+      obs({ speciesRarity: 1, activity: 'rastande', userId: 'me' }),
+      obs({ speciesRarity: 0, activity: 'rastande', userId: 'other' }),
     ]
     const r = applyFeedFilter(
       data,
-      { ...EMPTY_FILTER, speciesIds: [1], activities: ['rastande'], onlyMine: true },
+      { ...EMPTY_FILTER, rarities: [0], activities: ['rastande'], onlyMine: true },
       'me',
     )
     expect(r).toHaveLength(1)
@@ -94,29 +102,29 @@ describe('applyFeedFilter', () => {
 describe('deriveFilterOptions', () => {
   it('returns distinct values with counts', () => {
     const data = [
-      obs({ speciesId: 1, speciesSwedishName: 'Talgoxe', activity: 'rastande', locationId: 5, locationName: 'Hammarsjön' }),
-      obs({ speciesId: 1, speciesSwedishName: 'Talgoxe', activity: 'häckande', locationId: 5, locationName: 'Hammarsjön' }),
-      obs({ speciesId: 2, speciesSwedishName: 'Blåmes', activity: 'rastande', locationId: null }),
+      obs({ speciesRarity: 0, activity: 'rastande', locationId: 5, locationName: 'Hammarsjön' }),
+      obs({ speciesRarity: 0, activity: 'häckande', locationId: 5, locationName: 'Hammarsjön' }),
+      obs({ speciesRarity: 2, activity: 'rastande', locationId: null }),
     ]
     const opts = deriveFilterOptions(data)
-    expect(opts.species.find((s) => s.id === 1)?.count).toBe(2)
-    expect(opts.species.find((s) => s.id === 2)?.count).toBe(1)
+    expect(opts.rarities.find((r) => r.level === 0)?.count).toBe(2)
+    expect(opts.rarities.find((r) => r.level === 2)?.count).toBe(1)
     expect(opts.activities.find((a) => a.value === 'rastande')?.count).toBe(2)
     expect(opts.locations).toHaveLength(1)
     expect(opts.locations[0]?.count).toBe(2)
   })
 
-  it('sorts species and locations by Swedish name', () => {
-    const data = [
-      obs({ speciesId: 1, speciesSwedishName: 'Ärla' }),
-      obs({ speciesId: 2, speciesSwedishName: 'Bofink' }),
-      obs({ speciesId: 3, speciesSwedishName: 'Domherre' }),
-    ]
-    expect(deriveFilterOptions(data).species.map((s) => s.swedishName)).toEqual([
-      'Bofink',
-      'Domherre',
-      'Ärla',
-    ])
+  it('sorts rarities ascending (rarest first)', () => {
+    const data = [obs({ speciesRarity: 5 }), obs({ speciesRarity: 0 }), obs({ speciesRarity: 2 })]
+    expect(deriveFilterOptions(data).rarities.map((r) => r.level)).toEqual([0, 2, 5])
+  })
+
+  it('buckets unlisted species (null rarity) under level 5', () => {
+    const data = [obs({ speciesRarity: null }), obs({ speciesRarity: 5 })]
+    const opts = deriveFilterOptions(data)
+    expect(opts.rarities).toHaveLength(1)
+    expect(opts.rarities[0]?.level).toBe(5)
+    expect(opts.rarities[0]?.count).toBe(2)
   })
 
   it('omits null activities and null locations from the options', () => {
@@ -124,7 +132,7 @@ describe('deriveFilterOptions', () => {
     const opts = deriveFilterOptions(data)
     expect(opts.activities).toHaveLength(0)
     expect(opts.locations).toHaveLength(0)
-    expect(opts.species).toHaveLength(1)
+    expect(opts.rarities).toHaveLength(1)
   })
 })
 
@@ -132,7 +140,7 @@ describe('activeFilterCount', () => {
   it('counts each selected value plus onlyMine', () => {
     const f = {
       onlyMine: true,
-      speciesIds: [1, 2],
+      rarities: [0, 1] as RarityLevel[],
       activities: ['rastande'] as Activity[],
       locationIds: [5],
     }
