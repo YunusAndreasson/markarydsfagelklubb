@@ -11,7 +11,8 @@
  * border + a one-shot `hapticError`, both built into `PickerField` — matching the
  * app's own Profile form (M7), not the web's scroll-to-error.
  */
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { useIsFocused } from 'expo-router';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Alert, findNodeHandle, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityPicker } from '@/components/activity-picker';
@@ -105,6 +106,20 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
   const [value, setValue] = useState<ObservationFormValue>(initial ?? emptyObservation());
   const [showErrors, setShowErrors] = useState(false);
   const busy = !!submitting || !!deleting;
+
+  // Larma is a long-lived tab — it stays mounted, so the `observedAt` captured
+  // by `emptyObservation()` at first mount drifts stale (it would otherwise read
+  // "now" only on the very first open, or right after a submit). The user
+  // reaching this screen is reporting a bird they're seeing *now*, so snap the
+  // time to the present every time the create form regains focus. Edit mode is
+  // left alone — it shows the observation's real recorded time. A manual time
+  // change made during the same visit is preserved (focus hasn't changed).
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (isFocused && mode === 'create') {
+      setValue((v) => ({ ...v, observedAt: new Date() }));
+    }
+  }, [isFocused, mode]);
 
   // Wrappers around the three fields that can fail validation, so an invalid
   // submit can scroll the first one into view.
