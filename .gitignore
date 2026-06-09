@@ -49,3 +49,10 @@ yarn-error.*
 # Supabase CLI local link state (machine-specific, not for VCS)
 supabase/.temp/
 supabase/.branches/
+
+# Store-submission signing secrets (prefer storing these on EAS servers instead).
+# Never commit: App Store Connect API key (.p8) or Google Play service-account JSON.
+/credentials/
+*.p8
+*-service-account*.json
+google-play-*.json
