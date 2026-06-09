@@ -34,21 +34,33 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
   const insets = useSafeAreaInsets();
 
   return (
+    // The app is edge-to-edge (`edgeToEdgeEnabled`), so `insets.bottom` below is
+    // the nav-bar height. Both *Translucent flags make the modal's own window
+    // draw under the system bars too — without `navigationBarTranslucent` the
+    // window stops at the top of the nav bar, and the card's `insets.bottom`
+    // padding then stacks on top of it as a redundant dead band at the bottom.
     <Modal
       visible={visible}
       animationType="slide"
       transparent
       onRequestClose={onClose}
       statusBarTranslucent
+      navigationBarTranslucent
     >
-      {/* Lift the bottom-anchored card above the keyboard so a focused search
-          field never hides the results behind it. A native `Modal` gets its own
-          window that does NOT honor the Activity's `adjustResize`, so both
-          platforms need explicit avoidance: `padding` on iOS, `height` on
-          Android (shrinks the container so the flex-end card clears the keyboard). */}
+      {/* Keyboard avoidance for the bottom-anchored card. A native `Modal` gets
+          its own window that does NOT honor the Activity's `adjustResize`, so the
+          sheet handles the keyboard itself — but per platform:
+          • Android: `behavior="height"` shrinks the container so the flex-end card
+            rises above the keyboard.
+          • iOS: NO behavior. The old `padding` left a large dark band at the
+            bottom — an in-`Modal` KeyboardAvoidingView keeps a residual bottom
+            inset after the keyboard hides, exposing the backdrop below the card.
+            Instead the scrollable bodies (species `FlatList`, etc.) use
+            `automaticallyAdjustKeyboardInsets` (the app's `Screen` pattern), which
+            insets the list under the keyboard without lifting the whole card. */}
       <KeyboardAvoidingView
         style={styles.root}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'android' ? 'height' : undefined}
       >
         <Pressable
           style={styles.backdrop}

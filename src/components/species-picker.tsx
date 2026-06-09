@@ -206,6 +206,11 @@ export function SpeciesPicker({
               getItemLayout={(_, index) => ({ length: ROW_HEIGHT, offset: ROW_HEIGHT * index, index })}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
+              // iOS keyboard handling for the search field (the sheet no longer
+              // uses a KeyboardAvoidingView on iOS): inset the list under the
+              // keyboard so results stay scrollable. No-op on Android, where the
+              // sheet's `behavior="height"` handles it.
+              automaticallyAdjustKeyboardInsets
               onScrollToIndexFailed={() => {}}
               style={{ maxHeight: winH * 0.5 }}
               ListEmptyComponent={
