@@ -37,6 +37,7 @@
         "ascApiKeyIssuerId": "69a6de7c-e749-47e3-e053-5b8c7c11a4d1"
       },
       "android": {
+        "serviceAccountKeyPath": "./credentials/play-service-account.json",
         "track": "internal"
       }
     }
