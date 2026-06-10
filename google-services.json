@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "700238607781",
+    "project_id": "mafk-498611",
+    "storage_bucket": "mafk-498611.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700238607781:android:79796d6937cbaa9ab6a44c",
+        "android_client_info": {
+          "package_name": "nu.markarydsfagelklubb.mafk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMo69mFGj__b9skQLXa9loeh-aPLxYH_0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
