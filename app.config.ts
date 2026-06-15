@@ -42,5 +42,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // EAS projectId (`eas init`) and Android delivery needs FCM creds on the EAS
     // project — see supabase/functions/send-bird-alert/README.md.
     ['expo-notifications', { color: '#137D41', defaultChannel: 'default' }],
+    // AppCheckCore 11.3.0 (pulled transitively by GoogleSignIn) added a dependency on
+    // RecaptchaInterop, which doesn't define modules and breaks pod install for static
+    // Swift pods. Pin the last good version (no Podfile.lock exists under CNG, so
+    // transitive pods float between builds). Revisit when GoogleSignIn requires >11.2.
+    [
+      'expo-build-properties',
+      { ios: { extraPods: [{ name: 'AppCheckCore', version: '= 11.2.0' }] } },
+    ],
   ] as ExpoConfig['plugins'],
 });
