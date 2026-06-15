@@ -27,6 +27,10 @@ import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { sv } from '@/lib/i18n/sv';
+import {
+  composeDisplayName,
+  setPendingDisplayName,
+} from '@/lib/auth/pending-display-name';
 import { createStrictContext } from '@/lib/create-strict-context';
 import { persister, queryClient } from '@/lib/query-client';
 import { unregisterCurrentDeviceToken } from '@/lib/query/push-tokens';
@@ -112,13 +116,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nonce: hashedNonce,
       });
       if (!credential.identityToken) return { error: sv.login.errors.appleFailed };
+      // Apple returns the user's name only on the FIRST authorization. Capture it
+      // now — *before* the session flips — so first-run onboarding can create the
+      // profile from it instead of re-asking (App Store Guideline 4 forbids that).
+      setPendingDisplayName(
+        composeDisplayName([
+          credential.fullName?.givenName,
+          credential.fullName?.familyName,
+        ]),
+      );
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
         nonce: rawNonce,
       });
-      return { error: error?.message };
+      if (error) {
+        setPendingDisplayName(null);
+        return { error: error.message };
+      }
+      return {};
     } catch (e) {
+      setPendingDisplayName(null);
       if (
         e instanceof Error &&
         (e as { code?: string }).code === 'ERR_REQUEST_CANCELED'
@@ -137,12 +155,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.type === 'cancelled') return { cancelled: true };
       const idToken = response.data?.idToken;
       if (!idToken) return { error: sv.login.errors.googleFailed };
+      // Pre-fill the profile name from Google so first-run onboarding doesn't
+      // re-ask for something we already have (mirrors the Apple flow above).
+      const googleUser = response.data?.user;
+      setPendingDisplayName(
+        composeDisplayName([googleUser?.name]) ??
+          composeDisplayName([googleUser?.givenName, googleUser?.familyName]),
+      );
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
-      return { error: error?.message };
+      if (error) {
+        setPendingDisplayName(null);
+        return { error: error.message };
+      }
+      return {};
     } catch (e) {
+      setPendingDisplayName(null);
       if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) {
         return { cancelled: true };
       }
@@ -172,6 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Drop any provider name captured but not yet consumed, so it can't leak
+    // into the next account's first-run onboarding on this device.
+    setPendingDisplayName(null);
     // Stop this device receiving club alerts for the account being signed out —
     // best-effort, and BEFORE clearing the session (the owner-scoped RLS delete
     // needs the user's auth).
