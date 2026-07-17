@@ -1,6 +1,6 @@
 # mafk-mobie — agent & contributor guide
 
-**mafk-mobie** is the native **Expo SDK 56** (expo-router) app for **Markaryds
+**mafk-mobie** is the native **Expo SDK 57** (expo-router) app for **Markaryds
 Fågelklubb** — the mobile sibling of the **mafk** bird-reporting web app. It is
 built by mirroring the engineering patterns of the reference Expo app
 **edenmind-v2**.
@@ -51,13 +51,14 @@ Magic-link → **Apple + Google sign-in** (M5) · Leaflet → `react-native-maps
 - **TypeScript is strict** (see `tsconfig.json`). ESLint is type-aware; use
   `void promise()` for deliberate fire-and-forget.
 - **Design discipline:** read only what you're changing; trust named tokens.
-- **SDK 56:** always consult versioned docs at
-  https://docs.expo.dev/versions/v56.0.0/ — APIs drift between SDKs.
+- **SDK 57:** always consult versioned docs at
+  https://docs.expo.dev/versions/v57.0.0/ — APIs drift between SDKs.
 
 ## Local dev (this machine is Linux → Android only)
 
 - Package manager: **npm**.
 - `npm run start` — Metro. `npm run typecheck` — `tsc --noEmit`. `npm run lint`.
+- `npm run verify` — typecheck + lint + test in one command; run before finishing.
 - `npm run android` — builds + runs the dev client on the Android emulator.
   **JDK 17 is required** (`/usr/lib/jvm/java-17-openjdk`); the default `java` is
   26 and breaks AGP. `scripts/dev-android.sh` pins it and boots the AVD.
