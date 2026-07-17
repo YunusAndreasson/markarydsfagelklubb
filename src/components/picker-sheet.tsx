@@ -13,7 +13,7 @@ import { type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CLOSE, Icon } from '@/components/icon';
+import { CLOSE, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -91,9 +91,52 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
   );
 }
 
+export type SheetActionRowProps = {
+  icon: IconName;
+  label: string;
+  /** Tint the glyph + label destructive (e.g. "Dölj fynd från …"). */
+  destructive?: boolean;
+  onPress: () => void;
+};
+
+/**
+ * A tappable action row for sheet menus — the shared chrome behind the image
+ * chooser's rows and the report/block menu, so every action sheet reads the
+ * same (glyph + label in a bordered row).
+ */
+export function SheetActionRow({ icon, label, destructive = false, onPress }: SheetActionRowProps) {
+  const theme = useTheme();
+  const color = destructive ? theme.destructive : theme.foreground;
+  return (
+    <PressableScale
+      variant="row"
+      haptic="select"
+      onPress={onPress}
+      style={[styles.actionRow, { borderColor: theme.border }]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Icon name={icon} size={IconSize.action} color={color} />
+      <ThemedText type="default" style={{ color }}>
+        {label}
+      </ThemedText>
+    </PressableScale>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: SurfaceRadius.md,
+    minHeight: 56,
+  },
   card: {
     maxHeight: '85%',
     borderTopLeftRadius: SurfaceRadius.lg,

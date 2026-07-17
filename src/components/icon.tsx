@@ -81,6 +81,12 @@ export const MORE: IconName = { sf: 'ellipsis.circle', material: 'more-horiz' };
  *  raised hand.) */
 export const BLOCKED: IconName = { sf: 'eye.slash', material: 'visibility-off' };
 
+/** Un-hide — the "Visa fynd igen" action (BLOCKED's counterpart). */
+export const VISIBLE: IconName = { sf: 'eye', material: 'visibility' };
+
+/** Report content to the club (moderation). */
+export const FLAG: IconName = { sf: 'flag', material: 'flag' };
+
 /**
  * A one-shot bounce for peak/celebration glyphs. `repeating: false` plays the
  * effect once when the symbol mounts. iOS-only (SF Symbols); Android falls back

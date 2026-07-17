@@ -23,7 +23,7 @@ import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
 
 import { CAMERA, Icon, IMAGE } from '@/components/icon';
-import { PickerSheet } from '@/components/picker-sheet';
+import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Duration } from '@/constants/motion';
@@ -320,28 +320,12 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
   const chooser = (
     <PickerSheet visible={chooserOpen} title={sv.image.chooseSource} onClose={() => setChooserOpen(false)}>
       <View style={styles.sheetBody}>
-        <PressableScale
-          variant="row"
-          haptic="select"
-          onPress={() => void runPick('camera')}
-          style={[styles.sheetRow, { borderColor: theme.border }]}
-          accessibilityRole="button"
-          accessibilityLabel={sv.image.takePhoto}
-        >
-          <Icon name={CAMERA} size={IconSize.action} color={theme.foreground} />
-          <ThemedText type="default">{sv.image.takePhoto}</ThemedText>
-        </PressableScale>
-        <PressableScale
-          variant="row"
-          haptic="select"
+        <SheetActionRow icon={CAMERA} label={sv.image.takePhoto} onPress={() => void runPick('camera')} />
+        <SheetActionRow
+          icon={IMAGE}
+          label={sv.image.chooseFromLibrary}
           onPress={() => void runPick('library')}
-          style={[styles.sheetRow, { borderColor: theme.border }]}
-          accessibilityRole="button"
-          accessibilityLabel={sv.image.chooseFromLibrary}
-        >
-          <Icon name={IMAGE} size={IconSize.action} color={theme.foreground} />
-          <ThemedText type="default">{sv.image.chooseFromLibrary}</ThemedText>
-        </PressableScale>
+        />
       </View>
     </PickerSheet>
   );
@@ -435,14 +419,4 @@ const styles = StyleSheet.create({
   },
   blockedBody: { flex: 1, gap: Spacing.one, alignItems: 'flex-start' },
   sheetBody: { gap: Spacing.two, paddingTop: Spacing.one },
-  sheetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: SurfaceRadius.md,
-    minHeight: 56,
-  },
 });

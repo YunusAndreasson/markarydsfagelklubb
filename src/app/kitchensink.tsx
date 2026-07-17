@@ -6,13 +6,15 @@ import { ActivityPicker } from '@/components/activity-picker';
 import { Button } from '@/components/button';
 import { CountStepper } from '@/components/count-stepper';
 import { DateTimePicker } from '@/components/date-time-picker';
-import { ALERT, TRAY } from '@/components/icon';
+import { ALERT, BLOCKED, FLAG, TRAY } from '@/components/icon';
 import { ImageUpload } from '@/components/image-upload';
 import { ListCard } from '@/components/list-card';
 import { LocationPicker, type LocationValue } from '@/components/location-picker';
 import { Map, type MapMarker } from '@/components/map';
 import { ObservationMap } from '@/components/observation-map';
+import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
+import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
@@ -24,7 +26,9 @@ import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode, type ThemeMode } from '@/hooks/use-theme-mode';
+import { confirm } from '@/lib/confirm';
 import { hapticPress, hapticSuccess } from '@/lib/haptics';
+import { type RarityLevel } from '@/lib/rarity';
 import { type Activity } from '@/lib/validation/observation';
 
 // M2 kitchen-sink: eyeballs the design tokens and primitives in light + dark.
@@ -88,10 +92,15 @@ function ThemeModeToggle() {
 }
 
 export default function KitchenSink() {
+  const theme = useTheme();
   const [name, setName] = useState('');
   const [showError, setShowError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
+
+  // Confirm/action-sheet demo state.
+  const [choice, setChoice] = useState<string | null>(null);
+  const [menuDemo, setMenuDemo] = useState(false);
 
   // M9 form-field state.
   const [speciesId, setSpeciesId] = useState<number | null>(null);
@@ -187,6 +196,64 @@ export default function KitchenSink() {
       </View>
 
       <View style={styles.section}>
+        <SectionHeader title="Raritet" caption="0 = raraste → 5 = vanligast · sm / lg / custom" />
+        <View style={styles.rarityRow}>
+          {([0, 1, 2, 3, 4, 5] as RarityLevel[]).map((level) => (
+            <RarityBadge key={level} level={level} />
+          ))}
+        </View>
+        <View style={styles.rarityRow}>
+          <RarityBadge level={0} size="lg" />
+          <RarityBadge
+            custom={{ label: '–', background: theme.border, foreground: theme.mutedForeground }}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader
+          title="Bekräfta"
+          caption="confirm() — det märkta arket som ersätter Alert.alert · åtgärdsark"
+        />
+        <Button
+          title="Bekräfta (vanlig)"
+          variant="secondary"
+          onPress={() =>
+            void confirm({ title: 'Logga ut?', confirmLabel: 'Logga ut' }).then((ok) =>
+              setChoice(ok ? 'bekräftad' : 'avbruten'),
+            )
+          }
+        />
+        <Button
+          title="Bekräfta (destruktiv)"
+          variant="secondary"
+          onPress={() =>
+            void confirm({
+              title: 'Ta bort observationen?',
+              message: 'Detta går inte att ångra.',
+              confirmLabel: 'Ta bort',
+              destructive: true,
+            }).then((ok) => setChoice(ok ? 'bekräftad' : 'avbruten'))
+          }
+        />
+        <ThemedText type="small" themeColor="mutedForeground">
+          {choice ? `Senaste val: ${choice}` : 'Inget val gjort än.'}
+        </ThemedText>
+        <Button title="Åtgärdsark" variant="secondary" onPress={() => setMenuDemo(true)} />
+        <PickerSheet visible={menuDemo} title="Åtgärder" onClose={() => setMenuDemo(false)}>
+          <View style={styles.sheetBody}>
+            <SheetActionRow icon={FLAG} label="Rapportera" onPress={() => setMenuDemo(false)} />
+            <SheetActionRow
+              icon={BLOCKED}
+              label="Dölj fynd"
+              destructive
+              onPress={() => setMenuDemo(false)}
+            />
+          </View>
+        </PickerSheet>
+      </View>
+
+      <View style={styles.section}>
         <SectionHeader title="Tillstånd" />
         <SkeletonCard />
         <View style={styles.skeletonRow}>
@@ -274,4 +341,6 @@ const styles = StyleSheet.create({
     borderRadius: SurfaceRadius.xs,
   },
   skeletonRow: { flexDirection: 'row', gap: Spacing.two },
+  rarityRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  sheetBody: { gap: Spacing.two, paddingTop: Spacing.one },
 });

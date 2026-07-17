@@ -13,7 +13,7 @@
  */
 import { useIsFocused } from 'expo-router';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, findNodeHandle, ScrollView, StyleSheet, View } from 'react-native';
+import { findNodeHandle, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityPicker } from '@/components/activity-picker';
 import { Button } from '@/components/button';
@@ -26,7 +26,7 @@ import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
 import { Spacing } from '@/constants/theme';
-import { hapticWarning } from '@/lib/haptics';
+import { confirm } from '@/lib/confirm';
 import { sv } from '@/lib/i18n/sv';
 import { type Activity, type CreateObservationInput } from '@/lib/validation/observation';
 
@@ -198,13 +198,15 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
   submitRef.current = handleSubmit;
   useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), []);
 
-  function confirmDelete() {
-    // A destructive confirmation is appearing — let it be felt (HIG warning).
-    hapticWarning();
-    Alert.alert(sv.observation.deleteTitle, sv.observation.deleteConfirm, [
-      { text: sv.common.cancel, style: 'cancel' },
-      { text: sv.observation.deleteButton, style: 'destructive', onPress: () => onDelete?.() },
-    ]);
+  async function confirmDelete() {
+    // ConfirmSheet fires the warning haptic itself as the sheet presents.
+    const ok = await confirm({
+      title: sv.observation.deleteTitle,
+      message: sv.observation.deleteConfirm,
+      confirmLabel: sv.observation.deleteButton,
+      destructive: true,
+    });
+    if (ok) onDelete?.();
   }
 
   return (
@@ -284,7 +286,7 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
         <Button
           title={sv.observation.deleteButton}
           variant="destructive"
-          onPress={confirmDelete}
+          onPress={() => void confirmDelete()}
           loading={deleting}
           disabled={submitting}
           haptic="commit"

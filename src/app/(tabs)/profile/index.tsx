@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Linking, StyleSheet } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { SIGN_OUT, TRASH, type IconName } from '@/components/icon';
@@ -21,6 +21,7 @@ import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/legal';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useBlockedUsers } from '@/lib/blocks';
+import { confirm } from '@/lib/confirm';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -127,39 +128,36 @@ export default function ProfileScreen() {
     }
   }
 
-  function confirmSignOut() {
-    Alert.alert(sv.profile.signOutConfirmTitle, sv.profile.signOutConfirmMessage, [
-      { text: sv.common.cancel, style: 'cancel' },
-      { text: sv.profile.signOut, style: 'destructive', onPress: () => void signOut() },
-    ]);
+  async function confirmSignOut() {
+    const ok = await confirm({
+      title: sv.profile.signOutConfirmTitle,
+      message: sv.profile.signOutConfirmMessage,
+      confirmLabel: sv.profile.signOut,
+      destructive: true,
+    });
+    if (ok) void signOut();
   }
 
   // Permanent account deletion (Apple 5.1.1(v) / Google). Irreversible, so it's
   // gated behind an explicit destructive confirm; on success the session clears
   // and the root gate routes back to sign-in (this screen unmounts).
-  function confirmDeleteAccount() {
-    Alert.alert(
-      sv.profile.deleteAccount.confirmTitle,
-      sv.profile.deleteAccount.confirmMessage,
-      [
-        { text: sv.common.cancel, style: 'cancel' },
-        {
-          text: sv.profile.deleteAccount.confirm,
-          style: 'destructive',
-          onPress: () => {
-            setDeleting(true);
-            void deleteAccount().then((res) => {
-              if (res.error) {
-                setDeleting(false);
-                hapticError();
-                showToast(res.error, 'error');
-              }
-              // On success the screen unmounts with the session — no cleanup.
-            });
-          },
-        },
-      ],
-    );
+  async function confirmDeleteAccount() {
+    const ok = await confirm({
+      title: sv.profile.deleteAccount.confirmTitle,
+      message: sv.profile.deleteAccount.confirmMessage,
+      confirmLabel: sv.profile.deleteAccount.confirm,
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    void deleteAccount().then((res) => {
+      if (res.error) {
+        setDeleting(false);
+        hapticError();
+        showToast(res.error, 'error');
+      }
+      // On success the screen unmounts with the session — no cleanup.
+    });
   }
 
   function openLegal(url: string) {
@@ -245,7 +243,7 @@ export default function ProfileScreen() {
           icon={SIGN_OUT}
           label={sv.profile.signOut}
           accessory="chevron"
-          onPress={confirmSignOut}
+          onPress={() => void confirmSignOut()}
           disabled={deleting}
         />
         <SettingsRow
@@ -253,7 +251,7 @@ export default function ProfileScreen() {
           label={deleting ? sv.profile.deleteAccount.working : sv.profile.deleteAccount.row}
           destructive
           accessory="chevron"
-          onPress={confirmDeleteAccount}
+          onPress={() => void confirmDeleteAccount()}
           disabled={deleting}
         />
       </SettingsGroup>
