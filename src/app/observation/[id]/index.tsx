@@ -70,7 +70,15 @@ export default function ObservationDetailScreen() {
       />
     );
   } else if (!q.data) {
-    body = <StateBlock icon={ALERT} title={sv.observation.notFound} />;
+    body = (
+      <StateBlock
+        icon={ALERT}
+        title={sv.observation.notFound}
+        // A forward path out of the dead end — the native back chevron shouldn't
+        // be the only exit.
+        action={{ label: sv.observation.backToFeed, onPress: () => router.navigate('/') }}
+      />
+    );
   } else {
     const obs = q.data;
     const lat = obs.latitude ?? obs.locationLatitude;

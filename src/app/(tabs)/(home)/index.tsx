@@ -32,7 +32,7 @@ import {
   type FeedFilter,
 } from '@/lib/feed-filter';
 import { sv } from '@/lib/i18n/sv';
-import { listEntrance } from '@/lib/motion';
+import { deletableListItemMotion, listEntrance } from '@/lib/motion';
 import { feedQueryOptions } from '@/lib/query/observations';
 
 // Hem — the app's home tab and first data-driven screen: the club's
@@ -91,13 +91,21 @@ export default function FeedScreen() {
       );
       sections.forEach((s) => s.items.forEach((o) => order.set(o.id, order.size)));
 
+      // Rows reflow (filter toggles, optimistic insert/remove) instead of popping:
+      // `layout` slides survivors into place, `exiting` recedes removed rows.
+      const rowMotion = deletableListItemMotion(motion);
       body = (
         <>
           {sections.map((section) => (
             <View key={section.key} style={styles.section}>
               <SectionHeader title={section.label} />
               {section.items.map((obs) => (
-                <Animated.View key={obs.id} entering={motion(listEntrance(order.get(obs.id) ?? 0))}>
+                <Animated.View
+                  key={obs.id}
+                  entering={motion(listEntrance(order.get(obs.id) ?? 0))}
+                  exiting={rowMotion.exiting}
+                  layout={rowMotion.layout}
+                >
                   <ObservationCard observation={obs} currentUserId={user?.id} />
                 </Animated.View>
               ))}
@@ -160,7 +168,15 @@ export default function FeedScreen() {
       />
       <Screen
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            // tintColor drives the iOS spinner; colors + progressBackgroundColor
+            // are the Android pair — without them Android shows the stock palette.
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+            progressBackgroundColor={theme.card}
+          />
         }
       >
         {total > 0 && count > 0 ? (

@@ -126,9 +126,22 @@ export default function ObservationEditScreen() {
       />
     );
   } else if (!obs) {
-    body = <StateBlock icon={ALERT} title={sv.observation.notFound} />;
+    body = (
+      <StateBlock
+        icon={ALERT}
+        title={sv.observation.notFound}
+        // Dismiss the modal — the dead end shouldn't need the header chevron.
+        action={{ label: sv.common.close, onPress: () => router.back() }}
+      />
+    );
   } else if (!user || obs.userId !== user.id) {
-    body = <StateBlock icon={ALERT} title={sv.observation.notYours} />;
+    body = (
+      <StateBlock
+        icon={ALERT}
+        title={sv.observation.notYours}
+        action={{ label: sv.common.close, onPress: () => router.back() }}
+      />
+    );
   } else {
     const initial: ObservationFormValue = {
       speciesId: obs.speciesId,
@@ -161,6 +174,7 @@ export default function ObservationEditScreen() {
         observationId={obs.id}
         scrollRef={scrollRef}
         submitInHeader
+        inset="sub"
         onSubmit={(v) => {
           updateMutation.mutate(v);
           router.back();

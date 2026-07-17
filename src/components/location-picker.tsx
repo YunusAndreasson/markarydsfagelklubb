@@ -45,6 +45,7 @@ export function LocationPicker({
   onChange,
   invalid,
   error,
+  bleed = Spacing.three,
 }: {
   value: LocationValue;
   onChange: (v: LocationValue) => void;
@@ -52,6 +53,10 @@ export function LocationPicker({
   /** Validation message shown (destructive) in place of the hint when required-but-empty.
    *  No own haptic — the sibling PickerFields already buzz on the same submit. */
   error?: string | null;
+  /** The enclosing screen's horizontal padding — the quick-pick chip row bleeds
+   *  this far past the form edge so chips scroll off-screen instead of clipping.
+   *  Defaults to the tab inset (16); the edit modal passes its `sub` inset (24). */
+  bleed?: number;
 }) {
   const theme = useTheme();
   const { motion } = useMotion();
@@ -150,8 +155,8 @@ export function LocationPicker({
           horizontal
           showsHorizontalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          style={styles.quickBleed}
-          contentContainerStyle={styles.quickRow}
+          style={{ marginHorizontal: -bleed }}
+          contentContainerStyle={[styles.quickRow, { paddingHorizontal: bleed }]}
         >
           {common.map((loc) => (
             <FilterChip
@@ -301,10 +306,7 @@ export function LocationPicker({
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.two },
-  // Negative margin matches the Screen's 16px (`inset="tab"`) horizontal padding
-  // so the chip row scrolls edge-to-edge instead of clipping at the form border.
-  quickBleed: { marginHorizontal: -Spacing.three },
-  quickRow: { paddingHorizontal: Spacing.three, gap: Spacing.two },
+  quickRow: { gap: Spacing.two },
   mapWrap: {
     borderRadius: SurfaceRadius.md,
     overflow: 'hidden',

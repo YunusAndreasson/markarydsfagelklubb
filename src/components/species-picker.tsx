@@ -20,7 +20,7 @@ import { PickerField } from '@/components/picker-field';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
-import { SkeletonCard } from '@/components/skeleton';
+import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius, SurfaceStyles } from '@/constants/surface';
@@ -179,7 +179,19 @@ export function SpeciesPicker({
         </View>
 
         {speciesQuery.isPending ? (
-          <SkeletonCard height={ROW_HEIGHT} />
+          // Ghost rows in the real row geometry (chip + name + scientific name)
+          // so the load state reads like the list it becomes.
+          <View>
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <View key={n} style={styles.row}>
+                <Skeleton width={20} height={20} radius={SurfaceRadius.xs} />
+                <View style={styles.rowText}>
+                  <Skeleton width="55%" height={14} />
+                  <Skeleton width="40%" height={12} />
+                </View>
+              </View>
+            ))}
+          </View>
         ) : speciesQuery.isError ? (
           <StateBlock
             icon={ALERT}

@@ -22,12 +22,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ALERT, CHECK, Icon, type IconName } from '@/components/icon';
+import { ALERT, BOUNCE_ONCE, CHECK, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Curve, Duration } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
-import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { IconSize, Spacing, MaxContentWidth } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -130,7 +130,16 @@ export function ToastHost() {
             { backgroundColor: theme.card, borderColor: theme.border },
           ]}
         >
-          {icon ? <Icon name={icon} size={18} color={accent} /> : null}
+          {icon ? (
+            <Icon
+              name={icon}
+              size={IconSize.control}
+              color={accent}
+              // A one-shot bounce on the success check (iOS SF Symbols only) — a
+              // small celebratory beat; error/info stay still.
+              animationSpec={toast.tone === 'success' ? BOUNCE_ONCE : undefined}
+            />
+          ) : null}
           <ThemedText type="smallBold" numberOfLines={2} style={styles.text}>
             {toast.message}
           </ThemedText>

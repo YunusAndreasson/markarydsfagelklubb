@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Linking, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { SIGN_OUT, TRASH, type IconName } from '@/components/icon';
@@ -14,8 +14,8 @@ import { Screen } from '@/components/screen';
 import { SettingsFormInput } from '@/components/settings/settings-form-input';
 import { SettingsGroup } from '@/components/settings/settings-group';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { SettingsStaticRow } from '@/components/settings/settings-static-row';
 import { ThemePicker } from '@/components/theme-picker';
-import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/legal';
 import { Spacing } from '@/constants/theme';
@@ -227,12 +227,7 @@ export default function ProfileScreen() {
           maxLength={30}
           returnKeyType="done"
         />
-        <View style={styles.readonlyRow}>
-          <ThemedText type="small" themeColor="mutedForeground">
-            {sv.profile.emailLabel}
-          </ThemedText>
-          <ThemedText type="default">{user?.email ?? '—'}</ThemedText>
-        </View>
+        <SettingsStaticRow label={sv.profile.emailLabel} value={user?.email ?? '—'} />
       </SettingsGroup>
 
       <ThemePicker />
@@ -292,12 +287,4 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: Spacing.four },
-  // Read-only field styled to match the SettingsFormInput rows it sits beside.
-  readonlyRow: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-    gap: Spacing.half,
-    minHeight: 52,
-  },
 });

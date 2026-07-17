@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode } from 'react';
 import { Linking, RefreshControl, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -24,7 +24,7 @@ import { unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { errorCopy } from '@/lib/errors';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
-import { listEntrance } from '@/lib/motion';
+import { deletableListItemMotion, listEntrance } from '@/lib/motion';
 import { memberQueryOptions } from '@/lib/query/observations';
 import { digitsForTel } from '@/lib/validation/profile';
 
@@ -90,7 +90,15 @@ export default function MemberScreen() {
       />
     );
   } else if (!profile) {
-    body = <StateBlock icon={ALERT} title={sv.member.notFound} />;
+    body = (
+      <StateBlock
+        icon={ALERT}
+        title={sv.member.notFound}
+        // A forward path out of the dead end — the native back chevron shouldn't
+        // be the only exit.
+        action={{ label: sv.observation.backToFeed, onPress: () => router.navigate('/') }}
+      />
+    );
   } else {
     const telHref = profile.phone ? `tel:${digitsForTel(profile.phone)}` : null;
     body = (
@@ -113,11 +121,20 @@ export default function MemberScreen() {
         <SectionHeader title={sv.member.reportedHeading} />
 
         {observations.length > 0 ? (
-          observations.map((obs, i) => (
-            <Animated.View key={obs.id} entering={motion(listEntrance(i))}>
-              <ObservationCard observation={obs} currentUserId={user?.id} />
-            </Animated.View>
-          ))
+          observations.map((obs, i) => {
+            // Rows reflow on optimistic edits/deletes instead of popping.
+            const rowMotion = deletableListItemMotion(motion);
+            return (
+              <Animated.View
+                key={obs.id}
+                entering={motion(listEntrance(i))}
+                exiting={rowMotion.exiting}
+                layout={rowMotion.layout}
+              >
+                <ObservationCard observation={obs} currentUserId={user?.id} />
+              </Animated.View>
+            );
+          })
         ) : (
           <StateBlock icon={TRAY} title={sv.member.empty} />
         )}
@@ -147,7 +164,15 @@ export default function MemberScreen() {
       <Screen
         inset="sub"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            // tintColor drives the iOS spinner; colors + progressBackgroundColor
+            // are the Android pair — without them Android shows the stock palette.
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+            progressBackgroundColor={theme.card}
+          />
         }
       >
         {body}

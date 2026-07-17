@@ -1,15 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { TRAY } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SettingsGroup } from '@/components/settings/settings-group';
+import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
+import { AvatarSize } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { hapticSuccess } from '@/lib/haptics';
@@ -44,6 +46,25 @@ export default function BlockedMembersScreen() {
     );
   }
 
+  // While profiles resolve, hold the rows as skeletons instead of flashing
+  // "Okänd observatör" placeholders that pop to real names.
+  if (q.isPending) {
+    return (
+      <Screen inset="sub">
+        <SettingsGroup footer={sv.blockedMembers.help}>
+          {ids.map((userId) => (
+            <View key={userId} style={styles.row}>
+              <Skeleton width={AvatarSize.sm} height={AvatarSize.sm} radius={AvatarSize.sm / 2} />
+              <Skeleton width="45%" height={16} />
+            </View>
+          ))}
+        </SettingsGroup>
+      </Screen>
+    );
+  }
+
+  // On a failed profile fetch the rows fall back to id-only entries — unblocking
+  // must stay possible even when names can't load.
   const members = q.data ?? ids.map((userId) => ({ userId, displayName: null, avatarUrl: null }));
 
   return (

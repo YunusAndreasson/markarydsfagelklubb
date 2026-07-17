@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 
+import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { requireUserId } from '@/lib/query/session';
 import { signedUrlFor, signedUrlMap } from '@/lib/query/storage';
@@ -203,6 +204,26 @@ export function memberQueryOptions(userId: string) {
   return queryOptions({
     queryKey: queryKeys.member(userId),
     queryFn: () => fetchMemberFeed(userId),
+    // Seed from the feed cache so the member screen paints instantly with the
+    // rows (and observer identity) the user just tapped through from; the real
+    // fetch replaces it. MUST return undefined (not `{ profile: null }`) when
+    // the member has no cached rows — the screen reads `!profile` as the
+    // "Medlemmen hittades inte" state and would flash it.
+    placeholderData: () => {
+      const rows = queryClient
+        .getQueryData<FeedObservation[]>(queryKeys.feed)
+        ?.filter((o) => o.userId === userId);
+      const first = rows?.[0];
+      if (!first) return undefined;
+      return {
+        profile: {
+          displayName: first.observerDisplayName,
+          avatarUrl: first.observerAvatarUrl,
+          phone: first.observerPhone,
+        },
+        observations: rows,
+      };
+    },
   });
 }
 
@@ -223,6 +244,11 @@ export function observationQueryOptions(id: string) {
   return queryOptions({
     queryKey: queryKeys.observation(id),
     queryFn: () => fetchObservation(id),
+    // Seed from the feed cache: the user almost always arrives from a card
+    // whose full row shape is already loaded, so the detail paints instantly
+    // (no skeleton) and the fetch just revalidates.
+    placeholderData: () =>
+      queryClient.getQueryData<FeedObservation[]>(queryKeys.feed)?.find((o) => o.id === id),
   });
 }
 
