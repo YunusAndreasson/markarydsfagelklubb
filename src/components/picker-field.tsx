@@ -16,7 +16,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Duration } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticError } from '@/lib/haptics';
@@ -79,7 +79,7 @@ export function PickerField({
         >
           {value || placeholder}
         </ThemedText>
-        <Icon name={CHEVRON} size={18} color={theme.mutedForeground} />
+        <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
       </PressableScale>
       {error ? (
         <Animated.View entering={motion(FadeInDown.duration(Duration.quick))}>

@@ -21,7 +21,7 @@ import { CHEVRON, Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceStyles } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ListCardDensity = 'comfortable' | 'compact';
@@ -110,7 +110,7 @@ export function ListCard({
         ) : null}
       </View>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
-      {showChevron ? <Icon name={CHEVRON} size={22} color={theme.mutedForeground} /> : null}
+      {showChevron ? <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} /> : null}
     </PressableScale>
   );
 }

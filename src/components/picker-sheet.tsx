@@ -18,8 +18,9 @@ import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing, SurfaceOverlay } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 
 export type PickerSheetProps = {
@@ -31,6 +32,7 @@ export type PickerSheetProps = {
 
 export function PickerSheet({ visible, title, onClose, children }: PickerSheetProps) {
   const theme = useTheme();
+  const { colorScheme } = useThemeMode();
   const insets = useSafeAreaInsets();
 
   return (
@@ -63,7 +65,7 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
         behavior={Platform.OS === 'android' ? 'height' : undefined}
       >
         <Pressable
-          style={styles.backdrop}
+          style={[styles.backdrop, { backgroundColor: SurfaceOverlay[colorScheme].scrim }]}
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={sv.common.close}
@@ -79,7 +81,7 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
               accessibilityRole="button"
               accessibilityLabel={sv.common.close}
             >
-              <Icon name={CLOSE} size={20} color={theme.foreground} />
+              <Icon name={CLOSE} size={IconSize.close} color={theme.foreground} />
             </PressableScale>
           </View>
           {children}
@@ -91,7 +93,7 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   card: {
     maxHeight: '85%',
     borderTopLeftRadius: SurfaceRadius.lg,

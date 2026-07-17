@@ -13,6 +13,7 @@ export const sv = {
     close: 'Stäng',
     done: 'Klar',
     comingSoon: 'Kommer snart',
+    refreshFailed: 'Kunde inte uppdatera. Försök igen.',
   },
   nav: {
     home: 'Hem',

@@ -15,7 +15,7 @@ import { Platform, StyleSheet, Switch, View } from 'react-native';
 import { CHECK, CHEVRON, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Opacity, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticSelect } from '@/lib/haptics';
 
@@ -72,7 +72,7 @@ export function SettingsRow({
     <>
       {icon ? (
         <View style={styles.iconCell}>
-          <Icon name={icon} size={19} color={iconColor} />
+          <Icon name={icon} size={IconSize.control} color={iconColor} />
         </View>
       ) : null}
 
@@ -94,10 +94,10 @@ export function SettingsRow({
           </ThemedText>
         ) : null}
         {accessory === 'chevron' ? (
-          <Icon name={CHEVRON} size={15} color={theme.mutedForeground} />
+          <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
         ) : null}
         {accessory === 'check' && selected ? (
-          <Icon name={CHECK} size={18} color={theme.tint} />
+          <Icon name={CHECK} size={IconSize.control} color={theme.tint} />
         ) : null}
         {accessory === 'switch' ? (
           <Switch
@@ -151,5 +151,5 @@ const styles = StyleSheet.create({
   iconCell: { width: 22, alignItems: 'center', justifyContent: 'center' },
   textCol: { flex: 1, gap: Spacing.half },
   rightCol: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  dimmed: { opacity: 0.5 },
+  dimmed: { opacity: Opacity.disabled },
 });

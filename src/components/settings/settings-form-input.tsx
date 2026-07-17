@@ -13,7 +13,7 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type SettingsFormInputProps = TextInputProps & {
@@ -62,6 +62,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     minHeight: 52,
   },
-  // Intentional inline — TextInput needs a concrete fontSize.
-  input: { fontSize: 16, lineHeight: 22, padding: 0 },
+  // TextInput needs a concrete fontSize — ThemedText types can't apply.
+  input: { fontSize: FontSize.input, lineHeight: 22, padding: 0 },
 });

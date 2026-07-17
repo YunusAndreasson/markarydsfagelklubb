@@ -17,8 +17,10 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { Colors } from '@/constants/theme';
+
 /** Brand green — Android small-icon tint + channel light. Matches the plugin. */
-const ACCENT = '#137D41';
+const ACCENT = Colors.light.primary;
 const ANDROID_CHANNEL_ID = 'default';
 
 export type NotificationPermission = 'granted' | 'denied' | 'undetermined';

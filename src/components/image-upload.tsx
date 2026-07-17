@@ -28,9 +28,10 @@ import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing, SurfaceOverlay } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import {
@@ -84,6 +85,7 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
   ref,
 ) {
   const theme = useTheme();
+  const { colorScheme } = useThemeMode();
   const { reduced } = useMotion();
   const isSquare = shape === 'square';
 
@@ -248,7 +250,7 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
         </View>
       )}
       {busy !== 'idle' ? (
-        <View style={styles.overlay}>
+        <View style={[styles.overlay, { backgroundColor: SurfaceOverlay[colorScheme].scrim }]}>
           <ActivityIndicator color={theme.tint} />
           {busyLabel ? (
             <ThemedText type="small" themeColor="foreground">
@@ -291,7 +293,7 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
   // Shared chrome — reused by both the inline and headless renders.
   const blockedBlock = cameraBlocked ? (
     <View style={[styles.blocked, { backgroundColor: theme.muted }]}>
-      <Icon name={CAMERA} size={18} color={theme.mutedForeground} />
+      <Icon name={CAMERA} size={IconSize.control} color={theme.mutedForeground} />
       <View style={styles.blockedBody}>
         <ThemedText type="small" themeColor="mutedForeground">
           {sv.image.permissionBlocked}
@@ -326,7 +328,7 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
           accessibilityRole="button"
           accessibilityLabel={sv.image.takePhoto}
         >
-          <Icon name={CAMERA} size={22} color={theme.foreground} />
+          <Icon name={CAMERA} size={IconSize.action} color={theme.foreground} />
           <ThemedText type="default">{sv.image.takePhoto}</ThemedText>
         </PressableScale>
         <PressableScale
@@ -337,7 +339,7 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
           accessibilityRole="button"
           accessibilityLabel={sv.image.chooseFromLibrary}
         >
-          <Icon name={IMAGE} size={22} color={theme.foreground} />
+          <Icon name={IMAGE} size={IconSize.action} color={theme.foreground} />
           <ThemedText type="default">{sv.image.chooseFromLibrary}</ThemedText>
         </PressableScale>
       </View>
@@ -423,7 +425,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.one,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   actions: { flexDirection: 'row', gap: Spacing.four },
   blocked: {

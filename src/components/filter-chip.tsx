@@ -15,7 +15,7 @@ import { CLOSE, Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type FilterChipProps = {
@@ -67,7 +67,7 @@ export function FilterChip({
           {`· ${count}`}
         </ThemedText>
       ) : null}
-      {removable ? <Icon name={CLOSE} size={14} color={textColor} /> : null}
+      {removable ? <Icon name={CLOSE} size={IconSize.chipClose} color={textColor} /> : null}
     </PressableScale>
   );
 }

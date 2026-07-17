@@ -73,24 +73,10 @@ export const SurfaceStyles = StyleSheet.create({
     borderRadius: SurfaceRadius.sm,
     borderWidth: 1,
   },
-  card: {
-    borderRadius: SurfaceRadius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    ...elevationStyle(Elevation.raised),
-  },
   clippedCard: {
     borderRadius: SurfaceRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-  },
-  largeCard: {
-    borderRadius: SurfaceRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    ...elevationStyle(Elevation.elevated),
-  },
-  input: {
-    borderRadius: SurfaceRadius.sm,
-    borderWidth: 1,
   },
   /** Floating tray — used under bottom chrome (grade bars, sheets). */
   floatingTray: {

@@ -208,5 +208,36 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/** Shared opacity ramps — keep disabled/dimmed controls visually identical. */
+export const Opacity = {
+  disabled: 0.5,
+} as const;
+
+/**
+ * Icon sizes by semantic role, so the same role reads at the same size
+ * everywhere: `chipClose` = the ✕ inside a filter chip, `meta` = inline
+ * metadata glyphs beside small text, `control` = row chevrons and field
+ * adornments, `close` = sheet/fullscreen close buttons, `action` = sheet
+ * action-row icons, `header` = nav-bar buttons.
+ */
+export const IconSize = {
+  chipClose: 14,
+  meta: 16,
+  control: 18,
+  close: 20,
+  action: 22,
+  header: 26,
+} as const;
+
+/**
+ * Font sizes for raw `TextInput`s, which can't render through `ThemedText`.
+ * Values mirror the ThemedText ladder (`default` 16 / `subtitle` 32) so typed
+ * text sits on the same scale as displayed text.
+ */
+export const FontSize = {
+  input: 16,
+  display: 32,
+} as const;
+
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;

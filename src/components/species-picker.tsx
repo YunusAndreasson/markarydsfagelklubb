@@ -19,17 +19,17 @@ import { ALERT, CHECK, Icon, SEARCH } from '@/components/icon';
 import { PickerField } from '@/components/picker-field';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
+import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
 import { SkeletonCard } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius, SurfaceStyles } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { FontSize, IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useThemeMode } from '@/hooks/use-theme-mode';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { speciesQueryOptions, type Species } from '@/lib/query/species';
-import { rarityStyle, type RarityLevel } from '@/lib/rarity';
+import { type RarityLevel } from '@/lib/rarity';
 
 const ROW_HEIGHT = 64;
 
@@ -45,7 +45,6 @@ export function SpeciesPicker({
   error?: string | null;
 }) {
   const theme = useTheme();
-  const { colorScheme } = useThemeMode();
   const { height: winH } = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -93,11 +92,7 @@ export function SpeciesPicker({
 
   // A pinned special row (Olistad art / Övrigt) — same layout as a list row but
   // with a hint instead of a scientific name and a custom badge.
-  function renderPinnedRow(
-    item: Species,
-    hint: string,
-    badge: { label: string; background: string; color: string },
-  ) {
+  function renderPinnedRow(item: Species, hint: string, badge: RarityBadgeCustom) {
     const selected = item.id === value;
     return (
       <PressableScale
@@ -108,11 +103,7 @@ export function SpeciesPicker({
         accessibilityState={{ selected }}
         style={[styles.pinned, selected && { backgroundColor: theme.muted }]}
       >
-        <View style={[styles.rarityBadge, { backgroundColor: badge.background }]}>
-          <ThemedText type="micro" style={[styles.rarityNum, { color: badge.color }]}>
-            {badge.label}
-          </ThemedText>
-        </View>
+        <RarityBadge custom={badge} />
         <View style={styles.rowText}>
           <ThemedText
             type="smallBold"
@@ -125,14 +116,13 @@ export function SpeciesPicker({
             {hint}
           </ThemedText>
         </View>
-        {selected ? <Icon name={CHECK} size={18} color={theme.tint} /> : null}
+        {selected ? <Icon name={CHECK} size={IconSize.control} color={theme.tint} /> : null}
       </PressableScale>
     );
   }
 
   function renderRow({ item }: { item: Species }) {
     const selected = item.id === value;
-    const rarity = item.rarity != null ? rarityStyle(item.rarity as RarityLevel, colorScheme) : null;
     return (
       <PressableScale
         variant="row"
@@ -144,13 +134,7 @@ export function SpeciesPicker({
       >
         {/* Rarity prefix — same color-coded number chip as the Obsar card, so the
             grade is visible while scanning the art-lista (read-only, never edited). */}
-        {rarity ? (
-          <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
-            <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
-              {item.rarity}
-            </ThemedText>
-          </View>
-        ) : null}
+        {item.rarity != null ? <RarityBadge level={item.rarity as RarityLevel} /> : null}
         <View style={styles.rowText}>
           <ThemedText type="smallBold" numberOfLines={1} themeColor={selected ? 'tint' : 'foreground'}>
             {item.swedishName}
@@ -159,7 +143,7 @@ export function SpeciesPicker({
             {item.scientificName}
           </ThemedText>
         </View>
-        {selected ? <Icon name={CHECK} size={18} color={theme.tint} /> : null}
+        {selected ? <Icon name={CHECK} size={IconSize.control} color={theme.tint} /> : null}
       </PressableScale>
     );
   }
@@ -176,7 +160,7 @@ export function SpeciesPicker({
       />
       <PickerSheet visible={open} title={sv.observation.speciesLabel} onClose={() => setOpen(false)}>
         <View style={[styles.search, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Icon name={SEARCH} size={18} color={theme.mutedForeground} />
+          <Icon name={SEARCH} size={IconSize.control} color={theme.mutedForeground} />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -213,7 +197,7 @@ export function SpeciesPicker({
               ? renderPinnedRow(unlisted, sv.observation.speciesUnlistedHint, {
                   label: '0',
                   background: theme.destructive,
-                  color: theme.badgeForeground,
+                  foreground: theme.badgeForeground,
                 })
               : null}
             {/* "Övrigt (ej fågel)": no rarity grade applies to a non-bird, so the
@@ -222,7 +206,7 @@ export function SpeciesPicker({
               ? renderPinnedRow(other, sv.observation.speciesOtherHint, {
                   label: '–',
                   background: theme.border,
-                  color: theme.mutedForeground,
+                  foreground: theme.mutedForeground,
                 })
               : null}
 
@@ -271,7 +255,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: Spacing.two,
-    fontSize: 16,
+    // TextInput needs a concrete fontSize — ThemedText types can't apply.
+    fontSize: FontSize.input,
   },
   row: {
     height: ROW_HEIGHT,
@@ -291,15 +276,5 @@ const styles = StyleSheet.create({
     borderRadius: SurfaceRadius.sm,
   },
   rowText: { flex: 1, gap: Spacing.half },
-  // Matches the Obsar card's rarity chip so the prefix reads identically everywhere.
-  rarityBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: SurfaceRadius.xs,
-    paddingHorizontal: Spacing.one,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rarityNum: { fontWeight: '700' },
   empty: { paddingVertical: Spacing.four, textAlign: 'center' },
 });

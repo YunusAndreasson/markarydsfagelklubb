@@ -12,7 +12,7 @@ import { Icon, MINUS, PLUS } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceStyles } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     // Concrete fontSize — TextInput isn't a ThemedText so the type token can't
     // apply. Matches the `subtitle` display size so editing doesn't shift the layout.
-    fontSize: 32,
+    fontSize: FontSize.display,
     fontWeight: '600',
   },
 });

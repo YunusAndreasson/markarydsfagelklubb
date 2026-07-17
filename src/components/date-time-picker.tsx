@@ -19,7 +19,7 @@ import { CLOCK, Icon } from '@/components/icon';
 import { PickerField } from '@/components/picker-field';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode } from '@/hooks/use-theme-mode';
 import { hapticSelect } from '@/lib/haptics';
@@ -70,7 +70,7 @@ export function DateTimePicker({
         value={sv.observation.timeFriendly(value)}
         placeholder={sv.observation.timeLabel}
         onPress={openPicker}
-        leading={<Icon name={CLOCK} size={18} color={theme.mutedForeground} />}
+        leading={<Icon name={CLOCK} size={IconSize.control} color={theme.mutedForeground} />}
       />
 
       {/* Android: chained date → time dialogs (each opens on mount). */}

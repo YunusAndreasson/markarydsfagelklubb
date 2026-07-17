@@ -10,6 +10,7 @@ import { HeaderButton } from '@/components/header-button';
 import { ALERT, CLOCK, Icon, LOCATION } from '@/components/icon';
 import { ObservationMap } from '@/components/observation-map';
 import { PressableScale } from '@/components/pressable-scale';
+import { RarityBadge } from '@/components/rarity-badge';
 import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
@@ -17,15 +18,14 @@ import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
-import { useThemeMode } from '@/hooks/use-theme-mode';
 import { errorCopy } from '@/lib/errors';
 import { sv } from '@/lib/i18n/sv';
 import { observationQueryOptions } from '@/lib/query/observations';
-import { rarityFor, rarityStyle } from '@/lib/rarity';
+import { rarityFor } from '@/lib/rarity';
 
 // Observation detail — the full record, pushed over the tabs from a feed card
 // (M11). The "Read" of CRUD; the owner additionally gets an edit button that
@@ -36,7 +36,6 @@ import { rarityFor, rarityStyle } from '@/lib/rarity';
 export default function ObservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const { colorScheme } = useThemeMode();
   const { user } = useAuth();
   const q = useQuery(observationQueryOptions(id));
 
@@ -78,7 +77,6 @@ export default function ObservationDetailScreen() {
     const lng = obs.longitude ?? obs.locationLongitude;
     const mine = !!user && obs.userId === user.id;
     const level = rarityFor(obs);
-    const rarity = rarityStyle(level, colorScheme);
     const locationLabel =
       obs.locationName ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
@@ -88,11 +86,7 @@ export default function ObservationDetailScreen() {
           {/* Rarity badge in its own leading column, centered on the title's first
               line, so the title + scientific name align cleanly. */}
           <View style={styles.badgeColumn}>
-            <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
-              <ThemedText type="small" style={[styles.rarityNum, { color: rarity.foreground }]}>
-                {level}
-              </ThemedText>
-            </View>
+            <RarityBadge level={level} size="lg" />
           </View>
           <View style={styles.titleText}>
             <ThemedText type="card">{obs.speciesSwedishName}</ThemedText>
@@ -110,7 +104,7 @@ export default function ObservationDetailScreen() {
           {mine ? <Badge label={sv.feed.mine} tone="primary" /> : null}
         </View>
         <View style={styles.metaRow}>
-          <Icon name={CLOCK} size={16} color={theme.mutedForeground} />
+          <Icon name={CLOCK} size={IconSize.meta} color={theme.mutedForeground} />
           <ThemedText type="small" themeColor="mutedForeground">
             {sv.observation.timeFriendly(obs.observedAt)}
           </ThemedText>
@@ -118,7 +112,7 @@ export default function ObservationDetailScreen() {
 
         {locationLabel ? (
           <View style={styles.metaRow}>
-            <Icon name={LOCATION} size={16} color={theme.mutedForeground} />
+            <Icon name={LOCATION} size={IconSize.meta} color={theme.mutedForeground} />
             <ThemedText type="small" themeColor="mutedForeground" style={styles.flex} numberOfLines={1}>
               {locationLabel}
             </ThemedText>
@@ -199,17 +193,6 @@ const styles = StyleSheet.create({
   // height so `justifyContent: center` aligns the badge with the title.
   badgeColumn: { height: 36, justifyContent: 'center' },
   titleText: { flex: 1, minWidth: 0, gap: Spacing.half },
-  // Rarity badge beside the title — a color-coded chip with the rarity number,
-  // mirrors the feed card (sized up for the larger title).
-  rarityBadge: {
-    minWidth: 26,
-    height: 26,
-    borderRadius: SurfaceRadius.xs,
-    paddingHorizontal: Spacing.one,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rarityNum: { fontWeight: '700' },
   scientific: { fontStyle: 'italic' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },

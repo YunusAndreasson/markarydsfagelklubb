@@ -33,6 +33,7 @@ import Animated, {
 
 import { Avatar } from '@/components/avatar';
 import { PressableScale } from '@/components/pressable-scale';
+import { RarityBadge } from '@/components/rarity-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Curve, Duration } from '@/constants/motion';
 import { elevationStyle, SurfaceRadius, SurfaceStyles } from '@/constants/surface';
@@ -40,10 +41,9 @@ import { Elevation, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
-import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 import { type FeedObservation } from '@/lib/query/observations';
-import { rarityFor, rarityStyle } from '@/lib/rarity';
+import { rarityFor } from '@/lib/rarity';
 
 const VERY_RECENT_MS = 60 * 60 * 1000;
 
@@ -78,13 +78,11 @@ function PulsingDot() {
 
 export function ObservationCard({ observation, currentUserId, now }: ObservationCardProps) {
   const theme = useTheme();
-  const { colorScheme } = useThemeMode();
   const mine = !!currentUserId && observation.userId === currentUserId;
   const clock = now ?? new Date();
   const veryRecent = clock.getTime() - observation.observedAt.getTime() < VERY_RECENT_MS;
 
   const level = rarityFor(observation);
-  const rarity = rarityStyle(level, colorScheme);
 
   // Location matters — show a real name. Named locations use their name; pin-drop
   // observations (no name, raw coords) are reverse-geocoded to a place name, with
@@ -143,11 +141,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
               the bird it grades. The name fills the row and truncates; the time
               sits top-right. Name, location and meta share the left margin. */}
           <View style={styles.header}>
-            <View style={[styles.rarityBadge, { backgroundColor: rarity.background }]}>
-              <ThemedText type="micro" style={[styles.rarityNum, { color: rarity.foreground }]}>
-                {level}
-              </ThemedText>
-            </View>
+            <RarityBadge level={level} />
             <ThemedText type="heading" numberOfLines={1} style={styles.flex}>
               {observation.speciesSwedishName}
             </ThemedText>
@@ -220,16 +214,6 @@ const styles = StyleSheet.create({
   // own spacing, so this only pads the top block.
   content: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  // Rarity badge — a small color-coded chip holding the rarity number (0–5).
-  rarityBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: SurfaceRadius.xs,
-    paddingHorizontal: Spacing.one,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rarityNum: { fontWeight: '700' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },
   flex: { flex: 1 },

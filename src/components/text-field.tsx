@@ -5,7 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ThemedText } from '@/components/themed-text';
 import { Duration } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticError } from '@/lib/haptics';
@@ -104,9 +104,9 @@ const styles = StyleSheet.create({
     ...SurfaceStyles.inputSurface,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
-    // Intentional inline — TextInput needs a concrete fontSize (not a Text
-    // component, so ThemedText types don't apply). Matches body default.
-    fontSize: 16,
+    // TextInput needs a concrete fontSize (not a Text component, so ThemedText
+    // types don't apply).
+    fontSize: FontSize.input,
     minHeight: 52,
   },
 });

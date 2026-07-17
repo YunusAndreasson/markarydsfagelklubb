@@ -9,7 +9,7 @@ import {
 import { PressableScale, type PressableScaleHaptic } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { Opacity, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
@@ -105,5 +105,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  dimmed: { opacity: 0.6 },
+  dimmed: { opacity: Opacity.disabled },
 });

@@ -24,7 +24,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { getCurrentPosition } from '@/lib/geo';
@@ -191,7 +191,7 @@ export function LocationPicker({
           accessibilityLabel={sv.observation.mapExpand}
           style={[styles.expandBadge, { backgroundColor: theme.card, borderColor: theme.border }]}
         >
-          <Icon name={EXPAND} size={16} color={theme.foreground} />
+          <Icon name={EXPAND} size={IconSize.meta} color={theme.foreground} />
         </PressableScale>
       </View>
 
@@ -227,7 +227,7 @@ export function LocationPicker({
 
       {blocked ? (
         <View style={[styles.blocked, { backgroundColor: theme.muted }]}>
-          <Icon name={LOCATION} size={18} color={theme.mutedForeground} />
+          <Icon name={LOCATION} size={IconSize.control} color={theme.mutedForeground} />
           <View style={styles.blockedBody}>
             <ThemedText type="small" themeColor="mutedForeground">
               {sv.observation.locationBlockedHelpNative}
@@ -277,7 +277,7 @@ export function LocationPicker({
               { top: insets.top + Spacing.two, backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <Icon name={CLOSE} size={20} color={theme.foreground} />
+            <Icon name={CLOSE} size={IconSize.close} color={theme.foreground} />
           </PressableScale>
 
           <View style={[styles.fullBottom, { bottom: insets.bottom + Spacing.three }]}>

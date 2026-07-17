@@ -11,6 +11,7 @@ import { Alert, Linking } from 'react-native';
 import { Icon, MORE } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { showToast } from '@/components/toast';
+import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { blockUser, unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { hapticSuccess } from '@/lib/haptics';
@@ -83,7 +84,7 @@ export function ReportBlockButton({
     >
       {/* Understated in COLOR (muted, not a brand-tinted CTA) but sized like a
           normal nav-bar glyph so it's comfortably tappable on the iOS glass bar. */}
-      <Icon name={MORE} size={26} color={theme.mutedForeground} />
+      <Icon name={MORE} size={IconSize.header} color={theme.mutedForeground} />
     </PressableScale>
   );
 }
