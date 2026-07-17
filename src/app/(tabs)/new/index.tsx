@@ -13,6 +13,7 @@ import {
 } from '@/components/observation-form';
 import { showToast } from '@/components/toast';
 import { useAuth } from '@/hooks/use-auth';
+import { reverseGeocodePlaceName } from '@/hooks/use-reverse-geocode';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -56,7 +57,21 @@ export default function NewObservationScreen() {
       if (user) void queryClient.invalidateQueries({ queryKey: queryKeys.member(user.id) });
       // Fan the new fynd out to other members' devices (M14). Fire-and-forget: a
       // non-alert report or an undeployed function must never block the create.
-      if (value.alertRequested) void requestBirdAlert(newId).catch(() => {});
+      // Pin-drop reports have no lokal row in the DB — resolve the same
+      // reverse-geocoded label the feed shows so the notification names the place.
+      if (value.alertRequested) {
+        void (async () => {
+          // Best-effort: a throttled/failed geocode must not stop the alert.
+          const placeLabel =
+            value.location.kind === 'coords'
+              ? await reverseGeocodePlaceName(
+                  value.location.latitude,
+                  value.location.longitude,
+                ).catch(() => null)
+              : null;
+          await requestBirdAlert(newId, placeLabel);
+        })().catch(() => {});
+      }
     },
     onError: (_err, _value, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.feed, context.previous);

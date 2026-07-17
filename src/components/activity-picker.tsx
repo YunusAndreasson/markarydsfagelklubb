@@ -1,6 +1,6 @@
 /**
  * Aktivitet-väljaren — single-select of what the bird was doing. Required (no
- * silent default), mirroring the web. The 9 activities are shown alphabetically
+ * silent default), mirroring the web. The 10 activities are shown alphabetically
  * by their Swedish label (web parity — not in the enum's storage order); legacy
  * activity keys are accepted on read elsewhere but never offered here.
  */

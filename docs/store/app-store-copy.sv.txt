@@ -1,0 +1,50 @@
+APP STORE-TEXTER (SVENSKA) – Markaryds Fågelklubb (nu.markarydsfagelklubb.mafk)
+
+Teckengränser i App Store Connect:
+Undertitel max 30 · Kampanjtext max 170 · Nyckelord max 100 · Beskrivning max 4000.
+
+
+UNDERTITEL (24 tecken)
+
+Fågelskådning i Markaryd
+
+
+KAMPANJTEXT (151 tecken)
+
+Rapportera dina fågelobservationer, följ klubbens flöde och få larm direkt när ovanliga fåglar dyker upp i trakten. Fågelskådning för Markaryds Fågelklubb.
+
+
+NYCKELORD (85 tecken)
+
+fågel,fågelskådning,fåglar,Markaryd,ornitologi,observation,natur,kikare,art,skådning
+
+
+KORT BESKRIVNING – endast Google Play (74 tecken)
+
+Rapportera fågelobservationer, följ flödet och få larm om ovanliga fåglar.
+
+
+BESKRIVNING (App Store + Google Play "fullständig beskrivning")
+
+Markaryds Fågelklubb – appen för dig som skådar fågel i Markaryd med omnejd.
+
+Oavsett om du är ute med kikaren i skogen eller spanar från köksfönstret hjälper appen dig att fånga ögonblicket, dela dina fynd med klubben och hålla koll på vad andra ser just nu.
+
+Rapportera på sekunder
+Notera art, antal, plats och tidpunkt – och lägg gärna till ett foto. Platsen sätts automatiskt med din position eller väljs enkelt på kartan.
+
+Följ flödet
+Se klubbens senaste observationer i ett levande flöde. Ovanliga arter lyfts fram så att du snabbt ser de riktiga godbitarna.
+
+Få larm om ovanliga fåglar
+Slå på notiser och få besked direkt när någon rapporterar en sällsynt fågel – så att du hinner ut innan den flyger vidare.
+
+Utforska på kartan
+Se var fåglarna har setts och hitta nya skådarplatser i närområdet.
+
+Klubbens medlemmar
+Bläddra bland medlemmarnas observationer och se vem som sett vad.
+
+Appen drivs av och för Markaryds Fågelklubb. Logga in tryggt med Apple eller Google och kom igång på direkten.
+
+Välkommen ut i markerna!

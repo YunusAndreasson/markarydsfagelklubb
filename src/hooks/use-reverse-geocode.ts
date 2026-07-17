@@ -91,13 +91,32 @@ function queuedReverseGeocode(latitude: number, longitude: number): Promise<stri
   return run;
 }
 
+/**
+ * One-shot, cache-backed lookup — the plain-function core of the hook below.
+ * Also used outside React (the bird-alert fan-out labels pin-drop observations
+ * with the same place names the feed shows).
+ */
+export async function reverseGeocodePlaceName(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  // Round the cache key to ~11m so near-identical pins share a result; geocode
+  // with the full-precision coordinate.
+  const keyLat = Math.round(latitude * 1e4) / 1e4;
+  const keyLng = Math.round(longitude * 1e4) / 1e4;
+  const cacheKey = `${CACHE_PREFIX}${keyLat},${keyLng}`;
+  const cached = readCache(cacheKey);
+  if (cached !== null) return cached;
+  const label = await queuedReverseGeocode(latitude, longitude);
+  if (label !== null) writeCache(cacheKey, label);
+  return label;
+}
+
 export function useReverseGeocode(
   latitude: number | null | undefined,
   longitude: number | null | undefined,
 ): string | null {
   const enabled = latitude != null && longitude != null;
-  // Round the cache key to ~11m so near-identical pins share a result; geocode
-  // with the full-precision coordinate.
   const keyLat = enabled ? Math.round(latitude! * 1e4) / 1e4 : null;
   const keyLng = enabled ? Math.round(longitude! * 1e4) / 1e4 : null;
 
@@ -109,14 +128,7 @@ export function useReverseGeocode(
     // Throttled requests reject; retry with React Query's backoff re-enqueues
     // them at the tail of the serial queue, where they resolve once it drains.
     retry: 2,
-    queryFn: async () => {
-      const cacheKey = `${CACHE_PREFIX}${keyLat},${keyLng}`;
-      const cached = readCache(cacheKey);
-      if (cached !== null) return cached;
-      const label = await queuedReverseGeocode(latitude!, longitude!);
-      if (label !== null) writeCache(cacheKey, label);
-      return label;
-    },
+    queryFn: () => reverseGeocodePlaceName(latitude!, longitude!),
   });
 
   return query.data ?? null;

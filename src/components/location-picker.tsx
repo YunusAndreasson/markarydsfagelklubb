@@ -1,18 +1,22 @@
 /**
- * Plats-väljaren — set the find's location by tapping/dragging the map or via GPS
- * ("Använd min position"). The native port of the web `location-picker`: it emits
- * a coordinate on any user action; a `saved` value is only an inbound (edit-mode)
- * display state rendered as a named marker — there is no saved-location list here
- * (web parity). Location is required, so there is no "clear".
+ * Plats-väljaren — pick a common lokal from the quick-chip row, or set the
+ * find's location by tapping/dragging the map or via GPS ("Använd min
+ * position"). Ported from the web `location-picker` and extended: a chip picks a
+ * `saved` lokal (submitted as `locationId`, shown as a named marker), any map
+ * tap/drag or GPS fix replaces it with a `coords` value. Location is required,
+ * so there is no "clear".
  *
  * Composes the M8 `Map` (tap/drag → `onPick`, token-keyed recenter) and `geo`.
  */
 import { useRef, useState } from 'react';
-import { Linking, Modal, StyleSheet, View } from 'react-native';
+import { Linking, Modal, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useQuery } from '@tanstack/react-query';
+
 import { Button } from '@/components/button';
+import { FilterChip } from '@/components/filter-chip';
 import { CLOSE, EXPAND, Icon, LOCATION } from '@/components/icon';
 import { Map } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
@@ -26,6 +30,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { getCurrentPosition } from '@/lib/geo';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
+import { commonLocationsQueryOptions, type CommonLocation } from '@/lib/query/locations';
 
 export type LocationValue =
   | { kind: 'none' }
@@ -58,6 +63,12 @@ export function LocationPicker({
   const [recenter, setRecenter] = useState<{ latitude: number; longitude: number; token: number }>();
   const tokenRef = useRef(0);
 
+  // The most-used lokaler as one-tap picks. Purely additive sugar: while
+  // loading / on error / when empty the row simply isn't there and the map
+  // flow stands alone.
+  const commonQuery = useQuery(commonLocationsQueryOptions());
+  const common = commonQuery.data ?? [];
+
   const point =
     value.kind === 'coords'
       ? { latitude: value.latitude, longitude: value.longitude }
@@ -81,6 +92,18 @@ export function LocationPicker({
   function recenterTo(latitude: number, longitude: number) {
     tokenRef.current += 1;
     setRecenter({ latitude, longitude, token: tokenRef.current });
+  }
+
+  // No own haptic — FilterChip already buzzes on press.
+  function pickCommon(loc: CommonLocation) {
+    onChange({
+      kind: 'saved',
+      id: loc.id,
+      name: loc.name,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+    });
+    recenterTo(loc.latitude, loc.longitude);
   }
 
   async function requestMyPosition() {
@@ -119,6 +142,28 @@ export function LocationPicker({
       <ThemedText type="smallBold" themeColor="mutedForeground">
         {sv.observation.locationLabel}
       </ThemedText>
+
+      {common.length > 0 ? (
+        // Bleed the scroll row to the screen edges (the form's padding) so chips
+        // scroll off-screen instead of clipping at the card border.
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.quickBleed}
+          contentContainerStyle={styles.quickRow}
+        >
+          {common.map((loc) => (
+            <FilterChip
+              key={loc.id}
+              label={loc.name}
+              selected={value.kind === 'saved' && value.id === loc.id}
+              onPress={() => pickCommon(loc)}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
+
       <View
         style={[
           styles.mapWrap,
@@ -256,6 +301,10 @@ export function LocationPicker({
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.two },
+  // Negative margin matches the Screen's 16px (`inset="tab"`) horizontal padding
+  // so the chip row scrolls edge-to-edge instead of clipping at the form border.
+  quickBleed: { marginHorizontal: -Spacing.three },
+  quickRow: { paddingHorizontal: Spacing.three, gap: Spacing.two },
   mapWrap: {
     borderRadius: SurfaceRadius.md,
     overflow: 'hidden',

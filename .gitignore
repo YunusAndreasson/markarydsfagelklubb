@@ -56,3 +56,4 @@ supabase/.branches/
 *.p8
 *-service-account*.json
 google-play-*.json
+fastlane/report.xml

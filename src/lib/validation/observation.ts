@@ -18,12 +18,13 @@ export const ACTIVITIES = [
   'lockläte',
   'övrigaLäten',
   'häckande',
+  'sträckande',
 ] as const
 export type Activity = (typeof ACTIVITIES)[number]
 
 /** Tidigare aktivitetsnycklar — tillåts vid läsning så äldre observationer
  * fortfarande validerar och visas, men visas inte i picker:n. */
-export const LEGACY_ACTIVITIES = ['sträckande', 'spelande'] as const
+export const LEGACY_ACTIVITIES = ['spelande'] as const
 export type LegacyActivity = (typeof LEGACY_ACTIVITIES)[number]
 
 export const activitySchema = z.enum([...ACTIVITIES, ...LEGACY_ACTIVITIES])

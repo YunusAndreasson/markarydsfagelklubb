@@ -2,8 +2,8 @@
  * Art-väljaren — searchable single-select over the full (~300) species list. The
  * native port of the web `species-picker`:
  *   • a deferred search filters on Swedish + scientific name + family,
- *   • "Olistad art" (the unlisted-species row) is pinned above the list with its
- *     hint, always selectable,
+ *   • "Olistad art" (the unlisted-species row) and "Övrigt (ej fågel)" (the
+ *     non-bird row) are pinned above the list with their hints, always selectable,
  *   • the rest is a virtualized `FlatList` with a fixed row height (so scroll +
  *     scroll-to-selected are smooth),
  *   • picking fires a selection haptic and closes the sheet.
@@ -54,15 +54,20 @@ export function SpeciesPicker({
   const speciesQuery = useQuery(speciesQueryOptions());
   const all = useMemo(() => speciesQuery.data ?? [], [speciesQuery.data]);
 
-  // "Olistad art" is a real species row — pin it above the list and exclude it
-  // from the virtualized body so list rows stay a uniform height.
+  // "Olistad art" and "Övrigt (ej fågel)" are real species rows — pin them above
+  // the list and exclude them from the virtualized body so list rows stay a
+  // uniform height.
   const unlisted = useMemo(
     () => all.find((s) => s.swedishName === sv.observation.speciesUnlisted) ?? null,
     [all],
   );
+  const other = useMemo(
+    () => all.find((s) => s.swedishName === sv.observation.speciesOther) ?? null,
+    [all],
+  );
   const regular = useMemo(
-    () => all.filter((s) => s.id !== unlisted?.id),
-    [all, unlisted],
+    () => all.filter((s) => s.id !== unlisted?.id && s.id !== other?.id),
+    [all, unlisted, other],
   );
 
   const deferred = useDeferredValue(query);
@@ -84,6 +89,45 @@ export function SpeciesPicker({
     onChange(id);
     setOpen(false);
     setQuery('');
+  }
+
+  // A pinned special row (Olistad art / Övrigt) — same layout as a list row but
+  // with a hint instead of a scientific name and a custom badge.
+  function renderPinnedRow(
+    item: Species,
+    hint: string,
+    badge: { label: string; background: string; color: string },
+  ) {
+    const selected = item.id === value;
+    return (
+      <PressableScale
+        variant="row"
+        haptic={false}
+        onPress={() => pick(item.id)}
+        accessibilityRole="radio"
+        accessibilityState={{ selected }}
+        style={[styles.pinned, selected && { backgroundColor: theme.muted }]}
+      >
+        <View style={[styles.rarityBadge, { backgroundColor: badge.background }]}>
+          <ThemedText type="micro" style={[styles.rarityNum, { color: badge.color }]}>
+            {badge.label}
+          </ThemedText>
+        </View>
+        <View style={styles.rowText}>
+          <ThemedText
+            type="smallBold"
+            numberOfLines={1}
+            themeColor={selected ? 'tint' : 'foreground'}
+          >
+            {item.swedishName}
+          </ThemedText>
+          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={2}>
+            {hint}
+          </ThemedText>
+        </View>
+        {selected ? <Icon name={CHECK} size={18} color={theme.tint} /> : null}
+      </PressableScale>
+    );
   }
 
   function renderRow({ item }: { item: Species }) {
@@ -162,41 +206,25 @@ export function SpeciesPicker({
           />
         ) : (
           <>
-            {unlisted ? (
-              <PressableScale
-                variant="row"
-                haptic={false}
-                onPress={() => pick(unlisted.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: unlisted.id === value }}
-                style={[styles.unlisted, unlisted.id === value && { backgroundColor: theme.muted }]}
-              >
-                {/* Same chip-style badge as every other row (so it isn't missed),
-                    but a markedly red "0" — an unlisted/new species is the rarest
-                    find (rarity 0), the most notable thing to larma. */}
-                <View style={[styles.rarityBadge, { backgroundColor: theme.destructive }]}>
-                  <ThemedText
-                    type="micro"
-                    style={[styles.rarityNum, { color: theme.badgeForeground }]}
-                  >
-                    0
-                  </ThemedText>
-                </View>
-                <View style={styles.rowText}>
-                  <ThemedText
-                    type="smallBold"
-                    numberOfLines={1}
-                    themeColor={unlisted.id === value ? 'tint' : 'foreground'}
-                  >
-                    {unlisted.swedishName}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="mutedForeground" numberOfLines={2}>
-                    {sv.observation.speciesUnlistedHint}
-                  </ThemedText>
-                </View>
-                {unlisted.id === value ? <Icon name={CHECK} size={18} color={theme.tint} /> : null}
-              </PressableScale>
-            ) : null}
+            {/* "Olistad art": the same chip-style badge as every other row (so it
+                isn't missed), but a markedly red "0" — an unlisted/new species is
+                the rarest find (rarity 0), the most notable thing to larma. */}
+            {unlisted
+              ? renderPinnedRow(unlisted, sv.observation.speciesUnlistedHint, {
+                  label: '0',
+                  background: theme.destructive,
+                  color: theme.badgeForeground,
+                })
+              : null}
+            {/* "Övrigt (ej fågel)": no rarity grade applies to a non-bird, so the
+                chip is a neutral "–" instead of a number. */}
+            {other
+              ? renderPinnedRow(other, sv.observation.speciesOtherHint, {
+                  label: '–',
+                  background: theme.border,
+                  color: theme.mutedForeground,
+                })
+              : null}
 
             <FlatList
               ref={listRef}
@@ -212,7 +240,12 @@ export function SpeciesPicker({
               // sheet's `behavior="height"` handles it.
               automaticallyAdjustKeyboardInsets
               onScrollToIndexFailed={() => {}}
-              style={{ maxHeight: winH * 0.5 }}
+              // Fixed height (not maxHeight) so the sheet keeps its size while
+              // searching — with a content-driven height, narrowing to a single
+              // match collapsed the bottom-anchored card down behind the keyboard.
+              // `flexShrink` still lets the card's 85% clamp compress the list on
+              // short screens. (Web parity: the drawer is a fixed `h-[85svh]`.)
+              style={{ height: winH * 0.5, flexShrink: 1 }}
               ListEmptyComponent={
                 <ThemedText type="small" themeColor="mutedForeground" style={styles.empty}>
                   {sv.observation.speciesEmpty}
@@ -248,7 +281,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     borderRadius: SurfaceRadius.sm,
   },
-  unlisted: {
+  pinned: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,

@@ -4,7 +4,11 @@
 // the Expo push service. Invoked by the native client (fire-and-forget) right
 // after a successful insert:
 //
-//   supabase.functions.invoke('send-bird-alert', { body: { observationId } })
+//   supabase.functions.invoke('send-bird-alert', { body: { observationId, placeLabel? } })
+//
+// `placeLabel` is the client's reverse-geocoded name for a pin-drop observation
+// (which has no lokal row in the DB) — it fills the place slot in the
+// notification body so the location is always visible. A DB lokal name wins.
 //
 // There is deliberately NO database trigger on `observations` — keeping the
 // fan-out client-invoked means this never touches the insert path the web app
@@ -45,10 +49,16 @@ function json(body: unknown, status: number): Response {
 
 Deno.serve(async (req) => {
   try {
-    const { observationId } = await req.json();
+    const { observationId, placeLabel } = await req.json();
     if (!observationId || typeof observationId !== 'string') {
       return json({ error: 'observationId saknas' }, 400);
     }
+    // Client-supplied free text that lands in other members' notifications —
+    // collapse to one line and cap the length.
+    const clientPlace =
+      typeof placeLabel === 'string'
+        ? placeLabel.replace(/\s+/g, ' ').trim().slice(0, 80) || undefined
+        : undefined;
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -79,9 +89,12 @@ Deno.serve(async (req) => {
 
     const species =
       (obs.species as { swedish_name?: string } | null)?.swedish_name ?? 'Ny observation';
-    const place = (obs.location as { name?: string } | null)?.name;
+    // The place leads the body so the lokal is always visible in the collapsed
+    // banner (a combined "Species – Lokal" title truncates on one line). DB lokal
+    // name first; the client's geocoded pin label covers coordinate observations.
+    const place = (obs.location as { name?: string } | null)?.name ?? clientPlace;
     const who = reporter?.display_name ?? 'en medlem';
-    const body = [`${obs.count} st`, place].filter(Boolean).join(' · ') + ` — av ${who}`;
+    const body = [place, `${obs.count} st`].filter(Boolean).join(' · ') + ` — av ${who}`;
 
     const messages: ExpoMessage[] = tokens.map((t: { token: string }) => ({
       to: t.token,

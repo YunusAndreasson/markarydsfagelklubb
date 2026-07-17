@@ -46,10 +46,17 @@ export async function unregisterCurrentDeviceToken(): Promise<void> {
  * out to every other member's device. Fire-and-forget at the call site; a
  * not-yet-deployed function must never block the create flow. Web-created
  * observations keep using the web app's own (web-push) fan-out.
+ *
+ * `placeLabel` names the place for pin-drop observations, which have no lokal
+ * row for the function to read — pass the reverse-geocoded label so the
+ * notification still shows where. Ignored server-side when a lokal exists.
  */
-export async function requestBirdAlert(observationId: string): Promise<void> {
+export async function requestBirdAlert(
+  observationId: string,
+  placeLabel?: string | null,
+): Promise<void> {
   const { error } = await supabase.functions.invoke('send-bird-alert', {
-    body: { observationId },
+    body: { observationId, ...(placeLabel ? { placeLabel } : {}) },
   });
   if (error) throw error;
 }

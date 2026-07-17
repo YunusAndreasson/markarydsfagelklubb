@@ -209,6 +209,8 @@ export const sv = {
     speciesEmpty: 'Inga arter matchar.',
     speciesUnlisted: 'Olistad art',
     speciesUnlistedHint: 'Art som saknas i listan – beskriv den i kommentaren',
+    speciesOther: 'Övrigt (ej fågel)',
+    speciesOtherHint: 'Något annat än en fågel – beskriv det i kommentaren',
     required: 'Obligatoriskt',
     optional: 'Valfritt',
     errors: {
@@ -292,6 +294,7 @@ export const sv = {
     activityPickTitle: 'Välj aktivitet',
     activity: {
       // Nuvarande val i pickern
+      stationär: 'Stationär',
       födosökande: 'Födosökande',
       spelSång: 'Spel/sång',
       förbiflygande: 'Förbiflygande',
@@ -300,9 +303,8 @@ export const sv = {
       lockläte: 'Lockläte',
       övrigaLäten: 'Övriga läten',
       häckande: 'Häckande',
-      // Äldre nycklar — visas inte i pickern men renderas på gamla observationer
       sträckande: 'Sträckande',
-      stationär: 'Stationär',
+      // Äldre nycklar — visas inte i pickern men renderas på gamla observationer
       spelande: 'Spel/sång',
     } as const,
   },
