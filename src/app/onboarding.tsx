@@ -84,7 +84,14 @@ export default function OnboardingScreen() {
               <TextField
                 label={sv.onboarding.nameLabel}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(next) => {
+                  setName(next);
+                  // Clear the "name required" error as soon as the user starts
+                  // fixing it, so the field doesn't keep showing a red border +
+                  // message while they type a valid name (matches the Profile
+                  // form). The error re-derives on the next submit if still bad.
+                  if (error) setError(null);
+                }}
                 placeholder={sv.onboarding.namePlaceholder}
                 autoCapitalize="words"
                 autoComplete="name"

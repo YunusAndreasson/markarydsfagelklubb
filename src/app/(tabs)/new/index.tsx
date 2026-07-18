@@ -19,6 +19,7 @@ import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { createObservation, type FeedObservation } from '@/lib/query/observations';
+import { type MyProfile } from '@/lib/query/profile';
 import { requestBirdAlert } from '@/lib/query/push-tokens';
 import { type Species } from '@/lib/query/species';
 
@@ -120,6 +121,12 @@ function buildOptimisticRow(value: ObservationFormValue, userId: string): FeedOb
   const species = queryClient
     .getQueryData<Species[]>(queryKeys.species)
     ?.find((s) => s.id === value.speciesId);
+  // Seed the reporter's own identity from the cached profile, so their fresh
+  // observation shows *their* name + avatar immediately instead of flashing
+  // "Okänd observatör" (with a "?" avatar) until the background refetch merges
+  // the observer profile in — a flash that also persisted across a cold start
+  // via the query persister.
+  const me = queryClient.getQueryData<MyProfile>(queryKeys.profile);
   const coords = value.location.kind === 'coords' ? value.location : null;
   return {
     id: `optimistic-${Date.now()}`,
@@ -138,11 +145,11 @@ function buildOptimisticRow(value: ObservationFormValue, userId: string): FeedOb
     locationName: value.location.kind === 'saved' ? value.location.name : null,
     locationLatitude: null,
     locationLongitude: null,
-    observerDisplayName: null,
-    observerPhone: null,
+    observerDisplayName: me?.displayName ?? null,
+    observerPhone: me?.phone ?? null,
     imagePath: value.imagePath,
     imageUrl: null,
-    observerAvatarUrl: null,
+    observerAvatarUrl: me?.avatarUrl ?? null,
     activity: value.activity,
   };
 }

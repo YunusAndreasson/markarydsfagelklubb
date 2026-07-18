@@ -4,7 +4,7 @@
  * here so list reflows stay consistent across screens (and one number changes
  * them all).
  */
-import { FadeInDown, Keyframe, LinearTransition } from 'react-native-reanimated';
+import { FadeInDown, Keyframe } from 'react-native-reanimated';
 
 import { Duration, Stagger, type StaggerSpeed } from '@/constants/motion';
 
@@ -26,7 +26,17 @@ export function listEntrance(index: number, speed: StaggerSpeed = 'default') {
  * — fades out and shrinks slightly so the disappearance reads as the row
  * receding, not popping. The mirrored entering keyframe gives newly-added rows
  * (optimistic-add) a matching fade/scale-in so the list reads as a single, alive
- * surface. `layout` reflows siblings around either edge. Pair with a swipe row.
+ * surface.
+ *
+ * NOTE: intentionally no `layout` (LinearTransition) here. Our feed + member
+ * lists are a plain, *sectioned* ScrollView (not a virtualized list — the feed
+ * is render-all by design). Reanimated's `LinearTransition` mis-settles siblings
+ * in that setup: after an optimistic add or a delete/block removal, surviving
+ * cards ended up mispositioned — overlapping (hiding the observer footer) on
+ * removal, or leaving an oversized gap on insert — and the wrong layout PERSISTED
+ * until an app restart (a pull-to-refresh didn't clear it). Dropping the layout
+ * transition lets React Native re-lay-out siblings synchronously (they snap to the
+ * correct spot); the fade/scale in-out still keeps the list feeling alive.
  */
 export function deletableListItemMotion(motion: MotionGate) {
   const exiting = new Keyframe({
@@ -40,6 +50,5 @@ export function deletableListItemMotion(motion: MotionGate) {
   return {
     entering: motion(entering),
     exiting: motion(exiting),
-    layout: motion(LinearTransition.duration(Duration.quick)),
   } as const;
 }

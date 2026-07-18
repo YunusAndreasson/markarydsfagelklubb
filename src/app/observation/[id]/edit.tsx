@@ -95,6 +95,11 @@ export default function ObservationEditScreen() {
       showToast(sv.observation.deleted, 'success');
       if (obs?.imagePath) void deleteUpload(obs.imagePath).catch(() => {});
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
+      // Drop the now-deleted row's detail cache so it can't be re-shown (or
+      // persisted to disk) as a stale, still-"editable" record. The user has
+      // already been popped back to the feed by `onDelete`, so this can't flash a
+      // "not found" state under them.
+      queryClient.removeQueries({ queryKey: queryKeys.observation(id) });
       // Drop the now-deleted row from the owner's member-profile feed too.
       if (obs) void queryClient.invalidateQueries({ queryKey: queryKeys.member(obs.userId) });
     },
@@ -181,7 +186,14 @@ export default function ObservationEditScreen() {
         }}
         onDelete={() => {
           deleteMutation.mutate();
-          router.back();
+          // The observation no longer exists. A plain `router.back()` would land
+          // the user on its OWN detail screen — whose `observation(id)` cache the
+          // delete never clears — leaving them stranded on a stale, still-
+          // "editable" record. Pop BOTH the edit modal and the now-dead detail
+          // screen so they return to wherever they opened it from (feed / member
+          // profile). Guard for the rare stack that can't pop two.
+          if (router.canDismiss()) router.dismiss(2);
+          else router.back();
         }}
         submitting={updateMutation.isPending}
         deleting={deleteMutation.isPending}

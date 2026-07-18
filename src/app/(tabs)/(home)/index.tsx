@@ -104,7 +104,6 @@ export default function FeedScreen() {
                   key={obs.id}
                   entering={motion(listEntrance(order.get(obs.id) ?? 0))}
                   exiting={rowMotion.exiting}
-                  layout={rowMotion.layout}
                 >
                   <ObservationCard observation={obs} currentUserId={user?.id} />
                 </Animated.View>

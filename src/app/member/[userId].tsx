@@ -129,7 +129,6 @@ export default function MemberScreen() {
                 key={obs.id}
                 entering={motion(listEntrance(i))}
                 exiting={rowMotion.exiting}
-                layout={rowMotion.layout}
               >
                 <ObservationCard observation={obs} currentUserId={user?.id} />
               </Animated.View>

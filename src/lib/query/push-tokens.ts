@@ -55,6 +55,19 @@ export async function requestBirdAlert(
   observationId: string,
   placeLabel?: string | null,
 ): Promise<void> {
+  // Local-QA safety valve: driving the create flow repeatedly on a dev build
+  // would otherwise blast every real club member's device with push alerts. A
+  // connected debugger can set `globalThis.__mafkSuppressAlertFanout = true` to
+  // skip the real fan-out (the call is still exercised up to this point). The
+  // `__DEV__` guard dead-code-eliminates this from release bundles, so shipped
+  // behaviour is unchanged.
+  if (
+    __DEV__ &&
+    (globalThis as { __mafkSuppressAlertFanout?: boolean }).__mafkSuppressAlertFanout
+  ) {
+    console.log('[QA] send-bird-alert fan-out suppressed for', observationId, placeLabel ?? '');
+    return;
+  }
   const { error } = await supabase.functions.invoke('send-bird-alert', {
     body: { observationId, ...(placeLabel ? { placeLabel } : {}) },
   });

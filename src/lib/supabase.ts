@@ -43,6 +43,14 @@ export const supabase = createClient<Database>(supabaseUrl, supabasePublishableK
   },
 });
 
+// Dev-only: expose the live client on `globalThis` so a connected debugger can
+// drive auth (e.g. provision a throwaway test account) during local QA without
+// ever shipping a handle in a release build. Guarded by `__DEV__`, so it is
+// dead-code-eliminated from production bundles.
+if (__DEV__) {
+  (globalThis as unknown as { __sb?: typeof supabase }).__sb = supabase;
+}
+
 // Supabase's React Native guidance: drive token auto-refresh by app foreground
 // state (on top of `autoRefreshToken`). Stop refreshing in the background,
 // resume on return to foreground.
