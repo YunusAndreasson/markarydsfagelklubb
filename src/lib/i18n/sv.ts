@@ -246,6 +246,8 @@ export const sv = {
     locationLabel: 'Plats',
     locationPlaceholder: 'Välj plats',
     locationFromList: 'Välj från lista',
+    locationListHeader: 'Lokaler',
+    locationMapPick: 'Välj på karta',
     locationCurrent: 'Använd min position',
     locationCurrentDetecting: 'Hämtar position…',
     locationUpdate: 'Uppdatera position',

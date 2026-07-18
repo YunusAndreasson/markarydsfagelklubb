@@ -12,6 +12,7 @@
  */
 import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
 
@@ -46,6 +47,11 @@ export function SpeciesPicker({
 }) {
   const theme = useTheme();
   const { height: winH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // The PickerSheet card pads its bottom by the safe-area inset; the list must
+  // extend through it (negative margin cancels it, re-added as scroll content) so
+  // it reaches the sheet's bottom edge instead of leaving a dead band below.
+  const bottomInset = insets.bottom + Spacing.three;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const listRef = useRef<FlatList<Species>>(null);
@@ -241,7 +247,8 @@ export function SpeciesPicker({
               // match collapsed the bottom-anchored card down behind the keyboard.
               // `flexShrink` still lets the card's 85% clamp compress the list on
               // short screens. (Web parity: the drawer is a fixed `h-[85svh]`.)
-              style={{ height: winH * 0.5, flexShrink: 1 }}
+              style={{ height: winH * 0.5, flexShrink: 1, marginBottom: -bottomInset }}
+              contentContainerStyle={{ paddingBottom: bottomInset }}
               ListEmptyComponent={
                 <ThemedText type="small" themeColor="mutedForeground" style={styles.empty}>
                   {sv.observation.speciesEmpty}

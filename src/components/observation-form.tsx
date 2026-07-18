@@ -96,10 +96,6 @@ export type ObservationFormProps = {
   /** When the route hosts the primary submit in the nav header, hide the inline
    *  submit button (the destructive delete stays inline). */
   submitInHeader?: boolean;
-  /** The hosting Screen's inset — full-bleed children (the location quick-pick
-   *  row) must negate exactly this padding. Defaults to `tab` (the Larma tab);
-   *  the edit modal renders under `sub`. */
-  inset?: 'tab' | 'sub';
 };
 
 export const ObservationForm = forwardRef<ObservationFormHandle, ObservationFormProps>(
@@ -114,7 +110,6 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
       observationId,
       scrollRef,
       submitInHeader,
-      inset = 'tab',
     },
     ref,
   ) {
@@ -230,7 +225,6 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
           onChange={(loc) => update('location', loc)}
           invalid={locationInvalid}
           error={locationInvalid ? sv.observation.errors.locationMissing : null}
-          bleed={inset === 'sub' ? Spacing.four : Spacing.three}
         />
       </View>
 

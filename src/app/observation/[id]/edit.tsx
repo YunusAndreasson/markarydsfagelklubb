@@ -175,7 +175,6 @@ export default function ObservationEditScreen() {
         observationId={obs.id}
         scrollRef={scrollRef}
         submitInHeader
-        inset="sub"
         onSubmit={(v) => {
           updateMutation.mutate(v);
           router.back();

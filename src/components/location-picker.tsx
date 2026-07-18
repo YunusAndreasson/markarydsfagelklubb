@@ -1,36 +1,38 @@
 /**
- * Plats-väljaren — pick a common lokal from the quick-chip row, or set the
- * find's location by tapping/dragging the map or via GPS ("Använd min
- * position"). Ported from the web `location-picker` and extended: a chip picks a
- * `saved` lokal (submitted as `locationId`, shown as a named marker), any map
- * tap/drag or GPS fix replaces it with a `coords` value. Location is required,
- * so there is no "clear".
+ * Plats-väljaren — a `PickerField` trigger (like species/activity) that opens a
+ * bottom `PickerSheet` shaped as a familiar *list* (Jakob's law: it reads like
+ * the activity picker the user already knows). The sheet, top→bottom:
+ *   • "Använd min position" — pinned action row; opens the map and drops a pin at
+ *     the current GPS position,
+ *   • "Välj på karta" — pinned action row; opens the map to tap/drag a point,
+ *   • the most-used lokaler as a plain selectable list (tap → `saved`, closes).
+ * Precise placement happens on a full-screen map (an opaque `Modal`, so no
+ * map-in-transparent-sheet rendering quirks). Location is required — no "clear".
  *
  * Composes the M8 `Map` (tap/drag → `onPick`, token-keyed recenter) and `geo`.
  */
 import { useRef, useState } from 'react';
-import { Linking, Modal, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Linking, Modal, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/button';
-import { FilterChip } from '@/components/filter-chip';
-import { CLOSE, EXPAND, Icon, LOCATION } from '@/components/icon';
+import { CHECK, CLOSE, Icon, LOCATION, MY_LOCATION } from '@/components/icon';
 import { Map } from '@/components/map';
+import { PickerField } from '@/components/picker-field';
+import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
+import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
-import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { getCurrentPosition } from '@/lib/geo';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
-import { commonLocationsQueryOptions, type CommonLocation } from '@/lib/query/locations';
+import { locationsQueryOptions, type Location } from '@/lib/query/locations';
 
 export type LocationValue =
   | { kind: 'none' }
@@ -38,41 +40,38 @@ export type LocationValue =
   | { kind: 'coords'; latitude: number; longitude: number; accuracy?: number };
 
 const MARKARYD = { latitude: 56.46, longitude: 13.6 };
-const MAP_HEIGHT = 260;
 
 export function LocationPicker({
   value,
   onChange,
   invalid,
   error,
-  bleed = Spacing.three,
 }: {
   value: LocationValue;
   onChange: (v: LocationValue) => void;
   invalid?: boolean;
-  /** Validation message shown (destructive) in place of the hint when required-but-empty.
-   *  No own haptic — the sibling PickerFields already buzz on the same submit. */
+  /** Validation message shown (destructive) under the field when required-but-empty. */
   error?: string | null;
-  /** The enclosing screen's horizontal padding — the quick-pick chip row bleeds
-   *  this far past the form edge so chips scroll off-screen instead of clipping.
-   *  Defaults to the tab inset (16); the edit modal passes its `sub` inset (24). */
-  bleed?: number;
 }) {
   const theme = useTheme();
-  const { motion } = useMotion();
+  const { height: winH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [expanded, setExpanded] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [recenter, setRecenter] = useState<{ latitude: number; longitude: number; token: number }>();
   const tokenRef = useRef(0);
 
-  // The most-used lokaler as one-tap picks. Purely additive sugar: while
-  // loading / on error / when empty the row simply isn't there and the map
-  // flow stands alone.
-  const commonQuery = useQuery(commonLocationsQueryOptions());
-  const common = commonQuery.data ?? [];
+  // The PickerSheet card pads its bottom by the safe-area inset. A scrolling body
+  // must extend *through* that padding (negative margin cancels it) and re-add it
+  // as scroll content, so the list reaches the sheet's bottom edge instead of
+  // leaving a dead band below the viewport.
+  const bottomInset = insets.bottom + Spacing.three;
+
+  const locationsQuery = useQuery(locationsQueryOptions());
+  const locations = locationsQuery.data ?? [];
 
   const point =
     value.kind === 'coords'
@@ -82,13 +81,21 @@ export function LocationPicker({
         : null;
   const accuracy = value.kind === 'coords' ? value.accuracy : undefined;
 
+  // The field's summary line: the named lokal, "På karta" for a raw point, or the
+  // placeholder when nothing is set yet.
+  const summary =
+    value.kind === 'saved'
+      ? value.name
+      : value.kind === 'coords'
+        ? sv.feed.locationOnMap
+        : null;
+
   function setPoint(latitude: number, longitude: number, acc?: number) {
     onChange({ kind: 'coords', latitude, longitude, accuracy: acc });
   }
 
-  // A deliberate tap/drag to set the point — buzz like the other pickers. (Not
-  // inside `setPoint`, which the GPS path also calls — no double buzz.) Shared by
-  // the inline map and the fullscreen one.
+  // A deliberate tap/drag on the map — buzz like the other pickers. (Not inside
+  // `setPoint`, which the GPS path also calls — no double buzz.)
   function handlePick(latitude: number, longitude: number) {
     hapticSelect();
     setPoint(latitude, longitude);
@@ -99,16 +106,29 @@ export function LocationPicker({
     setRecenter({ latitude, longitude, token: tokenRef.current });
   }
 
-  // No own haptic — FilterChip already buzzes on press.
-  function pickCommon(loc: CommonLocation) {
+  // Picking a lokal from the list is the quick path — select and close, like the
+  // activity picker. Some lokaler have no coordinates (nothing to place on the
+  // map); the observation still references the lokal by id.
+  function pickLocation(loc: Location) {
+    hapticSelect();
     onChange({
       kind: 'saved',
       id: loc.id,
       name: loc.name,
-      latitude: loc.latitude,
-      longitude: loc.longitude,
+      latitude: loc.latitude ?? undefined,
+      longitude: loc.longitude ?? undefined,
     });
-    recenterTo(loc.latitude, loc.longitude);
+    setListOpen(false);
+  }
+
+  // The list → map handoff. The sheet closes first so the two modals are never
+  // stacked. `withGps` fires a location fix straight away (the "min position" row);
+  // "Välj på karta" opens the same map centered on the existing point for a manual
+  // tap.
+  function openMap(withGps: boolean) {
+    setListOpen(false);
+    setMapOpen(true);
+    if (withGps) void requestMyPosition();
   }
 
   async function requestMyPosition() {
@@ -143,124 +163,95 @@ export function LocationPicker({
   const hint = point ? sv.observation.locationDragHint : sv.observation.locationPickHint;
 
   return (
-    <View style={styles.container}>
-      <ThemedText type="smallBold" themeColor="mutedForeground">
-        {sv.observation.locationLabel}
-      </ThemedText>
-
-      {common.length > 0 ? (
-        // Bleed the scroll row to the screen edges (the form's padding) so chips
-        // scroll off-screen instead of clipping at the card border.
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={{ marginHorizontal: -bleed }}
-          contentContainerStyle={[styles.quickRow, { paddingHorizontal: bleed }]}
-        >
-          {common.map((loc) => (
-            <FilterChip
-              key={loc.id}
-              label={loc.name}
-              selected={value.kind === 'saved' && value.id === loc.id}
-              onPress={() => pickCommon(loc)}
-            />
-          ))}
-        </ScrollView>
-      ) : null}
-
-      <View
-        style={[
-          styles.mapWrap,
-          {
-            borderColor: invalid ? theme.destructive : theme.border,
-            borderWidth: invalid ? 1.5 : StyleSheet.hairlineWidth,
-          },
-        ]}
-      >
-        <Map
-          markers={markers}
-          center={point ?? MARKARYD}
-          zoom={point ? 14 : 11}
-          height={MAP_HEIGHT}
-          markerDraggable
-          onPick={handlePick}
-          recenter={recenter}
-        />
-        {/* Expand to a fullscreen canvas for precise placement. A small corner
-            button (not a full overlay) so the inline map stays tap-to-set. */}
-        <PressableScale
-          variant="icon"
-          onPress={() => setExpanded(true)}
-          accessibilityRole="button"
-          accessibilityLabel={sv.observation.mapExpand}
-          style={[styles.expandBadge, { backgroundColor: theme.card, borderColor: theme.border }]}
-        >
-          <Icon name={EXPAND} size={IconSize.meta} color={theme.foreground} />
-        </PressableScale>
-      </View>
-
-      {error ? (
-        <Animated.View entering={motion(FadeInDown.duration(Duration.quick))}>
-          <ThemedText type="small" themeColor="destructive">
-            {error}
-          </ThemedText>
-        </Animated.View>
-      ) : (
-        <ThemedText type="small" themeColor="mutedForeground">
-          {hint}
-        </ThemedText>
-      )}
-      {point && accuracy != null ? (
-        <ThemedText type="small" themeColor="mutedForeground">
-          {sv.observation.locationAccuracy(accuracy)}
-        </ThemedText>
-      ) : null}
-
-      <Button
-        title={sv.observation.locationCurrent}
-        variant="secondary"
-        loading={pending}
-        onPress={() => void requestMyPosition()}
+    <>
+      <PickerField
+        label={sv.observation.locationLabel}
+        value={summary}
+        placeholder={sv.observation.locationPlaceholder}
+        invalid={invalid}
+        error={error}
+        onPress={() => setListOpen(true)}
+        leading={<Icon name={LOCATION} size={IconSize.control} color={theme.mutedForeground} />}
       />
 
-      {errorMsg ? (
-        <ThemedText type="small" themeColor="destructive">
-          {errorMsg}
-        </ThemedText>
-      ) : null}
+      {/* The list sheet — familiar activity-picker shape. */}
+      <PickerSheet
+        visible={listOpen}
+        title={sv.observation.locationLabel}
+        onClose={() => setListOpen(false)}
+      >
+        <ScrollView
+          style={{ maxHeight: winH * 0.62, marginBottom: -bottomInset }}
+          contentContainerStyle={[styles.listBody, { paddingBottom: bottomInset }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Pinned map actions — "min position" first, then the manual map pick. */}
+          <SheetActionRow
+            icon={MY_LOCATION}
+            label={sv.observation.locationCurrent}
+            onPress={() => openMap(true)}
+          />
+          <SheetActionRow
+            icon={LOCATION}
+            label={sv.observation.locationMapPick}
+            onPress={() => openMap(false)}
+          />
 
-      {blocked ? (
-        <View style={[styles.blocked, { backgroundColor: theme.muted }]}>
-          <Icon name={LOCATION} size={IconSize.control} color={theme.mutedForeground} />
-          <View style={styles.blockedBody}>
-            <ThemedText type="small" themeColor="mutedForeground">
-              {sv.observation.locationBlockedHelpNative}
-            </ThemedText>
-            <PressableScale
-              variant="link"
-              onPress={() => void Linking.openSettings()}
-              accessibilityRole="button"
-            >
-              <ThemedText type="smallBold" themeColor="tint">
-                {sv.profile.location.openSettings}
+          {/* Every saved lokal as a plain selectable list (A–Ö). Absent while
+              loading / on error / when empty — the map actions above always
+              stand alone. */}
+          {locationsQuery.isPending ? (
+            <View style={styles.loadingRows}>
+              {[0, 1, 2, 3].map((n) => (
+                <Skeleton key={n} width="70%" height={16} />
+              ))}
+            </View>
+          ) : locations.length > 0 ? (
+            <>
+              <ThemedText type="smallBold" themeColor="mutedForeground" style={styles.listHeader}>
+                {sv.observation.locationListHeader}
               </ThemedText>
-            </PressableScale>
-          </View>
-        </View>
-      ) : null}
+              {locations.map((loc) => {
+                const selected = value.kind === 'saved' && value.id === loc.id;
+                return (
+                  <PressableScale
+                    key={loc.id}
+                    variant="row"
+                    haptic={false}
+                    onPress={() => pickLocation(loc)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    style={[styles.row, selected && { backgroundColor: theme.muted }]}
+                  >
+                    <ThemedText
+                      type="default"
+                      themeColor={selected ? 'tint' : 'foreground'}
+                      numberOfLines={1}
+                      style={styles.rowLabel}
+                    >
+                      {loc.name}
+                    </ThemedText>
+                    {selected ? <Icon name={CHECK} size={IconSize.control} color={theme.tint} /> : null}
+                  </PressableScale>
+                );
+              })}
+            </>
+          ) : null}
+        </ScrollView>
+      </PickerSheet>
 
-      {/* Fullscreen canvas — same interactive map (tap/drag → onChange) on a
-          full screen for precise placement, plus GPS and the live hint. State is
-          shared, so a point set here is already applied when the modal closes. */}
+      {/* Full-screen map — the precise placement canvas (opaque Modal). Tap/drag
+          sets the point (state is shared, so it's already applied); "Klar"
+          confirms, the corner ✕ goes back to the list. */}
       <Modal
-        visible={expanded}
+        visible={mapOpen}
         animationType="slide"
-        onRequestClose={() => setExpanded(false)}
+        onRequestClose={() => setMapOpen(false)}
         statusBarTranslucent
       >
         <ThemedView style={styles.full}>
-          {expanded ? (
+          {mapOpen ? (
             <Map
               markers={markers}
               center={point ?? MARKARYD}
@@ -274,9 +265,12 @@ export function LocationPicker({
 
           <PressableScale
             variant="icon"
-            onPress={() => setExpanded(false)}
+            onPress={() => {
+              setMapOpen(false);
+              setListOpen(true);
+            }}
             accessibilityRole="button"
-            accessibilityLabel={sv.observation.mapClose}
+            accessibilityLabel={sv.common.close}
             style={[
               styles.close,
               { top: insets.top + Spacing.two, backgroundColor: theme.card, borderColor: theme.border },
@@ -290,40 +284,68 @@ export function LocationPicker({
               <ThemedText type="small" themeColor="mutedForeground">
                 {hint}
               </ThemedText>
+              {point && accuracy != null ? (
+                <ThemedText type="small" themeColor="mutedForeground">
+                  {sv.observation.locationAccuracy(accuracy)}
+                </ThemedText>
+              ) : null}
             </View>
+
+            {blocked ? (
+              <View style={[styles.blocked, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Icon name={LOCATION} size={IconSize.control} color={theme.mutedForeground} />
+                <View style={styles.blockedBody}>
+                  <ThemedText type="small" themeColor="mutedForeground">
+                    {sv.observation.locationBlockedHelpNative}
+                  </ThemedText>
+                  <PressableScale
+                    variant="link"
+                    onPress={() => void Linking.openSettings()}
+                    accessibilityRole="button"
+                  >
+                    <ThemedText type="smallBold" themeColor="tint">
+                      {sv.profile.location.openSettings}
+                    </ThemedText>
+                  </PressableScale>
+                </View>
+              </View>
+            ) : errorMsg ? (
+              <View style={[styles.hintPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <ThemedText type="small" themeColor="destructive">
+                  {errorMsg}
+                </ThemedText>
+              </View>
+            ) : null}
+
+            {/* GPS above the confirm button — the position action stays reachable
+                without hunting for it. */}
             <Button
               title={sv.observation.locationCurrent}
               variant="secondary"
               loading={pending}
               onPress={() => void requestMyPosition()}
             />
+            <Button title={sv.common.done} onPress={() => setMapOpen(false)} />
           </View>
         </ThemedView>
       </Modal>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: Spacing.two },
-  quickRow: { gap: Spacing.two },
-  mapWrap: {
-    borderRadius: SurfaceRadius.md,
-    overflow: 'hidden',
-  },
-  // Small expand affordance in the inline map's corner — sits above the MapView
-  // so its tap opens fullscreen while the rest of the map stays tap-to-set.
-  expandBadge: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    minWidth: 36,
-    minHeight: 36,
+  listBody: { gap: Spacing.one },
+  loadingRows: { gap: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three },
+  listHeader: { paddingHorizontal: Spacing.one, paddingTop: Spacing.two },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.two,
+    minHeight: 52,
+    paddingHorizontal: Spacing.three,
     borderRadius: SurfaceRadius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
   },
+  rowLabel: { flex: 1 },
   full: { flex: 1 },
   // Override the Map's default fixed height so it fills the flex parent.
   fullMap: { flex: 1, height: '100%' },
@@ -344,12 +366,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: SurfaceRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
+    gap: Spacing.half,
   },
   blocked: {
     flexDirection: 'row',
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: SurfaceRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   blockedBody: { flex: 1, gap: Spacing.one, alignItems: 'flex-start' },
 });
