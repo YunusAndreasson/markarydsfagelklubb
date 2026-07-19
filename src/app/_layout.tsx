@@ -243,6 +243,17 @@ function ThemedNavigation() {
               sheetAllowedDetents: [0.6, 0.9],
               sheetGrabberVisible: true,
               sheetCornerRadius: 24,
+              // `height: '100%'` is load-bearing, not cosmetic. On iOS
+              // react-native-screens lays a formSheet's content wrapper out
+              // absolutely with top/left/right but NO bottom constraint (so Yoga
+              // doesn't re-measure it mid-animation). A `flex: 1` child therefore
+              // has nothing to stretch against: it laid out fine at the initial
+              // detent, then collapsed the moment the sheet was dragged to the
+              // taller one — the sheet stayed painted but its content vanished.
+              // A percentage height resolves against the (correctly sized) screen
+              // and follows every resize. Only needed on sheets whose content is a
+              // flex column rather than a single scroller.
+              contentStyle: { height: '100%', backgroundColor: theme.background },
             }}
           />
           <Stack.Screen
