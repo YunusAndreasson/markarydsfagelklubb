@@ -101,29 +101,6 @@ export default function ObservationEditScreen() {
     },
   });
 
-  const busy = updateMutation.isPending || deleteMutation.isPending;
-  // Keep the modal mounted until its write settles. This preserves both the
-  // mutation continuation and the form needed to retry a failure.
-  const handleDismiss = useCallback(() => {
-    if (busy) return;
-    if (!dirty) {
-      router.back();
-      return;
-    }
-    void (async () => {
-      const ok = await confirm({
-        title: sv.observation.discard.editTitle,
-        message: sv.observation.discard.editMessage,
-        confirmLabel: sv.observation.discard.editConfirm,
-        cancelLabel: sv.observation.discard.keepEditing,
-        destructive: true,
-      });
-      if (ok) router.back();
-    })();
-  }, [busy, dirty]);
-
-  useHardwareBackGuard(dirty || busy, handleDismiss);
-
   const deleteMutation = useMutation({
     mutationFn: () => deleteObservation(id),
     onMutate: async () => {
@@ -159,6 +136,29 @@ export default function ObservationEditScreen() {
       showToast(sv.observation.saveFailed, 'error');
     },
   });
+
+  const busy = updateMutation.isPending || deleteMutation.isPending;
+  // Keep the modal mounted until its write settles. This preserves both the
+  // mutation continuation and the form needed to retry a failure.
+  const handleDismiss = useCallback(() => {
+    if (busy) return;
+    if (!dirty) {
+      router.back();
+      return;
+    }
+    void (async () => {
+      const ok = await confirm({
+        title: sv.observation.discard.editTitle,
+        message: sv.observation.discard.editMessage,
+        confirmLabel: sv.observation.discard.editConfirm,
+        cancelLabel: sv.observation.discard.keepEditing,
+        destructive: true,
+      });
+      if (ok) router.back();
+    })();
+  }, [busy, dirty]);
+
+  useHardwareBackGuard(dirty || busy, handleDismiss);
 
   let body: ReactNode;
   if (q.isLoading) {
