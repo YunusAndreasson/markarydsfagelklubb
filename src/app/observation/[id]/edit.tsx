@@ -37,9 +37,8 @@ import { deleteUpload } from '@/lib/query/storage';
 
 // Observation edit (owner-only) — a modal over the tabs. Repopulates the shared
 // `ObservationForm`, then updates/deletes via the M3 mutations. Both flows patch
-// the feed + detail caches optimistically and dismiss immediately; the side
-// effects (invalidate, image cleanup, rollback, haptics) live in the
-// `useMutation` option callbacks, which fire even after the modal unmounts.
+// the feed + detail caches optimistically, but only dismiss after the write has
+// committed so a failure leaves the form and its retry path intact.
 export default function ObservationEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -52,31 +51,13 @@ export default function ObservationEditScreen() {
   // dirty so the guarded Avbryt is the only exit.
   const [dirty, setDirty] = useState(false);
 
-  // Void-returning + memoized on `dirty` so it drives the Avbryt button and the
-  // hardware-back guard alike (see the compose modal for the full rationale).
-  const handleDismiss = useCallback(() => {
-    if (!dirty) {
-      router.back();
-      return;
-    }
-    void (async () => {
-      const ok = await confirm({
-        title: sv.observation.discard.editTitle,
-        message: sv.observation.discard.editMessage,
-        confirmLabel: sv.observation.discard.editConfirm,
-        cancelLabel: sv.observation.discard.keepEditing,
-        destructive: true,
-      });
-      if (ok) router.back();
-    })();
-  }, [dirty]);
-
-  useHardwareBackGuard(dirty, handleDismiss);
-
   const updateMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => updateObservation({ id, ...formToInput(value) }),
     onMutate: async (value) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.feed });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: queryKeys.feed }),
+        queryClient.cancelQueries({ queryKey: queryKeys.observation(id) }),
+      ]);
       const previousFeed = queryClient.getQueryData<FeedObservation[]>(queryKeys.feed);
       const previousObs = queryClient.getQueryData<FeedObservation | null>(queryKeys.observation(id));
       queryClient.setQueryData<FeedObservation[]>(queryKeys.feed, (prev) =>
@@ -103,12 +84,45 @@ export default function ObservationEditScreen() {
       if (obs) void queryClient.invalidateQueries({ queryKey: queryKeys.member(obs.userId) });
     },
     onError: (_err, _value, context) => {
-      if (context?.previousFeed) queryClient.setQueryData(queryKeys.feed, context.previousFeed);
-      if (context) queryClient.setQueryData(queryKeys.observation(id), context.previousObs);
+      if (context) {
+        if (context.previousFeed === undefined) {
+          queryClient.removeQueries({ queryKey: queryKeys.feed, exact: true });
+        } else {
+          queryClient.setQueryData(queryKeys.feed, context.previousFeed);
+        }
+        if (context.previousObs === undefined) {
+          queryClient.removeQueries({ queryKey: queryKeys.observation(id), exact: true });
+        } else {
+          queryClient.setQueryData(queryKeys.observation(id), context.previousObs);
+        }
+      }
       hapticError();
       showToast(sv.observation.saveFailed, 'error');
     },
   });
+
+  const busy = updateMutation.isPending || deleteMutation.isPending;
+  // Keep the modal mounted until its write settles. This preserves both the
+  // mutation continuation and the form needed to retry a failure.
+  const handleDismiss = useCallback(() => {
+    if (busy) return;
+    if (!dirty) {
+      router.back();
+      return;
+    }
+    void (async () => {
+      const ok = await confirm({
+        title: sv.observation.discard.editTitle,
+        message: sv.observation.discard.editMessage,
+        confirmLabel: sv.observation.discard.editConfirm,
+        cancelLabel: sv.observation.discard.keepEditing,
+        destructive: true,
+      });
+      if (ok) router.back();
+    })();
+  }, [busy, dirty]);
+
+  useHardwareBackGuard(dirty || busy, handleDismiss);
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteObservation(id),
@@ -134,7 +148,13 @@ export default function ObservationEditScreen() {
       if (obs) void queryClient.invalidateQueries({ queryKey: queryKeys.member(obs.userId) });
     },
     onError: (_err, _value, context) => {
-      if (context?.previousFeed) queryClient.setQueryData(queryKeys.feed, context.previousFeed);
+      if (context) {
+        if (context.previousFeed === undefined) {
+          queryClient.removeQueries({ queryKey: queryKeys.feed, exact: true });
+        } else {
+          queryClient.setQueryData(queryKeys.feed, context.previousFeed);
+        }
+      }
       hapticError();
       showToast(sv.observation.saveFailed, 'error');
     },
@@ -211,19 +231,17 @@ export default function ObservationEditScreen() {
         submitInHeader
         onDirtyChange={setDirty}
         onSubmit={(v) => {
-          updateMutation.mutate(v);
-          router.back();
+          updateMutation.mutate(v, { onSuccess: () => router.back() });
         }}
         onDelete={() => {
-          deleteMutation.mutate();
-          // The observation no longer exists. A plain `router.back()` would land
-          // the user on its OWN detail screen — whose `observation(id)` cache the
-          // delete never clears — leaving them stranded on a stale, still-
-          // "editable" record. Pop BOTH the edit modal and the now-dead detail
-          // screen so they return to wherever they opened it from (feed / member
-          // profile). Guard for the rare stack that can't pop two.
-          if (router.canDismiss()) router.dismiss(2);
-          else router.back();
+          deleteMutation.mutate(undefined, {
+            onSuccess: () => {
+              // The observation no longer exists. Pop both the edit modal and
+              // its now-dead detail screen, returning to feed/member profile.
+              if (router.canDismiss()) router.dismiss(2);
+              else router.back();
+            },
+          });
         }}
         submitting={updateMutation.isPending}
         deleting={deleteMutation.isPending}
@@ -242,8 +260,8 @@ export default function ObservationEditScreen() {
         options={{
           // Block the native swipe-to-dismiss while there are unsaved edits so the
           // guarded Avbryt below is the only way out.
-          gestureEnabled: !dirty,
-          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} />,
+          gestureEnabled: !dirty && !busy,
+          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} disabled={busy} />,
           headerRight: canEdit
             ? () => (
                 <HeaderButton

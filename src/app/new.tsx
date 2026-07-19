@@ -31,8 +31,8 @@ import { type Species } from '@/lib/query/species';
 // button in the Larm tab header (a root-level `presentation: 'modal'` route, see
 // the root `_layout`). Composes the M9 pickers + M10 image into the shared
 // `ObservationForm` and inserts directly (M3 `createObservation`). The feed
-// updates optimistically (`onMutate`) and we dismiss straight back to it; a
-// failure rolls the row back with a `hapticError` + toast. As a modal it
+// updates optimistically (`onMutate`) and dismisses after the insert commits; a
+// failure rolls the row back while preserving the form for retry. As a modal it
 // unmounts on dismiss, so there's no long-lived form to reset via a bumped key.
 export default function NewObservationScreen() {
   const { user } = useAuth();
@@ -43,31 +43,6 @@ export default function NewObservationScreen() {
   // changes?" convention). While dirty, swipe-to-dismiss is disabled too, so the
   // guarded Avbryt is the only exit and no draft is lost silently.
   const [dirty, setDirty] = useState(false);
-
-  // Guard the explicit dismiss: a clean form closes straight away; a dirty one
-  // confirms first. `confirm()` settles only after its sheet closes, so
-  // navigating from the continuation is safe on the native-stack modal. Void-
-  // returning + memoized on `dirty` so it can drive both the Avbryt button and
-  // the hardware-back guard without re-subscribing every render.
-  const handleDismiss = useCallback(() => {
-    if (!dirty) {
-      router.back();
-      return;
-    }
-    void (async () => {
-      const ok = await confirm({
-        title: sv.observation.discard.createTitle,
-        message: sv.observation.discard.createMessage,
-        confirmLabel: sv.observation.discard.createConfirm,
-        cancelLabel: sv.observation.discard.keepEditing,
-        destructive: true,
-      });
-      if (ok) router.back();
-    })();
-  }, [dirty]);
-
-  // Android hardware back is a second dismiss path `gestureEnabled` can't cover.
-  useHardwareBackGuard(dirty, handleDismiss);
 
   const createMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => createObservation(formToInput(value)),
@@ -109,11 +84,42 @@ export default function NewObservationScreen() {
       }
     },
     onError: (_err, _value, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.feed, context.previous);
+      if (context) {
+        if (context.previous === undefined) {
+          queryClient.removeQueries({ queryKey: queryKeys.feed, exact: true });
+        } else {
+          queryClient.setQueryData(queryKeys.feed, context.previous);
+        }
+      }
       hapticError();
       showToast(sv.observation.saveFailed, 'error');
     },
   });
+
+  // Never dismiss while the insert is in flight: doing so would unmount the
+  // per-call success continuation and make a successful report look stuck. A
+  // clean form closes immediately; a dirty one still gets the discard guard.
+  const busy = createMutation.isPending;
+  const handleDismiss = useCallback(() => {
+    if (busy) return;
+    if (!dirty) {
+      router.back();
+      return;
+    }
+    void (async () => {
+      const ok = await confirm({
+        title: sv.observation.discard.createTitle,
+        message: sv.observation.discard.createMessage,
+        confirmLabel: sv.observation.discard.createConfirm,
+        cancelLabel: sv.observation.discard.keepEditing,
+        destructive: true,
+      });
+      if (ok) router.back();
+    })();
+  }, [busy, dirty]);
+
+  // Android hardware back is a second dismiss path `gestureEnabled` can't cover.
+  useHardwareBackGuard(dirty || busy, handleDismiss);
 
   return (
     <>
@@ -122,11 +128,11 @@ export default function NewObservationScreen() {
           // While the form is dirty, block the native swipe-to-dismiss so a draft
           // can't vanish with an accidental drag — the guarded Avbryt below is the
           // only way out, and it confirms.
-          gestureEnabled: !dirty,
+          gestureEnabled: !dirty && !busy,
           // Compose-modal chrome: dismiss (text "Avbryt" on iOS, ✕ on Android)
           // cancels, Larma submits (via the form's imperative handle). Both live
           // in the native bar, not the body.
-          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} />,
+          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} disabled={busy} />,
           headerRight: () => (
             <HeaderButton
               title={sv.observation.submitNew}
@@ -144,9 +150,7 @@ export default function NewObservationScreen() {
           submitInHeader
           onDirtyChange={setDirty}
           onSubmit={(v) => {
-            createMutation.mutate(v);
-            // The feed behind already has the optimistic row; dismiss back to it.
-            router.back();
+            createMutation.mutate(v, { onSuccess: () => router.back() });
           }}
           submitting={createMutation.isPending}
         />
@@ -171,7 +175,7 @@ function buildOptimisticRow(value: ObservationFormValue, userId: string): FeedOb
   // "Okänd observatör" (with a "?" avatar) until the background refetch merges
   // the observer profile in — a flash that also persisted across a cold start
   // via the query persister.
-  const me = queryClient.getQueryData<MyProfile>(queryKeys.profile);
+  const me = queryClient.getQueryData<MyProfile>(queryKeys.profile(userId));
   const coords = value.location.kind === 'coords' ? value.location : null;
   return {
     id: `optimistic-${Date.now()}`,
