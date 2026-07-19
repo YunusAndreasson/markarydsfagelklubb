@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query/keys';
 import { requireUserId } from '@/lib/query/session';
-import { signedUrlFor } from '@/lib/query/storage';
+import { signedUrlFor, signedUrlMap } from '@/lib/query/storage';
 import { supabase } from '@/lib/supabase';
 import { upsertProfileInput, type UpsertProfileInput } from '@/lib/validation/profile';
 
@@ -44,8 +44,8 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
   return toMyProfile(data as RawMyProfileRow);
 }
 
-export function myProfileQueryOptions() {
-  return queryOptions({ queryKey: queryKeys.profile, queryFn: fetchMyProfile });
+export function myProfileQueryOptions(userId: string) {
+  return queryOptions({ queryKey: queryKeys.profile(userId), queryFn: fetchMyProfile });
 }
 
 export type MemberSummary = { userId: string; displayName: string | null; avatarUrl: string | null };
@@ -65,16 +65,15 @@ export async function fetchProfilesByIds(userIds: string[]): Promise<MemberSumma
   if (error) throw error;
   const rows = (data ?? []) as { user_id: string; display_name: string | null; avatar_path: string | null }[];
   const byId = new Map(rows.map((r) => [r.user_id, r]));
-  return Promise.all(
-    userIds.map(async (userId) => {
-      const row = byId.get(userId);
-      return {
-        userId,
-        displayName: row?.display_name ?? null,
-        avatarUrl: row ? await signedUrlFor(row.avatar_path) : null,
-      };
-    }),
-  );
+  const avatarUrls = await signedUrlMap(rows.map((row) => row.avatar_path));
+  return userIds.map((userId) => {
+    const row = byId.get(userId);
+    return {
+      userId,
+      displayName: row?.display_name ?? null,
+      avatarUrl: row?.avatar_path ? (avatarUrls.get(row.avatar_path) ?? null) : null,
+    };
+  });
 }
 
 /**

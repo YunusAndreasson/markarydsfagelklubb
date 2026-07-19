@@ -68,7 +68,7 @@ type WebStorageLike = {
 const storage = (globalThis as unknown as { localStorage: WebStorageLike }).localStorage;
 
 /** Bump when persisted data shapes change — invalidates any old on-disk cache. */
-export const PERSIST_BUSTER = 'mafk-cache-v1';
+export const PERSIST_BUSTER = 'mafk-cache-v2';
 /** Discard persisted data older than this on restore (offline tolerance window). */
 export const PERSIST_MAX_AGE = 1000 * 60 * 60 * 24 * 7; // 7 days
 

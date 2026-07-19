@@ -168,7 +168,7 @@ export function feedQueryOptions() {
 export async function fetchMemberFeed(
   userId: string,
 ): Promise<{ profile: MemberProfile | null; observations: FeedObservation[] }> {
-  const [{ data: profileRow }, { data: obsRows, error }] = await Promise.all([
+  const [profileResult, observationsResult] = await Promise.all([
     supabase
       .from('profiles')
       .select('display_name,avatar_path,phone')
@@ -182,7 +182,11 @@ export async function fetchMemberFeed(
       .order('observed_at', { ascending: false })
       .limit(FEED_LIMIT),
   ]);
-  if (error) throw error;
+  if (profileResult.error) throw profileResult.error;
+  if (observationsResult.error) throw observationsResult.error;
+
+  const profileRow = profileResult.data;
+  const obsRows = observationsResult.data;
 
   const observations = await toFeedObservations((obsRows ?? []) as unknown as RawObservationRow[]);
   const memberRow = profileRow as Pick<

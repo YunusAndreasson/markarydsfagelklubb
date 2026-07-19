@@ -43,7 +43,11 @@ type Persisted = { displayName: string; phone: string | null; avatarPath: string
 // round it out. The tab nests a native Stack (`profile/_layout.tsx`).
 export default function ProfileScreen() {
   const { signOut, deleteAccount, user } = useAuth();
-  const { data: profile } = useQuery(myProfileQueryOptions());
+  const userId = user?.id ?? '';
+  const { data: profile } = useQuery({
+    ...myProfileQueryOptions(userId),
+    enabled: !!user,
+  });
   const uploadRef = useRef<ImageUploadHandle>(null);
   const [deleting, setDeleting] = useState(false);
   // Only surface the block-management row once a block exists — no clutter for the
@@ -66,31 +70,58 @@ export default function ProfileScreen() {
     phone: profile?.phone ?? null,
     avatarPath: profile?.avatarPath ?? null,
   });
+  // The mutation scope below serializes autosaves. Read the latest committed
+  // snapshot at execution time so a queued phone/avatar patch includes a name
+  // that finished saving just before it, rather than stale render-time siblings.
+  const savedRef = useRef(saved);
+
+  type ProfilePatch = Partial<Persisted>;
 
   const mutation = useMutation({
-    mutationFn: (input: Persisted) => upsertMyProfile(input),
-    onSuccess: (result, input) => {
+    scope: { id: 'profile-autosave' },
+    mutationFn: async (patch: ProfilePatch) => {
+      const previous = savedRef.current;
+      const input = { ...previous, ...patch };
+      const result = await upsertMyProfile(input);
+      const persisted: Persisted = {
+        displayName: result.displayName,
+        phone: result.phone ?? null,
+        avatarPath: result.avatarPath,
+      };
+      savedRef.current = persisted;
+      return {
+        result,
+        persisted,
+        previousAvatarPath: previous.avatarPath,
+        avatarChanged:
+          Object.prototype.hasOwnProperty.call(patch, 'avatarPath') &&
+          input.avatarPath !== previous.avatarPath,
+      };
+    },
+    onSuccess: ({ result, persisted, previousAvatarPath, avatarChanged }) => {
       // Seed the shared profile query so the gate / header avatar / other readers
       // see the update without a refetch, and advance the persisted snapshot. The
       // editable fields are intentionally NOT overwritten here — they already hold
       // the user's input, and rewriting them would clobber a parallel edit.
-      queryClient.setQueryData(queryKeys.profile, result);
+      queryClient.setQueryData(queryKeys.profile(userId), result);
       // The old avatar object is deleted only now, once the save has committed —
       // deleting it at tap time would break the profile row if the save failed.
-      if (input.avatarPath !== saved.avatarPath && saved.avatarPath) {
-        void deleteUpload(saved.avatarPath).catch(() => {});
+      if (avatarChanged && previousAvatarPath && previousAvatarPath !== persisted.avatarPath) {
+        void deleteUpload(previousAvatarPath).catch(() => {});
       }
-      setSaved({
-        displayName: result.displayName,
-        phone: result.phone ?? null,
-        avatarPath: result.avatarPath,
-      });
+      setSaved(persisted);
       hapticSuccess();
       showToast(sv.profile.saved, 'success');
       // The feed embeds the observer's display name — refresh it.
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
     },
-    onError: () => {
+    onError: (_error, patch) => {
+      // An avatar upload precedes the profile write. If that write fails, return
+      // the editor to the last committed path instead of presenting an unsaved
+      // local value as though it were durable.
+      if (Object.prototype.hasOwnProperty.call(patch, 'avatarPath')) {
+        setAvatarPath(savedRef.current.avatarPath);
+      }
       hapticError();
       showToast(sv.profile.saveFailed, 'error');
     },
@@ -105,7 +136,7 @@ export default function ProfileScreen() {
     }
     setNameError(null);
     if (parsed.data !== saved.displayName) {
-      mutation.mutate({ displayName: parsed.data, phone: saved.phone, avatarPath: saved.avatarPath });
+      mutation.mutate({ displayName: parsed.data });
     }
   }
 
@@ -123,14 +154,14 @@ export default function ProfileScreen() {
     }
     setPhoneError(null);
     if (next !== saved.phone) {
-      mutation.mutate({ displayName: saved.displayName, phone: next, avatarPath: saved.avatarPath });
+      mutation.mutate({ phone: next });
     }
   }
 
   function onChangeAvatar(path: string | null) {
     setAvatarPath(path);
     if (path !== saved.avatarPath) {
-      mutation.mutate({ displayName: saved.displayName, phone: saved.phone, avatarPath: path });
+      mutation.mutate({ avatarPath: path });
     }
   }
 

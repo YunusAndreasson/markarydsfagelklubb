@@ -67,7 +67,8 @@ function ThemedNavigation() {
   // Resolve the profile alongside the session (mirrors the web `_authed` gate's
   // `ensureQueryData`). `fetchMyProfile` returns null for "no row" → onboarding;
   // only a thrown error means we genuinely couldn't resolve it.
-  const profileQuery = useQuery({ ...myProfileQueryOptions(), enabled: !!session });
+  const userId = session?.user.id ?? '';
+  const profileQuery = useQuery({ ...myProfileQueryOptions(userId), enabled: !!session });
   const profileSettled = !session || profileQuery.isSuccess || profileQuery.isError;
   const ready = initialized && profileSettled;
   const hasProfile = !!profileQuery.data;

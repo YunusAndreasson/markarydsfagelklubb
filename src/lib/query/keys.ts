@@ -1,5 +1,8 @@
 export const queryKeys = {
-  profile: ['profile'] as const,
+  // Profile data is private and user-specific. Including the auth id prevents a
+  // persisted cache entry from a previous session being reused by a different
+  // account while its own profile request is still in flight.
+  profile: (userId: string) => ['profile', userId] as const,
   species: ['species'] as const,
   locations: ['locations'] as const,
   locationsCommon: ['locations', 'common'] as const,

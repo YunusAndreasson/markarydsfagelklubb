@@ -6,8 +6,9 @@ import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
 import { sharedStyles } from '@/constants/shared-styles';
+import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import {
   peekPendingDisplayName,
   takePendingDisplayName,
@@ -31,6 +32,7 @@ import { displayNameSchema } from '@/lib/validation/profile';
  * name, so the field simply starts empty.
  */
 export default function OnboardingScreen() {
+  const { user } = useAuth();
   // Pre-fill from the provider-supplied name (peek is a pure read, safe under
   // React Strict Mode's double-invoked initializer). The effect below consumes it.
   const [name, setName] = useState(() => peekPendingDisplayName() ?? '');
@@ -56,7 +58,7 @@ export default function OnboardingScreen() {
       const profile = await upsertMyProfile({ displayName: parsed.data });
       // Seed the gate's profile query so it re-routes to the app immediately,
       // without waiting on a refetch.
-      queryClient.setQueryData(queryKeys.profile, profile);
+      if (user) queryClient.setQueryData(queryKeys.profile(user.id), profile);
       hapticSuccess();
     } catch {
       hapticError();
