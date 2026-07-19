@@ -7,7 +7,7 @@
  * It reads the feed from the query CACHE to derive the same chip options + a live
  * result count, and reads/writes the shared `feed-filter-store` — so toggling a
  * chip updates the feed rendered behind the half-height sheet instantly, with no
- * "Apply" step. The footer's primary button just closes and doubles as result-
+ * "Apply" step. The primary action at the end just closes and doubles as result-
  * count feedback ("Visa N träffar").
  */
 import { useMemo } from 'react';
@@ -83,124 +83,136 @@ export default function FilterSheet() {
   const change = (next: FeedFilter) => setFeedFilter(next);
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      {/* Built on the app's `Screen` scroller (a flex:1 ScrollView that paints the
-          theme background and insets the content below the native sheet header) —
-          the same recipe as the pickers and the lokal peek.
-          This only lays out correctly because the route's `contentStyle` gives the
-          sheet's content wrapper an explicit `height: '100%'` (see the root
-          layout): on iOS react-native-screens positions that wrapper absolutely
-          with no bottom constraint, so a `flex: 1` child has nothing to stretch
-          against and collapses when the sheet is dragged to the taller detent. */}
-      <Screen contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    /* The `Screen` scroller IS the route root — no wrapping flex column, exactly
+       like the pickers and the lokal peek. That constraint is load-bearing on iOS:
+       react-native-screens lays a formSheet's content wrapper out absolutely with
+       top/left/right but NO bottom (so Yoga doesn't re-measure it mid-animation),
+       so a `flex: 1` child has nothing to stretch against. A single scroller
+       survives that; a column of scroller + pinned footer collapsed to nothing the
+       moment the sheet was dragged to the taller detent — the sheet stayed there
+       but its content went black. Hence the actions scroll along at the end
+       instead of being pinned. */
+    <Screen
+      contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.three }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.section}>
+        <SectionHeader title={sv.filter.scopeLabel} />
+        <SegmentedPicker<Scope>
+          options={SCOPE_OPTIONS}
+          value={filter.onlyMine ? 'mine' : 'all'}
+          onChange={(next) => change({ ...filter, onlyMine: next === 'mine' })}
+          ariaLabel={sv.filter.scopeLabel}
+        />
+      </View>
+
+      {options.rarities.length > 0 ? (
         <View style={styles.section}>
-          <SectionHeader title={sv.filter.scopeLabel} />
-          <SegmentedPicker<Scope>
-            options={SCOPE_OPTIONS}
-            value={filter.onlyMine ? 'mine' : 'all'}
-            onChange={(next) => change({ ...filter, onlyMine: next === 'mine' })}
-            ariaLabel={sv.filter.scopeLabel}
-          />
-        </View>
-
-        {options.rarities.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader title={sv.rarity.label} />
-            <View style={styles.chips}>
-              {options.rarities.map((r) => {
-                const label = sv.rarity.levelLabel(r.level);
-                return (
-                  <FilterChip
-                    key={r.level}
-                    label={label}
-                    count={r.count}
-                    leading={<RarityBadge level={r.level} />}
-                    selected={filter.rarities.includes(r.level)}
-                    accessibilityLabel={`${sv.rarity.a11y(r.level)}, ${label}`}
-                    onPress={() =>
-                      change({ ...filter, rarities: toggle<RarityLevel>(filter.rarities, r.level) })
-                    }
-                  />
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
-        {activityOptions.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader title={sv.observation.activityLabel} />
-            <View style={styles.chips}>
-              {activityOptions.map((a) => (
+          <SectionHeader title={sv.rarity.label} />
+          <View style={styles.chips}>
+            {options.rarities.map((r) => {
+              const label = sv.rarity.levelLabel(r.level);
+              return (
                 <FilterChip
-                  key={a.value}
-                  label={a.label}
-                  count={a.count}
-                  selected={filter.activities.includes(a.value)}
+                  key={r.level}
+                  label={label}
+                  count={r.count}
+                  leading={<RarityBadge level={r.level} />}
+                  selected={filter.rarities.includes(r.level)}
+                  accessibilityLabel={`${sv.rarity.a11y(r.level)}, ${label}`}
                   onPress={() =>
-                    change({ ...filter, activities: toggle<Activity>(filter.activities, a.value) })
+                    change({
+                      ...filter,
+                      rarities: toggle<RarityLevel>(filter.rarities, r.level),
+                    })
                   }
                 />
-              ))}
-            </View>
+              );
+            })}
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
-        {options.locations.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader title={sv.observation.locationLabel} />
-            <View style={styles.chips}>
-              {options.locations.map((l) => (
-                <FilterChip
-                  key={l.id}
-                  label={l.name}
-                  count={l.count}
-                  selected={filter.locationIds.includes(l.id)}
-                  onPress={() => change({ ...filter, locationIds: toggle(filter.locationIds, l.id) })}
-                />
-              ))}
-            </View>
+      {activityOptions.length > 0 ? (
+        <View style={styles.section}>
+          <SectionHeader title={sv.observation.activityLabel} />
+          <View style={styles.chips}>
+            {activityOptions.map((a) => (
+              <FilterChip
+                key={a.value}
+                label={a.label}
+                count={a.count}
+                selected={filter.activities.includes(a.value)}
+                onPress={() =>
+                  change({
+                    ...filter,
+                    activities: toggle<Activity>(filter.activities, a.value),
+                  })
+                }
+              />
+            ))}
           </View>
-        ) : null}
-      </Screen>
+        </View>
+      ) : null}
 
-      <View
-        style={[
-          styles.footer,
-          { borderTopColor: theme.border, paddingBottom: insets.bottom + Spacing.three },
-        ]}
-      >
+      {options.locations.length > 0 ? (
+        <View style={styles.section}>
+          <SectionHeader title={sv.observation.locationLabel} />
+          <View style={styles.chips}>
+            {options.locations.map((l) => (
+              <FilterChip
+                key={l.id}
+                label={l.name}
+                count={l.count}
+                selected={filter.locationIds.includes(l.id)}
+                onPress={() =>
+                  change({
+                    ...filter,
+                    locationIds: toggle(filter.locationIds, l.id),
+                  })
+                }
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* Actions ride at the end of the content (see the note on the root). The
+          count still reads live — the feed behind updates as chips toggle. */}
+      <View style={[styles.actions, { borderTopColor: theme.border }]}>
         <Button
           title={sv.filter.clear}
           variant="secondary"
           onPress={() => setFeedFilter(EMPTY_FILTER)}
           disabled={count === 0}
-          style={styles.footerButton}
+          style={styles.actionButton}
         />
         <Button
           title={sv.filter.apply(resultCount)}
           variant="primary"
           onPress={() => router.back()}
-          style={styles.footerButton}
+          style={styles.actionButton}
         />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   // Horizontal padding + background come from `Screen`; only the sheet-appropriate
   // top/bottom padding and the wider section gap are overridden here.
-  scroll: { gap: Spacing.four, paddingTop: Spacing.two, paddingBottom: Spacing.three },
+  scroll: {
+    gap: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.three,
+  },
   section: { gap: Spacing.two },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  footer: {
+  actions: {
     flexDirection: 'row',
     gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  footerButton: { flex: 1 },
+  actionButton: { flex: 1 },
 });
