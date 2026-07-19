@@ -7,7 +7,12 @@
  *    refreshes the token on every cold start (tokens rotate / change on
  *    reinstall) and re-registers after a sign-in.
  * 2. Routes a notification tap to the observation detail — cold start via
- *    `getLastNotificationResponseAsync`, warm via the response listener.
+ *    `getLastNotificationResponseAsync`, warm via the response listener. On a
+ *    cold start the tap resolves before the navigator (and the observation
+ *    route) exists — the root gate renders a spinner until session + profile
+ *    settle — so a tap that arrives while `canRoute` is false is HELD and
+ *    flushed the moment the app's routes mount, instead of being dropped by a
+ *    navigator that can't handle it yet.
  */
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
@@ -18,14 +23,25 @@ import { getExpoPushToken, getNotificationPermission } from '@/lib/notifications
 import { isPushOptedOut } from '@/lib/push-prefs';
 import { registerPushToken } from '@/lib/query/push-tokens';
 
-export function usePushRegistration(): void {
+/**
+ * @param canRoute True once the signed-in app routes (the observation detail
+ * among them) are actually mounted — session resolved, profile present, gate
+ * open. Taps arriving earlier are buffered and flushed when it flips true.
+ */
+export function usePushRegistration(canRoute: boolean): void {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const signedInRef = useRef(false);
+  const canRouteRef = useRef(canRoute);
+  const pendingIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    signedInRef.current = !!userId;
-  }, [userId]);
+    canRouteRef.current = canRoute;
+    if (canRoute && pendingIdRef.current) {
+      const id = pendingIdRef.current;
+      pendingIdRef.current = null;
+      router.push({ pathname: '/observation/[id]', params: { id } });
+    }
+  }, [canRoute]);
 
   // (Re)register when signed in + granted + not opted out.
   useEffect(() => {
@@ -47,14 +63,18 @@ export function usePushRegistration(): void {
     };
   }, [userId]);
 
-  // Notification taps → the observation detail. Subscribe once.
+  // Notification taps → the observation detail. Subscribe once; route (or hold)
+  // based on whether the target route can exist right now.
   useEffect(() => {
     function handle(response: Notifications.NotificationResponse | null): void {
-      if (!response || !signedInRef.current) return;
+      if (!response) return;
       const data = response.notification.request.content.data;
       const observationId = typeof data?.observationId === 'string' ? data.observationId : null;
-      if (observationId) {
+      if (!observationId) return;
+      if (canRouteRef.current) {
         router.push({ pathname: '/observation/[id]', params: { id: observationId } });
+      } else {
+        pendingIdRef.current = observationId;
       }
     }
     void Notifications.getLastNotificationResponseAsync().then(handle);

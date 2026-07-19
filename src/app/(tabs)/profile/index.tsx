@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import Constants from 'expo-constants';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Linking, StyleSheet } from 'react-native';
@@ -20,6 +19,7 @@ import { showToast } from '@/components/toast';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/legal';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { versionLabel } from '@/lib/app-version';
 import { useBlockedUsers } from '@/lib/blocks';
 import { confirm } from '@/lib/confirm';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
@@ -27,6 +27,7 @@ import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { myProfileQueryOptions, upsertMyProfile } from '@/lib/query/profile';
+import { deleteUpload } from '@/lib/query/storage';
 import { displayNameSchema, phoneSchema } from '@/lib/validation/profile';
 
 const ADMIN_BADGE: IconName = { sf: 'checkmark.shield.fill', material: 'verified-user' };
@@ -68,12 +69,17 @@ export default function ProfileScreen() {
 
   const mutation = useMutation({
     mutationFn: (input: Persisted) => upsertMyProfile(input),
-    onSuccess: (result) => {
+    onSuccess: (result, input) => {
       // Seed the shared profile query so the gate / header avatar / other readers
       // see the update without a refetch, and advance the persisted snapshot. The
       // editable fields are intentionally NOT overwritten here — they already hold
       // the user's input, and rewriting them would clobber a parallel edit.
       queryClient.setQueryData(queryKeys.profile, result);
+      // The old avatar object is deleted only now, once the save has committed —
+      // deleting it at tap time would break the profile row if the save failed.
+      if (input.avatarPath !== saved.avatarPath && saved.avatarPath) {
+        void deleteUpload(saved.avatarPath).catch(() => {});
+      }
       setSaved({
         displayName: result.displayName,
         phone: result.phone ?? null,
@@ -192,6 +198,9 @@ export default function ProfileScreen() {
         onChange={onChangeAvatar}
         purpose="avatar"
         shape="square"
+        // The persisted avatar is deleted by the autosave's onSuccess (above),
+        // never at tap time — a failed save must not orphan the profile row.
+        preservePath={saved.avatarPath}
       />
 
       <SettingsGroup title={sv.profile.detailsSection} footer={sv.profile.phoneHelp}>
@@ -274,10 +283,7 @@ export default function ProfileScreen() {
           accessory="chevron"
           onPress={() => openLegal(TERMS_URL)}
         />
-        <SettingsRow
-          label={sv.profile.appVersion}
-          value={Constants.expoConfig?.version ?? '1.0.0'}
-        />
+        <SettingsRow label={sv.profile.appVersion} value={versionLabel} />
       </SettingsGroup>
     </Screen>
   );

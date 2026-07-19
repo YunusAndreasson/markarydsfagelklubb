@@ -1,9 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ScrollView } from 'react-native';
 
+import { ConfirmSheet } from '@/components/confirm-sheet';
 import { HeaderButton } from '@/components/header-button';
+import { HeaderDismissButton } from '@/components/header-dismiss-button';
 import { Screen } from '@/components/screen';
 import {
   ObservationForm,
@@ -13,7 +15,9 @@ import {
 } from '@/components/observation-form';
 import { showToast } from '@/components/toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useHardwareBackGuard } from '@/hooks/use-hardware-back-guard';
 import { reverseGeocodePlaceName } from '@/hooks/use-reverse-geocode';
+import { confirm } from '@/lib/confirm';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -23,17 +27,47 @@ import { type MyProfile } from '@/lib/query/profile';
 import { requestBirdAlert } from '@/lib/query/push-tokens';
 import { type Species } from '@/lib/query/species';
 
-// Larm — the center "new observation" tab. Composes the M9 pickers + M10
-// image into the shared `ObservationForm` and inserts directly (M3
-// `createObservation`). The feed updates optimistically and we jump to Obsar
-// immediately; a failure rolls the row back with a `hapticError` (no toast
-// primitive — web parity minus sonner). The tab stays mounted, so the form is
-// reset by remounting via a bumped `key`.
+// Nytt larm — the create-observation compose modal, opened from the "Larma"
+// button in the Larm tab header (a root-level `presentation: 'modal'` route, see
+// the root `_layout`). Composes the M9 pickers + M10 image into the shared
+// `ObservationForm` and inserts directly (M3 `createObservation`). The feed
+// updates optimistically (`onMutate`) and we dismiss straight back to it; a
+// failure rolls the row back with a `hapticError` + toast. As a modal it
+// unmounts on dismiss, so there's no long-lived form to reset via a bumped key.
 export default function NewObservationScreen() {
   const { user } = useAuth();
-  const [formKey, setFormKey] = useState(0);
   const formRef = useRef<ObservationFormHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Tracks whether the form has unsaved input, so a swipe/Avbryt on a half-filled
+  // report asks before throwing it away (Norman: forgiveness; the iOS "Discard
+  // changes?" convention). While dirty, swipe-to-dismiss is disabled too, so the
+  // guarded Avbryt is the only exit and no draft is lost silently.
+  const [dirty, setDirty] = useState(false);
+
+  // Guard the explicit dismiss: a clean form closes straight away; a dirty one
+  // confirms first. `confirm()` settles only after its sheet closes, so
+  // navigating from the continuation is safe on the native-stack modal. Void-
+  // returning + memoized on `dirty` so it can drive both the Avbryt button and
+  // the hardware-back guard without re-subscribing every render.
+  const handleDismiss = useCallback(() => {
+    if (!dirty) {
+      router.back();
+      return;
+    }
+    void (async () => {
+      const ok = await confirm({
+        title: sv.observation.discard.createTitle,
+        message: sv.observation.discard.createMessage,
+        confirmLabel: sv.observation.discard.createConfirm,
+        cancelLabel: sv.observation.discard.keepEditing,
+        destructive: true,
+      });
+      if (ok) router.back();
+    })();
+  }, [dirty]);
+
+  // Android hardware back is a second dismiss path `gestureEnabled` can't cover.
+  useHardwareBackGuard(dirty, handleDismiss);
 
   const createMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => createObservation(formToInput(value)),
@@ -85,6 +119,14 @@ export default function NewObservationScreen() {
     <>
       <Stack.Screen
         options={{
+          // While the form is dirty, block the native swipe-to-dismiss so a draft
+          // can't vanish with an accidental drag — the guarded Avbryt below is the
+          // only way out, and it confirms.
+          gestureEnabled: !dirty,
+          // Compose-modal chrome: dismiss (text "Avbryt" on iOS, ✕ on Android)
+          // cancels, Larma submits (via the form's imperative handle). Both live
+          // in the native bar, not the body.
+          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} />,
           headerRight: () => (
             <HeaderButton
               title={sv.observation.submitNew}
@@ -96,19 +138,22 @@ export default function NewObservationScreen() {
       />
       <Screen ref={scrollRef} keyboardAware keyboardShouldPersistTaps="handled">
         <ObservationForm
-          key={formKey}
           ref={formRef}
           mode="create"
           scrollRef={scrollRef}
           submitInHeader
+          onDirtyChange={setDirty}
           onSubmit={(v) => {
             createMutation.mutate(v);
-            setFormKey((k) => k + 1);
-            router.navigate('/');
+            // The feed behind already has the optimistic row; dismiss back to it.
+            router.back();
           }}
           submitting={createMutation.isPending}
         />
       </Screen>
+      {/* Own confirm host: this route is a native-stack modal, so the root-mounted
+          host's RN Modal would present BEHIND it (same reason as the edit modal). */}
+      <ConfirmSheet />
     </>
   );
 }

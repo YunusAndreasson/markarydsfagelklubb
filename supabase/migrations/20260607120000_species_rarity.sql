@@ -263,3 +263,39 @@ update public.species set rarity = 5 where swedish_name = 'Tamduva';
 -- (otherwise a common woodpecker/dipper shows as the rarest tier on the card).
 update public.species set rarity = 5 where swedish_name = 'Större hackspett';
 update public.species set rarity = 5 where swedish_name = 'Strömstare';
+
+-- Markaryd kommun calibration (2026-07-18): the bulk prefixes above come from the
+-- general MaFk larmlista. These nine are scarcer in Markaryd — a small inland
+-- kommun (no coast) — than that list implies, so each is lowered one step (rarer
+-- = lower number) to make it more alert-worthy locally. Kept as overrides here,
+-- not edited into the bulk list, so the xlsx transcription stays intact — same
+-- pattern as the anomaly corrections above. Swedish names are unique → matched on
+-- swedish_name.
+update public.species set rarity = 4 where swedish_name = 'Salskrake';    -- 5 → 4
+update public.species set rarity = 3 where swedish_name = 'Fasan';        -- 4 → 3
+update public.species set rarity = 4 where swedish_name = 'Ljungpipare';  -- 5 → 4
+update public.species set rarity = 4 where swedish_name = 'Grönbena';     -- 5 → 4
+update public.species set rarity = 4 where swedish_name = 'Backsvala';    -- 5 → 4
+update public.species set rarity = 3 where swedish_name = 'Näktergal';    -- 4 → 3
+update public.species set rarity = 3 where swedish_name = 'Stenfalk';     -- 4 → 3
+update public.species set rarity = 4 where swedish_name = 'Kungsfiskare'; -- 5 → 4
+update public.species set rarity = 4 where swedish_name = 'Härmsångare';  -- 5 → 4
+
+-- Markaryd kommun calibration, pass 2 (2026-07-18): the coastal/marine species
+-- the general larmlista still rated common, plus one upward tweak. Markaryd has
+-- no coast, so seaducks, coastal gulls and passage waders are genuinely notable
+-- inland and are stepped down to be more alert-worthy; Sjöorre joins its congener
+-- Svärta at 2. Järpe — an elusive but genuine local conifer resident (its earlier
+-- prefix 2 is set by the genus-revised block above) — is nudged up one step.
+update public.species set rarity = 2 where swedish_name = 'Sjöorre';         -- 5 → 2 (marine scoter; parity with Svärta)
+update public.species set rarity = 2 where swedish_name = 'Ejder';           -- 4 → 2 (marine seaduck)
+update public.species set rarity = 2 where swedish_name = 'Prutgås';         -- 4 → 2 (coastal goose)
+update public.species set rarity = 3 where swedish_name = 'Kärrsnäppa';      -- 4 → 3 (coastal/passage wader)
+update public.species set rarity = 3 where swedish_name = 'Havstrut';        -- 4 → 3 (coastal gull)
+update public.species set rarity = 3 where swedish_name = 'Vinterhämpling';  -- 4 → 3 (coastal winter finch)
+update public.species set rarity = 4 where swedish_name = 'Gråtrut';         -- 5 → 4 (coastal gull)
+update public.species set rarity = 4 where swedish_name = 'Storskarv';       -- 5 → 4 (coastal / big-lake)
+update public.species set rarity = 4 where swedish_name = 'Svart rödstjärt'; -- 5 → 4 (local inland)
+update public.species set rarity = 4 where swedish_name = 'Nötkråka';        -- 5 → 4 (scarce conifer resident)
+update public.species set rarity = 4 where swedish_name = 'Vattenrall';      -- 5 → 4 (local reedbed skulker)
+update public.species set rarity = 3 where swedish_name = 'Järpe';           -- 2 → 3 (regular local conifer resident)

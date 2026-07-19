@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode } from 'react';
 import { Linking, RefreshControl, StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { ALERT, BLOCKED, TRAY } from '@/components/icon';
+import { ListItemEntrance } from '@/components/list-item-entrance';
 import { ObservationCard } from '@/components/observation-card';
 import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
@@ -24,7 +24,7 @@ import { unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { errorCopy } from '@/lib/errors';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
-import { deletableListItemMotion, listEntrance } from '@/lib/motion';
+import { deletableListItemMotion } from '@/lib/motion';
 import { memberQueryOptions } from '@/lib/query/observations';
 import { digitsForTel } from '@/lib/validation/profile';
 
@@ -101,6 +101,7 @@ export default function MemberScreen() {
     );
   } else {
     const telHref = profile.phone ? `tel:${digitsForTel(profile.phone)}` : null;
+    const rowMotion = deletableListItemMotion(motion);
     body = (
       <View style={styles.body}>
         <View style={styles.headerRow}>
@@ -121,19 +122,15 @@ export default function MemberScreen() {
         <SectionHeader title={sv.member.reportedHeading} />
 
         {observations.length > 0 ? (
-          observations.map((obs, i) => {
-            // Rows reflow on optimistic edits/deletes instead of popping.
-            const rowMotion = deletableListItemMotion(motion);
-            return (
-              <Animated.View
-                key={obs.id}
-                entering={motion(listEntrance(i))}
-                exiting={rowMotion.exiting}
-              >
-                <ObservationCard observation={obs} currentUserId={user?.id} />
-              </Animated.View>
-            );
-          })
+          // `ListItemEntrance` (not a raw `entering` keyframe): the same busy-
+          // sibling interruptions that stuck feed cards half-faded apply here
+          // (reverse-geocode queries settle within the entrance window). Rows
+          // still recede on optimistic edits/deletes via `exiting`.
+          observations.map((obs, i) => (
+            <ListItemEntrance key={obs.id} index={i} exiting={rowMotion.exiting}>
+              <ObservationCard observation={obs} currentUserId={user?.id} />
+            </ListItemEntrance>
+          ))
         ) : (
           <StateBlock icon={TRAY} title={sv.member.empty} />
         )}

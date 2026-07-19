@@ -1,42 +1,68 @@
 /**
- * The app's haptic vocabulary — seven intent-named wrappers over `expo-haptics`.
+ * The app's haptic vocabulary — intent-named wrappers over `expo-haptics`.
  * Haptics are an *accent* on visible feedback (a toggle just flipped, a card just
  * landed); every call is fire-and-forget, errors are swallowed, and the calls
  * no-op on web. Keeping them here — rather than calling `Haptics.*` directly —
  * means call sites read in intent and there is exactly one place to retune.
  *
- * Pick by intent, not by raw primitive. The mapping below tracks Apple's
- * "Playing Haptics" HIG; Android's `expo-haptics` translates each primitive to
- * a sensible OEM pattern, so no platform branching lives in this file. If
- * Android testing later shows Light impact feels too aggressive vs. iOS, this
- * is the file to tune.
+ * Pick by intent, not by raw primitive.
  *
- *   INTENT          WHEN TO USE                                  iOS primitive          Android
- *   hapticTick      A gesture crosses a threshold mid-drag, or   selectionAsync         short selection buzz
- *                   a pull-to-refresh fires. Continuous-motion
- *                   ratchet. Pair with mic open/close.
- *   hapticPress     Default tap confirmation on a button or a    Impact.Light           light tap pattern
- *                   navigation row.
- *   hapticSelect    A value/selection just changed — toggle      selectionAsync         short selection buzz
- *                   flipped, radio chosen, card revealed.
- *   hapticCommit    A gesture commits / something lands — fling  Impact.Medium          medium tap pattern
- *                   release, swipe-to-delete confirmed.
- *   hapticSuccess   End-of-task semantic success — review        Notification.Success   success pattern
- *                   session done, account deleted.
- *   hapticWarning   A destructive confirmation appears —         Notification.Warning   warning pattern
- *                   close-mid-review, sign-out, reset.
- *   hapticError     Validation fails / action rejected — form    Notification.Error     error pattern
- *                   error, voice missed, network failure.
+ * PLATFORM SPLIT (this is the modern-SDK part). Each intent maps to the
+ * *platform-native* engine, not one API faked across both:
  *
- * Reduce-motion is intentionally *not* gated here. Reduce Motion controls
- * visual motion; iOS exposes a separate "System Haptics" toggle and Android a
- * "Touch feedback" toggle, both of which `expo-haptics` honors at the OS layer.
+ *  - iOS uses the UIKit generators directly — `impactAsync` (Light…Rigid/Soft),
+ *    `notificationAsync` (Success/Warning/Error) and `selectionAsync` — which is
+ *    exactly Apple's "Playing Haptics" HIG vocabulary.
+ *  - Android uses `performAndroidHapticsAsync(AndroidHaptics.*)`, which drives
+ *    the platform `HapticFeedbackConstants` / `View.performHapticFeedback`
+ *    engine. Expo's own docs flag the alternative — `impactAsync` /
+ *    `notificationAsync` on Android — as the *discouraged* path: it falls back to
+ *    the coarse `Vibrator` and needs the `VIBRATE` permission. The constants
+ *    below are the OEM-tuned effects Android recommends, honor the system
+ *    "Touch feedback" setting, and need no permission. So each side plays its own
+ *    full spectrum rather than a lowest-common-denominator buzz.
+ *
+ *   INTENT          WHEN TO USE                              iOS (UIKit)         Android (AndroidHaptics)
+ *   hapticTick      Continuous-motion ratchet — a gesture    selection           Clock_Tick
+ *                   crosses a threshold mid-drag, or
+ *                   pull-to-refresh fires.
+ *   hapticPress     Default tap confirmation on a button     Impact.Light        Virtual_Key
+ *                   or navigation row.
+ *   hapticSelect    A value is chosen among discrete         selection           Segment_Tick
+ *                   options — radio row, segmented control,
+ *                   filter chip, picker row, card reveal.
+ *   hapticToggle    An on/off switch is flipped. Carries     Impact.Rigid (on)   Toggle_On (on)
+ *                   direction so the "on" click is crisp     Impact.Soft (off)   Toggle_Off (off)
+ *                   and the "off" one softer.
+ *   hapticCommit    A deliberate action lands / a gesture    Impact.Medium       Long_Press
+ *                   commits — fling release, swipe-to-
+ *                   delete confirmed, form submit.
+ *   hapticSuccess   End-of-task semantic success — report    Notification.       Confirm
+ *                   saved, account deleted, permission       Success
+ *                   granted.
+ *   hapticWarning   A destructive confirmation appears —     Notification.       Context_Click
+ *                   sign-out, reset, delete confirm sheet.   Warning
+ *   hapticError     Validation fails / action rejected —     Notification.       Reject
+ *                   form error, voice missed, net failure.   Error
+ *
+ * `Impact.Heavy` is intentionally unused — reserved for a genuinely heavy,
+ * physics-y collision the app doesn't have yet; reaching for it now would just be
+ * spectrum for its own sake. Android has no distinct "warning" effect, so
+ * `hapticWarning` borrows `Context_Click` (a firm secondary-action click) — the
+ * closest cautionary feel to iOS's warning notification.
+ *
+ * Reduce-motion is intentionally *not* gated here. Reduce Motion controls visual
+ * motion; iOS exposes a separate "System Haptics" toggle and Android a "Touch
+ * feedback" toggle, both of which the native engines above honor at the OS layer.
  * The in-app Haptics preference is the only thing that flips `enabled` below.
  *
  * Safe to call from a Reanimated worklet only via `runOnJS` — these touch the
  * JS bridge and must run on the JS thread.
  */
 import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
+
+const isAndroid = Platform.OS === 'android';
 
 // Gated by the user's "Haptics" preference. A preferences provider pushes the
 // stored value here via `setHapticsEnabled` (added with Settings in M7), so call
@@ -49,48 +75,80 @@ export function setHapticsEnabled(value: boolean): void {
   enabled = value;
 }
 
-/** Continuous-motion ratchet — gesture crosses a threshold, pull-to-refresh
- *  fires, mic opens/closes. Apple HIG: this is `selectionAsync` territory, not
- *  `Impact.Light` (which reads as a discrete tap). */
-export function hapticTick(): void {
+/**
+ * Play one intent on whichever engine the current platform owns: the iOS UIKit
+ * generator (`ios` thunk, only invoked on iOS) or the Android native constant
+ * (only invoked on Android). Fire-and-forget; the sole failure mode is an
+ * unsupported device, which we swallow.
+ */
+function play(ios: () => Promise<void>, android: Haptics.AndroidHaptics): void {
   if (!enabled) return;
-  Haptics.selectionAsync().catch(() => {});
+  (isAndroid ? Haptics.performAndroidHapticsAsync(android) : ios()).catch(() => {});
+}
+
+/** Continuous-motion ratchet — gesture crosses a threshold, pull-to-refresh
+ *  fires. A light, repeatable tick (not a discrete tap). */
+export function hapticTick(): void {
+  play(() => Haptics.selectionAsync(), Haptics.AndroidHaptics.Clock_Tick);
 }
 
 /** Default tap confirmation on a button or navigation row. Use `hapticSelect`
- *  instead when a value/selection changes (toggles, radio rows, card reveal). */
+ *  when a value/selection changes, or `hapticToggle` for an on/off switch. */
 export function hapticPress(): void {
-  if (!enabled) return;
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  play(
+    () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+    Haptics.AndroidHaptics.Virtual_Key,
+  );
 }
 
-/** A discrete selection change — toggle flipped, radio chosen, card revealed. */
+/** A value chosen among discrete options — radio row, segmented control, filter
+ *  chip, picker row, card revealed. */
 export function hapticSelect(): void {
-  if (!enabled) return;
-  Haptics.selectionAsync().catch(() => {});
+  play(() => Haptics.selectionAsync(), Haptics.AndroidHaptics.Segment_Tick);
 }
 
-/** A gesture commits / something lands — fling release, swipe-to-delete
- *  confirmed. Firmer than `hapticPress`. */
+/** An on/off switch flipped. Direction-aware: a crisp `Rigid`/`Toggle_On` when
+ *  turning on, a softer `Soft`/`Toggle_Off` when turning off. */
+export function hapticToggle(on: boolean): void {
+  play(
+    () =>
+      Haptics.impactAsync(
+        on ? Haptics.ImpactFeedbackStyle.Rigid : Haptics.ImpactFeedbackStyle.Soft,
+      ),
+    on ? Haptics.AndroidHaptics.Toggle_On : Haptics.AndroidHaptics.Toggle_Off,
+  );
+}
+
+/** A deliberate action lands / a gesture commits — fling release, swipe-to-delete
+ *  confirmed, form submit. Firmer than `hapticPress`. */
 export function hapticCommit(): void {
-  if (!enabled) return;
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  play(
+    () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+    Haptics.AndroidHaptics.Long_Press,
+  );
 }
 
-/** End-of-task semantic success — e.g. finishing a flow. */
+/** End-of-task semantic success — report saved, account deleted, permission
+ *  granted. */
 export function hapticSuccess(): void {
-  if (!enabled) return;
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  play(
+    () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    Haptics.AndroidHaptics.Confirm,
+  );
 }
 
-/** A destructive confirmation appears — sign-out, reset, delete confirm. */
+/** A destructive confirmation appears — sign-out, reset, delete confirm sheet. */
 export function hapticWarning(): void {
-  if (!enabled) return;
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+  play(
+    () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
+    Haptics.AndroidHaptics.Context_Click,
+  );
 }
 
 /** Validation fails / action rejected — form error, network failure. */
 export function hapticError(): void {
-  if (!enabled) return;
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+  play(
+    () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
+    Haptics.AndroidHaptics.Reject,
+  );
 }

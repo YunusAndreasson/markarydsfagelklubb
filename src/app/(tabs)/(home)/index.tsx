@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
-import { FeedFilterSheet } from '@/components/feed-filter-sheet';
 import { FilterChip } from '@/components/filter-chip';
 import { HeaderButton } from '@/components/header-button';
-import { ALERT, TRAY } from '@/components/icon';
+import { ALERT, FILTER, FILTER_ACTIVE, Icon, PLUS, TRAY } from '@/components/icon';
+import { ListItemEntrance } from '@/components/list-item-entrance';
 import { ObservationCard } from '@/components/observation-card';
 import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
@@ -16,7 +15,7 @@ import { SectionHeader } from '@/components/section-header';
 import { SkeletonCard } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useMotion } from '@/hooks/use-motion';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
@@ -29,23 +28,25 @@ import {
   applyFeedFilter,
   deriveFilterOptions,
   EMPTY_FILTER,
-  type FeedFilter,
 } from '@/lib/feed-filter';
+import { setFeedFilter, useFeedFilter } from '@/lib/feed-filter-store';
 import { sv } from '@/lib/i18n/sv';
-import { deletableListItemMotion, listEntrance } from '@/lib/motion';
+import { deletableListItemMotion } from '@/lib/motion';
 import { feedQueryOptions } from '@/lib/query/observations';
 
-// Hem — the app's home tab and first data-driven screen: the club's
+// Larm — the app's landing tab and first data-driven screen: the club's
 // last-14-days observations, grouped by Stockholm calendar day, newest first.
 // The "dashboard" IS this list (web parity — no stats). The tab nests a native
-// Stack (see `(home)/_layout.tsx`), so the "Hem" title is the native (large,
-// on iOS) header; the in-content SectionHeaders here are the per-day group
-// labels. `Screen`'s default `automatic` inset drives the large-title collapse.
+// Stack (see `(home)/_layout.tsx`), so the "Larm" title is the native (large,
+// on iOS) header. The header hosts the create action ("Larma", right, opening
+// the compose modal) and the filter funnel (left, when there's data); the
+// in-content SectionHeaders here are the per-day group labels. `Screen`'s
+// default `automatic` inset drives the large-title collapse.
 //
 // Client-side filter (M15): the whole feed is already loaded, so narrowing by
 // art/aktivitet/plats/"endast mina" is a pure transform (`applyFeedFilter`)
-// applied before `groupFeed`. The funnel lives in the native header; active
-// selections show as removable chips above the list.
+// applied before `groupFeed`. Active selections show as removable chips above
+// the list.
 const BUCKETS: { key: FeedBucket; label: string }[] = [
   { key: 'today', label: sv.feed.today },
   { key: 'yesterday', label: sv.feed.yesterday },
@@ -60,8 +61,10 @@ export default function FeedScreen() {
   const feed = useQuery(feedQueryOptions());
   const { refreshing, onRefresh } = usePullToRefresh(feed.refetch);
 
-  const [filter, setFilter] = useState<FeedFilter>(EMPTY_FILTER);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  // Filter lives in a shared store so the native filter sheet (a separate route)
+  // and this feed read/write the same value — the sheet's toggles update the feed
+  // live behind it.
+  const filter = useFeedFilter();
 
   // Blocked members (Apple 1.2) drop out before anything else, so they're absent
   // from the list, the filter options, and the counts alike.
@@ -77,7 +80,7 @@ export default function FeedScreen() {
   const total = data.length;
   const count = activeFilterCount(filter);
 
-  const clearFilter = () => setFilter(EMPTY_FILTER);
+  const clearFilter = () => setFeedFilter(EMPTY_FILTER);
   const locationName = (id: number) => options.locations.find((l) => l.id === id)?.name;
 
   let body: ReactNode;
@@ -100,13 +103,13 @@ export default function FeedScreen() {
             <View key={section.key} style={styles.section}>
               <SectionHeader title={section.label} />
               {section.items.map((obs) => (
-                <Animated.View
+                <ListItemEntrance
                   key={obs.id}
-                  entering={motion(listEntrance(order.get(obs.id) ?? 0))}
+                  index={order.get(obs.id) ?? 0}
                   exiting={rowMotion.exiting}
                 >
                   <ObservationCard observation={obs} currentUserId={user?.id} />
-                </Animated.View>
+                </ListItemEntrance>
               ))}
             </View>
           ))}
@@ -154,15 +157,41 @@ export default function FeedScreen() {
     <>
       <Stack.Screen
         options={{
-          headerRight:
+          // Filter in the free left slot (a tab root has no back button), only
+          // when there's data to narrow. Brand-GREEN like the create action, but a
+          // funnel OUTLINE — not the inverted/filled treatment the "+" gets; it
+          // fills (still green) once any filter is on, and the active chips row
+          // below carries the specifics, so the "(n)" count drops from the bar.
+          headerLeft:
             total > 0
               ? () => (
                   <HeaderButton
+                    icon={count > 0 ? FILTER_ACTIVE : FILTER}
+                    iconColor={theme.tint}
                     title={count > 0 ? sv.filter.buttonActive(count) : sv.filter.button}
-                    onPress={() => setSheetOpen(true)}
+                    onPress={() => router.navigate('/filter')}
                   />
                 )
               : undefined,
+          // "Larma" — the primary create action, always available (even on an
+          // empty feed). A SOLID brand-green disc with a filling white "+" (a mini-
+          // FAB) so it reads loudest — composed rather than `plus.circle.fill`,
+          // whose glyph leaves dead padding inside the circle. Opens the compose
+          // modal (root `new` route).
+          headerRight: () => (
+            <PressableScale
+              variant="icon"
+              // A light press confirmation on the app's primary action — "haptics
+              // on meaningful interactions" (opening the composer is exactly that).
+              haptic="press"
+              onPress={() => router.navigate('/new')}
+              accessibilityRole="button"
+              accessibilityLabel={sv.observation.submitNew}
+              style={[styles.createDisc, { backgroundColor: theme.tint }]}
+            >
+              <Icon name={PLUS} size={IconSize.action} weight="heavy" color={theme.badgeForeground} />
+            </PressableScale>
+          ),
         }}
       />
       <Screen
@@ -188,7 +217,7 @@ export default function FeedScreen() {
             {filter.onlyMine ? (
               <FilterChip
                 label={sv.filter.scopeMine}
-                onRemove={() => setFilter((f) => ({ ...f, onlyMine: false }))}
+                onRemove={() => setFeedFilter({ ...filter, onlyMine: false })}
                 accessibilityLabel={sv.filter.removeChip(sv.filter.scopeMine)}
               />
             ) : null}
@@ -200,7 +229,7 @@ export default function FeedScreen() {
                   label={name}
                   leading={<RarityBadge level={level} />}
                   onRemove={() =>
-                    setFilter((f) => ({ ...f, rarities: f.rarities.filter((x) => x !== level) }))
+                    setFeedFilter({ ...filter, rarities: filter.rarities.filter((x) => x !== level) })
                   }
                   accessibilityLabel={sv.filter.removeChip(name)}
                 />
@@ -211,7 +240,7 @@ export default function FeedScreen() {
                 key={`a-${a}`}
                 label={sv.observation.activity[a]}
                 onRemove={() =>
-                  setFilter((f) => ({ ...f, activities: f.activities.filter((x) => x !== a) }))
+                  setFeedFilter({ ...filter, activities: filter.activities.filter((x) => x !== a) })
                 }
                 accessibilityLabel={sv.filter.removeChip(sv.observation.activity[a])}
               />
@@ -223,7 +252,7 @@ export default function FeedScreen() {
                   key={`l-${id}`}
                   label={name}
                   onRemove={() =>
-                    setFilter((f) => ({ ...f, locationIds: f.locationIds.filter((x) => x !== id) }))
+                    setFeedFilter({ ...filter, locationIds: filter.locationIds.filter((x) => x !== id) })
                   }
                   accessibilityLabel={sv.filter.removeChip(name)}
                 />
@@ -244,15 +273,6 @@ export default function FeedScreen() {
         ) : null}
         {body}
       </Screen>
-      <FeedFilterSheet
-        visible={sheetOpen}
-        filter={filter}
-        options={options}
-        resultCount={filtered.length}
-        onChange={setFilter}
-        onClear={clearFilter}
-        onClose={() => setSheetOpen(false)}
-      />
     </>
   );
 }
@@ -261,4 +281,6 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.three },
   chipsRow: { gap: Spacing.two, alignItems: 'center', paddingVertical: Spacing.half },
   clearLink: { paddingHorizontal: Spacing.two, paddingVertical: Spacing.one },
+  // Solid brand-green create disc (mini-FAB) — the white "+" fills it, no dead padding.
+  createDisc: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 });

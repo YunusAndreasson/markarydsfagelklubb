@@ -17,7 +17,7 @@
  * from `value` (or the `previewUrl` seed the parent already has, e.g.
  * `profile.avatarUrl`).
  */
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useState, type Ref } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
@@ -54,36 +54,44 @@ type Busy = 'idle' | 'compressing' | 'uploading' | 'removing';
 export type ImageUploadHandle = { open: () => void };
 
 export type ImageUploadProps = {
+  ref?: Ref<ImageUploadHandle>;
   /** The stored object path, or null when empty. */
   value: string | null;
   /** Reports the new path after an upload, or null after a remove. */
   onChange: (path: string | null) => void;
   purpose: 'observation' | 'avatar';
-  /** Observation draft id (M12 supplies a stable one; generated here otherwise). */
+  /** Observation draft id (generated here when omitted). */
   draftId?: string;
   shape?: ImageShape;
   /** A signed URL the parent already holds (e.g. `profile.avatarUrl`) — avoids re-minting. */
   previewUrl?: string | null;
+  /**
+   * A stored path that a SAVED record still references (e.g. the observation's
+   * committed photo while editing). "Ta bort" then only clears the field —
+   * deleting the object is the save flow's job, so a discarded edit never
+   * destroys a photo the record still points at. Fresh drafts (any other path)
+   * are still cleaned up immediately.
+   */
+  preservePath?: string | null;
   invalid?: boolean;
   disabled?: boolean;
   /** Render only the chooser sheet (no inline preview/links). Drive via `ref.open()`. */
   headless?: boolean;
 };
 
-export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(function ImageUpload(
-  {
-    value,
-    onChange,
-    purpose,
-    draftId: propDraftId,
-    shape = 'rectangle',
-    previewUrl,
-    invalid,
-    disabled,
-    headless = false,
-  },
+export function ImageUpload({
   ref,
-) {
+  value,
+  onChange,
+  purpose,
+  draftId: propDraftId,
+  shape = 'rectangle',
+  previewUrl,
+  preservePath,
+  invalid,
+  disabled,
+  headless = false,
+}: ImageUploadProps) {
   const theme = useTheme();
   const { colorScheme } = useThemeMode();
   const { reduced } = useMotion();
@@ -200,7 +208,11 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
     setError(null);
     setBusy('removing');
     try {
-      if (value) await deleteUpload(value);
+      // Only delete uncommitted drafts here. A path a saved record still
+      // references (`preservePath`) is left in place — its deletion belongs to
+      // the save flow, so a later discard can't leave the record pointing at a
+      // destroyed object.
+      if (value && value !== preservePath) await deleteUpload(value);
       onChange(null);
       setLocalUri(null);
       setMinted(null);
@@ -376,7 +388,7 @@ export const ImageUpload = forwardRef<ImageUploadHandle, ImageUploadProps>(funct
       {chooser}
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.two },

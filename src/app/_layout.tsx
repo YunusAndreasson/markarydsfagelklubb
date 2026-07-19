@@ -64,18 +64,22 @@ function ThemedNavigation() {
   const { session, initialized } = useAuth();
   const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
-  // Keep this device's push token registered + route notification taps (M14).
-  usePushRegistration();
-
   // Resolve the profile alongside the session (mirrors the web `_authed` gate's
   // `ensureQueryData`). `fetchMyProfile` returns null for "no row" → onboarding;
   // only a thrown error means we genuinely couldn't resolve it.
   const profileQuery = useQuery({ ...myProfileQueryOptions(), enabled: !!session });
   const profileSettled = !session || profileQuery.isSuccess || profileQuery.isError;
   const ready = initialized && profileSettled;
+  const hasProfile = !!profileQuery.data;
 
-  // Reveal the app once session + profile are known. The navigator is always
-  // mounted below; the splash hides the brief signed-out → signed-in correction.
+  // Keep this device's push token registered + route notification taps (M14).
+  // The flag says when the signed-in routes are mounted (the gate below renders
+  // a spinner until `ready`), so a cold-start tap is buffered, not dropped.
+  usePushRegistration(ready && !!session && hasProfile);
+
+  // Reveal the app once session + profile are known; until then the gate below
+  // renders a spinner, and the splash hides the brief signed-out → signed-in
+  // correction.
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
@@ -111,8 +115,6 @@ function ThemedNavigation() {
       </ThemedView>
     );
   }
-
-  const hasProfile = !!profileQuery.data;
 
   return (
     <ThemeProvider
@@ -152,11 +154,18 @@ function ThemedNavigation() {
           <Stack.Screen name="onboarding" />
         </Stack.Protected>
         {/* Signed in + onboarded: the app. `(tabs)` is the bottom-tab shell
-            (Hem · Larm · Profil) and owns "/"; observation/member routes
-            push over it; `kitchensink` is the M2 primitives showcase, gated to
-            `__DEV__` in the screen itself so it can't be reached in production. */}
+            (Larm · Profil) and owns "/"; the new-observation compose modal and
+            the observation/member routes push over it; `kitchensink` is the M2
+            primitives showcase, gated to `__DEV__` in the screen itself so it
+            can't be reached in production. */}
         <Stack.Protected guard={!!session && hasProfile}>
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          {/* "Larma" — raise a new bird alarm. A compose modal opened from the
+              Larm tab header (was the center tab before the IA merge). */}
+          <Stack.Screen
+            name="new"
+            options={{ headerShown: true, title: sv.observation.titleNew, presentation: 'modal' }}
+          />
           <Stack.Screen
             name="observation/[id]/index"
             options={{ headerShown: true, title: sv.observation.titleDetail }}
@@ -168,6 +177,73 @@ function ThemedNavigation() {
           <Stack.Screen
             name="member/[userId]"
             options={{ headerShown: true, title: sv.member.title }}
+          />
+          {/* A lokal's larm peek — a REAL native sheet (UISheetPresentationController
+              on iOS / native sheet on Android): grabber, detents, rubber-band drag
+              and swipe-to-dismiss all from the OS, no hand-rolled Modal. Opened from
+              the Lokaler map. */}
+          {/* The title lives in the native sheet header (headerShown), not in the
+              content — a custom in-content title overlapped the first row. The
+              header title is set inline from the lokal name. */}
+          <Stack.Screen
+            name="location/[id]"
+            options={{
+              headerShown: true,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.5, 0.9],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
+          />
+          {/* Report-form pickers — each is a REAL native sheet (formSheet). The
+              field opens the route and awaits its selection via the picker bridge
+              (`lib/picker-bridge`). Title in the native header; grabber +
+              swipe-to-dismiss come from the OS. */}
+          <Stack.Screen
+            name="picker/activity"
+            options={{
+              headerShown: true,
+              title: sv.observation.activityPickTitle,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.6],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
+          />
+          <Stack.Screen
+            name="picker/species"
+            options={{
+              headerShown: true,
+              title: sv.observation.speciesLabel,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.9],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
+          />
+          <Stack.Screen
+            name="picker/location"
+            options={{
+              headerShown: true,
+              title: sv.observation.locationLabel,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.6, 0.9],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
+          />
+          {/* Larm feed filter — a native sheet like the pickers; reads/writes the
+              shared feed-filter store so the feed behind updates live as chips toggle. */}
+          <Stack.Screen
+            name="filter"
+            options={{
+              headerShown: true,
+              title: sv.filter.title,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.6, 0.9],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
           />
           <Stack.Screen
             name="blocked"

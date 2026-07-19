@@ -1,5 +1,7 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
 
+import { version } from './package.json';
+
 // Dynamic Expo config. `app.json` stays the static source of truth; this layer
 // adds the native modules introduced after M1 (M8 maps + location, M10 images) and
 // injects the Google Maps key from the environment so it never lands in version
@@ -24,6 +26,13 @@ const CAMERA_PERMISSION = 'Appen använder kameran för att ta foton på fynd.';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...(config as ExpoConfig),
+  // Single source of truth for the marketing version is `package.json` — bump it there
+  // (`npm version patch|minor|major`) and it flows everywhere: the native binary
+  // (CFBundleShortVersionString / versionName), the `appVersion` runtimeVersion policy
+  // (so a new version = a new OTA lane), and the in-app display (src/lib/app-version.ts).
+  // The build number (versionCode / buildNumber) is owned remotely by EAS
+  // (eas.json → appVersionSource: "remote" + autoIncrement) and is deliberately not set here.
+  version,
   plugins: [
     ...(config.plugins ?? []),
     ['react-native-maps', { androidGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '' }],

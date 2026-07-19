@@ -2,9 +2,12 @@
  * A single observation, rendered as a compact, scannable feed card — the native
  * port of the web `observation-card.tsx`, trimmed for a phone list. The hero is
  * the species name; the three things a birder scans for — name, when, where —
- * form the top block. A color-coded rarity badge (the rarity number 0–5, tinted
- * by how rare the bird is — red = rare/0, grey = common/5) leads the name, and
- * the photo (when present) runs full-bleed to the card's rounded edges.
+ * form the top block. The species name is the flush-left hero and shares its
+ * left edge with the location + meta below; a color-coded rarity badge (the
+ * rarity number 0–5 — a solid red/orange fill when rare, a quiet grey tint when
+ * common) clusters with the time top-right, so the grade's colour still signals
+ * rarity without pushing the title inward. The photo (when present) runs
+ * full-bleed to the card's rounded edges.
  *
  * Card structure: an OUTER pressable carries the shadow + rounded fill (and the
  * press tint), an INNER clip view (`clippedCard`, overflow hidden) holds the
@@ -32,12 +35,13 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/avatar';
+import { CHEVRON, Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Curve, Duration } from '@/constants/motion';
 import { elevationStyle, SurfaceRadius, SurfaceStyles } from '@/constants/surface';
-import { Elevation, Spacing } from '@/constants/theme';
+import { Elevation, IconSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
@@ -137,15 +141,16 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           tint show through the text. */}
       <View style={[SurfaceStyles.clippedCard, styles.clip, { borderColor: theme.border }]}>
         <View style={styles.content}>
-          {/* The rarity badge prefixes the species name — the number is glued to
-              the bird it grades. The name fills the row and truncates; the time
-              sits top-right. Name, location and meta share the left margin. */}
+          {/* Name-first: the species name is the flush-left hero and shares its
+              left edge with the location + meta below — one clean anchor, no
+              hanging indent. The rarity grade and the time cluster top-right as
+              compact metadata; the grade's colour (loud when rare) still carries. */}
           <View style={styles.header}>
-            <RarityBadge level={level} />
             <ThemedText type="heading" numberOfLines={1} style={styles.flex}>
               {observation.speciesSwedishName}
             </ThemedText>
-            <View style={styles.timeRow}>
+            <View style={styles.metaRight}>
+              <RarityBadge level={level} />
               {veryRecent ? <PulsingDot /> : null}
               <ThemedText type="smallBold" themeColor={veryRecent ? 'primary' : 'mutedForeground'}>
                 {sv.feed.timeAgo(observation.observedAt, clock)}
@@ -197,6 +202,10 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1} style={styles.flex}>
             {observation.observerDisplayName ?? sv.feed.unknownObserver}
           </ThemedText>
+          {/* Chevron signifies the observer row is its own tap target → their
+              profile — otherwise a nested target inside a tappable card is
+              invisible (Norman: signifier). */}
+          <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
         </PressableScale>
       </View>
     </PressableScale>
@@ -214,7 +223,7 @@ const styles = StyleSheet.create({
   // own spacing, so this only pads the top block.
   content: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  metaRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },
   flex: { flex: 1 },
   // Full-bleed photo: no horizontal margin (touches the clipped edges); a gap

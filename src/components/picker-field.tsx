@@ -11,6 +11,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { FieldLabel } from '@/components/field-label';
 import { CHEVRON, Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
@@ -59,9 +60,7 @@ export function PickerField({
 
   return (
     <View style={styles.container}>
-      <ThemedText type="smallBold" themeColor="mutedForeground">
-        {label}
-      </ThemedText>
+      <FieldLabel label={label} />
       <PressableScale
         variant="row"
         onPress={onPress}

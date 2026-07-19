@@ -74,6 +74,14 @@ export default function SignInScreen() {
     setError(null);
   }
 
+  // "Check your inbox" screens conventionally offer a jump straight to the mail
+  // app (Jakob's Law). `message://` opens Mail on iOS; Android has no universal
+  // inbox scheme, so the button is shown on iOS only. Best-effort — a missing
+  // Mail app just no-ops, the on-screen instructions still stand.
+  function openMail() {
+    void Linking.openURL('message://').catch(() => {});
+  }
+
   const busy = pending !== null;
 
   return (
@@ -106,6 +114,9 @@ export default function SignInScreen() {
                     {sv.login.sentSpamHint}
                   </ThemedText>
                 </View>
+                {Platform.OS === 'ios' ? (
+                  <Button title={sv.login.openMail} onPress={openMail} />
+                ) : null}
                 <Button
                   title={sv.login.useDifferentEmail}
                   variant="secondary"

@@ -26,6 +26,8 @@ export type MapMarker = {
   latitude: number;
   longitude: number;
   label?: string;
+  /** Per-marker pin colour. Defaults to the brand tint when omitted. */
+  tint?: string;
 };
 
 export type MapProps = {
@@ -35,10 +37,16 @@ export type MapProps = {
    *  Markaryd-wide view. */
   zoom?: number;
   onPick?: (latitude: number, longitude: number) => void;
+  /** Tap a specific pin (by its `id`). Distinct from `onPick`, which is a
+   *  map-level tap used to set a point. */
+  onMarkerPress?: (id: MapMarker['id']) => void;
   markerDraggable?: boolean;
   /** Imperative recenter — bump `token` to pan to the point (lat/lng alone won't
    *  trigger it, matching the web). */
   recenter?: { latitude: number; longitude: number; token: number };
+  /** Imperative fit-to-bounds — bump this number to reframe all `markers` in view
+   *  (the Lokaler "visa alla" control). No-op with fewer than 2 markers. */
+  fitToken?: number;
   /** Disable pan/zoom/rotate for a static preview. Default true. */
   interactive?: boolean;
   height?: number;
@@ -59,8 +67,10 @@ export function Map({
   center = MARKARYD,
   zoom,
   onPick,
+  onMarkerPress,
   markerDraggable = false,
   recenter,
+  fitToken,
   interactive = true,
   height = 240,
   style,
@@ -79,15 +89,27 @@ export function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recenter?.token]);
 
-  // Frame all markers once the map is laid out (only meaningful for 2+).
-  function handleReady() {
-    if (markers.length >= 2) {
-      ref.current?.fitToCoordinates(
-        markers.map((m) => ({ latitude: m.latitude, longitude: m.longitude })),
-        { edgePadding: { top: 48, right: 48, bottom: 48, left: 48 }, animated: false },
-      );
-    }
+  // Frame all markers (only meaningful for 2+). `animated` off for the initial
+  // layout fit, on for an explicit "visa alla" tap so the reframe reads as motion.
+  function fitAll(animated: boolean) {
+    if (markers.length < 2) return;
+    ref.current?.fitToCoordinates(
+      markers.map((m) => ({ latitude: m.latitude, longitude: m.longitude })),
+      { edgePadding: { top: 48, right: 48, bottom: 48, left: 48 }, animated },
+    );
   }
+
+  function handleReady() {
+    fitAll(false);
+  }
+
+  // Imperative fit-to-bounds, keyed on `fitToken` so only an explicit bump
+  // reframes (same pattern as `recenter`).
+  useEffect(() => {
+    if (!fitToken) return;
+    fitAll(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitToken]);
 
   return (
     <MapView
@@ -110,8 +132,9 @@ export function Map({
           key={m.id}
           coordinate={{ latitude: m.latitude, longitude: m.longitude }}
           title={m.label}
-          pinColor={theme.tint}
+          pinColor={m.tint ?? theme.tint}
           draggable={markerDraggable}
+          onPress={onMarkerPress ? () => onMarkerPress(m.id) : undefined}
           onDragEnd={
             markerDraggable && onPick
               ? (e) => onPick(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)

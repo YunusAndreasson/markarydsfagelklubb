@@ -19,6 +19,8 @@ export const ACTIVITIES = [
   'övrigaLäten',
   'häckande',
   'sträckande',
+  'drogIväg',
+  'svårsedd',
 ] as const
 export type Activity = (typeof ACTIVITIES)[number]
 

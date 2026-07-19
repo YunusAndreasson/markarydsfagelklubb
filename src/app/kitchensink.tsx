@@ -27,7 +27,16 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode, type ThemeMode } from '@/hooks/use-theme-mode';
 import { confirm } from '@/lib/confirm';
-import { hapticPress, hapticSuccess } from '@/lib/haptics';
+import {
+  hapticCommit,
+  hapticError,
+  hapticPress,
+  hapticSelect,
+  hapticSuccess,
+  hapticTick,
+  hapticToggle,
+  hapticWarning,
+} from '@/lib/haptics';
 import { type RarityLevel } from '@/lib/rarity';
 import { type Activity } from '@/lib/validation/observation';
 
@@ -315,9 +324,19 @@ export default function KitchenSink() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Haptik" />
-        <Button title="Testa haptik (tryck)" variant="secondary" onPress={hapticPress} />
-        <Button title="Testa haptik (lyckades)" variant="secondary" onPress={hapticSuccess} />
+        <SectionHeader
+          title="Haptik"
+          caption="Hela registret — iOS-generatorer / Android AndroidHaptics. Känn efter på enhet."
+        />
+        <Button title="Tick (ratchet)" variant="secondary" size="compact" onPress={hapticTick} />
+        <Button title="Tryck (press)" variant="secondary" size="compact" onPress={hapticPress} />
+        <Button title="Val (select)" variant="secondary" size="compact" onPress={hapticSelect} />
+        <Button title="Växla på (toggle on)" variant="secondary" size="compact" onPress={() => hapticToggle(true)} />
+        <Button title="Växla av (toggle off)" variant="secondary" size="compact" onPress={() => hapticToggle(false)} />
+        <Button title="Bekräfta (commit)" variant="secondary" size="compact" onPress={hapticCommit} />
+        <Button title="Lyckades (success)" variant="secondary" size="compact" onPress={hapticSuccess} />
+        <Button title="Varning (warning)" variant="secondary" size="compact" onPress={hapticWarning} />
+        <Button title="Fel (error)" variant="secondary" size="compact" onPress={hapticError} />
       </View>
     </Screen>
   );

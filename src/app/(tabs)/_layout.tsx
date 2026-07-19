@@ -12,14 +12,16 @@ import { sv } from '@/lib/i18n/sv';
 // Material bottom navigation on Android. Icons are platform-native — SF Symbols
 // on iOS (`sf`, no assets), @expo/vector-icons Material glyphs on Android via an
 // image `src`. Mirrors edenmind's tab shell; here the three triggers are the
-// mafk IA: Hem · Larm · Profil — all nouns (destinations). "Larm" is an ordinary
-// center tab (not a FAB) where the create form lands; the action verb ("Larma")
-// lives on that form's submit button, not on the tab.
+// mafk IA: Larm · Lokaler · Profil — all nouns (destinations). "Larm" is the
+// club's alerts stream (the feed); the create action ("Larma") is a header button
+// on it that opens the compose modal (see the root `_layout` `new` route), so the
+// destination and its verb sit together instead of on separate tabs. "Lokaler" is
+// the club's birding sites on a map. Profil stays rightmost (convention).
 const { Trigger } = NativeTabs;
 
 // Default tab when entering the group at "/". `anchor` is the SDK 54+ key.
-// The feed tab is the `(home)` group (a nested Stack so it gets a native title);
-// `new` and `profile` are likewise Stack-wrapped folders.
+// The Larm tab is the `(home)` group (a nested Stack so it gets a native title);
+// `profile` is likewise a Stack-wrapped folder.
 export const unstable_settings = { anchor: '(home)' };
 
 export default function TabsLayout() {
@@ -58,25 +60,25 @@ export default function TabsLayout() {
     <NativeTabs {...barProps} screenListeners={screenListeners}>
       <Trigger name="(home)">
         <Trigger.Label>{sv.bottomNav.feed}</Trigger.Label>
-        {/* "Hem" = the landing/feed. A house makes the home tab unmistakable and
-            keeps the hierarchy clear (Hem = content, Larm = the action). */}
-        {Platform.OS === 'ios' ? (
-          <Trigger.Icon sf="house.fill" />
-        ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="home" />} />
-        )}
-      </Trigger>
-      <Trigger name="new">
-        <Trigger.Label>{sv.bottomNav.newObservation}</Trigger.Label>
-        {/* "Larm" stays a noun (a destination, like Hem/Profil). A megaphone =
-            "announce a fynd to the club" — it reads as broadcasting, not the
-            notifications inbox a bell implies. The action verb ("Larma") lives on
-            the form's submit button, not here. MaterialIcons `campaign` is the
-            megaphone glyph — same font as home/person, so no extra font ships. */}
+        {/* "Larm" = the club's alerts stream (the feed). A megaphone reads as
+            "announcements broadcast to the club" — not the notifications inbox a
+            bell implies. The verb ("Larma") lives on the header button that opens
+            the compose modal. MaterialIcons `campaign` is the megaphone glyph —
+            same font as person, so no extra font ships. */}
         {Platform.OS === 'ios' ? (
           <Trigger.Icon sf="megaphone.fill" />
         ) : (
           <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="campaign" />} />
+        )}
+      </Trigger>
+      <Trigger name="locations">
+        <Trigger.Label>{sv.bottomNav.locations}</Trigger.Label>
+        {/* A map pin reads as "places / sites" — the club's lokaler. MaterialIcons
+            `map` is the same font as person/campaign, so no extra font ships. */}
+        {Platform.OS === 'ios' ? (
+          <Trigger.Icon sf="map.fill" />
+        ) : (
+          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="map" />} />
         )}
       </Trigger>
       <Trigger name="profile">

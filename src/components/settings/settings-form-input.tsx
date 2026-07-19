@@ -8,7 +8,7 @@
  * Ported from the edenmind reference; `error` support added for inline (autosave)
  * validation feedback.
  */
-import { forwardRef } from 'react';
+import { type Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -17,42 +17,41 @@ import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type SettingsFormInputProps = TextInputProps & {
+  ref?: Ref<TextInput>;
   label: string;
   error?: string | null;
 };
 
-export const SettingsFormInput = forwardRef<TextInput, SettingsFormInputProps>(
-  function SettingsFormInput({ label, error, style, ...rest }, ref) {
-    const theme = useTheme();
+export function SettingsFormInput({ ref, label, error, style, ...rest }: SettingsFormInputProps) {
+  const theme = useTheme();
 
-    return (
-      <View style={styles.row}>
-        <ThemedText
-          type="small"
-          style={{ color: error ? theme.destructive : theme.mutedForeground }}
-        >
-          {label}
-        </ThemedText>
-        <TextInput
-          ref={ref}
-          accessibilityLabel={label}
-          placeholderTextColor={theme.mutedForeground}
-          // Cap Dynamic Type like the app's body inputs so the row keeps its rhythm.
-          maxFontSizeMultiplier={1.6}
-          style={[styles.input, { color: theme.foreground }, style]}
-          {...rest}
-        />
-        {error ? (
-          <Animated.View entering={FadeInDown.duration(160)}>
-            <ThemedText type="small" style={{ color: theme.destructive }}>
-              {error}
-            </ThemedText>
-          </Animated.View>
-        ) : null}
-      </View>
-    );
-  },
-);
+  return (
+    <View style={styles.row}>
+      <ThemedText
+        type="small"
+        style={{ color: error ? theme.destructive : theme.mutedForeground }}
+      >
+        {label}
+      </ThemedText>
+      <TextInput
+        ref={ref}
+        accessibilityLabel={label}
+        placeholderTextColor={theme.mutedForeground}
+        // Cap Dynamic Type like the app's body inputs so the row keeps its rhythm.
+        maxFontSizeMultiplier={1.6}
+        style={[styles.input, { color: theme.foreground }, style]}
+        {...rest}
+      />
+      {error ? (
+        <Animated.View entering={FadeInDown.duration(160)}>
+          <ThemedText type="small" style={{ color: theme.destructive }}>
+            {error}
+          </ThemedText>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   row: {

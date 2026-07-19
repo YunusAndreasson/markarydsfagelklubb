@@ -1,27 +1,42 @@
 /**
- * The Obsar feed filter — a bottom sheet over `PickerSheet`. Four dimensions:
- * scope (Alla/Mina), raritet, aktivitet, plats. Filters apply *live* to the
- * parent's state as chips toggle (no Apply step); the footer's primary button
- * just closes the sheet and doubles as result-count feedback ("Visa N träffar").
+ * The Larm feed filter — a native `formSheet` route (registered in the root
+ * layout), so it slides up with the OS sheet + grabber + swipe-to-dismiss, exactly
+ * like the report-form pickers (no hand-rolled Modal, no fade). Four dimensions:
+ * scope (Alla/Mina), raritet, aktivitet, plats.
  *
- * Section labels reuse `observation.*Label` (+ `rarity.label`). Options are
- * derived from the feed (see `deriveFilterOptions`), so every chip yields ≥1
- * result. The body is a single `ScrollView` (no FlatList) — the dimensions are
- * small (rarity is ≤6 levels, activities/locations bounded by the 14-day feed).
+ * It reads the feed from the query CACHE to derive the same chip options + a live
+ * result count, and reads/writes the shared `feed-filter-store` — so toggling a
+ * chip updates the feed rendered behind the half-height sheet instantly, with no
+ * "Apply" step. The footer's primary button just closes and doubles as result-
+ * count feedback ("Visa N träffar").
  */
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 
 import { Button } from '@/components/button';
 import { FilterChip } from '@/components/filter-chip';
-import { PickerSheet } from '@/components/picker-sheet';
 import { RarityBadge } from '@/components/rarity-badge';
+import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SegmentedPicker } from '@/components/segmented-picker';
 import { Spacing } from '@/constants/theme';
-import type { FeedFilter, FilterOptions } from '@/lib/feed-filter';
-import { activeFilterCount } from '@/lib/feed-filter';
+import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/hooks/use-theme';
+import { useBlockedUsers } from '@/lib/blocks';
+import {
+  activeFilterCount,
+  applyFeedFilter,
+  deriveFilterOptions,
+  EMPTY_FILTER,
+  type FeedFilter,
+} from '@/lib/feed-filter';
+import { setFeedFilter, useFeedFilter } from '@/lib/feed-filter-store';
 import { sv } from '@/lib/i18n/sv';
+import { feedQueryOptions, type FeedObservation } from '@/lib/query/observations';
 import type { RarityLevel } from '@/lib/rarity';
 import type { Activity } from '@/lib/validation/observation';
 
@@ -36,29 +51,26 @@ function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
 }
 
-export type FeedFilterSheetProps = {
-  visible: boolean;
-  filter: FeedFilter;
-  options: FilterOptions;
-  resultCount: number;
-  onChange: (next: FeedFilter) => void;
-  onClear: () => void;
-  onClose: () => void;
-};
+export default function FilterSheet() {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const filter = useFeedFilter();
 
-export function FeedFilterSheet({
-  visible,
-  filter,
-  options,
-  resultCount,
-  onChange,
-  onClear,
-  onClose,
-}: FeedFilterSheetProps) {
-  const { height: winH } = useWindowDimensions();
+  // Same derivation as the feed, straight from the warm cache (no refetch).
+  const feed = useQuery(feedQueryOptions());
+  const blocked = useBlockedUsers();
+  const data = useMemo(
+    () => (feed.data ?? []).filter((o: FeedObservation) => !blocked.has(o.userId)),
+    [feed.data, blocked],
+  );
+  const options = useMemo(() => deriveFilterOptions(data), [data]);
+  const resultCount = useMemo(
+    () => applyFeedFilter(data, filter, user?.id).length,
+    [data, filter, user?.id],
+  );
 
-  // Activities carry only their raw value from the feed; resolve labels here and
-  // sort alphabetically by label (sv), matching the activity picker.
+  // Activities carry only their raw value; resolve labels + sort A–Ö (sv).
   const activityOptions = useMemo(
     () =>
       options.activities
@@ -68,22 +80,21 @@ export function FeedFilterSheet({
   );
 
   const count = activeFilterCount(filter);
+  const change = (next: FeedFilter) => setFeedFilter(next);
 
   return (
-    <PickerSheet visible={visible} title={sv.filter.title} onClose={onClose}>
-      <ScrollView
-        style={{ maxHeight: winH * 0.55 }}
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      {/* Built on the app's `Screen` scroller (a flex:1 ScrollView that paints the
+          theme background and adjusts insets) — the same recipe as the pickers and
+          the lokal peek. A plain ScrollView here didn't fill the sheet, so dragging
+          up to the taller detent exposed an unpainted (black) area. */}
+      <Screen contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <SectionHeader title={sv.filter.scopeLabel} />
           <SegmentedPicker<Scope>
             options={SCOPE_OPTIONS}
             value={filter.onlyMine ? 'mine' : 'all'}
-            onChange={(next) => onChange({ ...filter, onlyMine: next === 'mine' })}
+            onChange={(next) => change({ ...filter, onlyMine: next === 'mine' })}
             ariaLabel={sv.filter.scopeLabel}
           />
         </View>
@@ -103,7 +114,7 @@ export function FeedFilterSheet({
                     selected={filter.rarities.includes(r.level)}
                     accessibilityLabel={`${sv.rarity.a11y(r.level)}, ${label}`}
                     onPress={() =>
-                      onChange({ ...filter, rarities: toggle<RarityLevel>(filter.rarities, r.level) })
+                      change({ ...filter, rarities: toggle<RarityLevel>(filter.rarities, r.level) })
                     }
                   />
                 );
@@ -123,10 +134,7 @@ export function FeedFilterSheet({
                   count={a.count}
                   selected={filter.activities.includes(a.value)}
                   onPress={() =>
-                    onChange({
-                      ...filter,
-                      activities: toggle<Activity>(filter.activities, a.value),
-                    })
+                    change({ ...filter, activities: toggle<Activity>(filter.activities, a.value) })
                   }
                 />
               ))}
@@ -144,39 +152,51 @@ export function FeedFilterSheet({
                   label={l.name}
                   count={l.count}
                   selected={filter.locationIds.includes(l.id)}
-                  onPress={() =>
-                    onChange({ ...filter, locationIds: toggle(filter.locationIds, l.id) })
-                  }
+                  onPress={() => change({ ...filter, locationIds: toggle(filter.locationIds, l.id) })}
                 />
               ))}
             </View>
           </View>
         ) : null}
-      </ScrollView>
+      </Screen>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: theme.border, paddingBottom: insets.bottom + Spacing.three },
+        ]}
+      >
         <Button
           title={sv.filter.clear}
           variant="secondary"
-          onPress={onClear}
+          onPress={() => setFeedFilter(EMPTY_FILTER)}
           disabled={count === 0}
           style={styles.footerButton}
         />
         <Button
           title={sv.filter.apply(resultCount)}
           variant="primary"
-          onPress={onClose}
+          onPress={() => router.back()}
           style={styles.footerButton}
         />
       </View>
-    </PickerSheet>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { gap: Spacing.four, paddingBottom: Spacing.two },
+  root: { flex: 1 },
+  // Horizontal padding + background come from `Screen`; only the sheet-appropriate
+  // top/bottom padding and the wider section gap are overridden here.
+  scroll: { gap: Spacing.four, paddingTop: Spacing.two, paddingBottom: Spacing.three },
   section: { gap: Spacing.two },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  footer: { flexDirection: 'row', gap: Spacing.two, paddingTop: Spacing.two },
+  footer: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   footerButton: { flex: 1 },
 });

@@ -17,7 +17,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { IconSize, Opacity, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { hapticSelect } from '@/lib/haptics';
+import { hapticToggle } from '@/lib/haptics';
 
 export type SettingsRowProps = {
   icon?: IconName;
@@ -103,7 +103,9 @@ export function SettingsRow({
           <Switch
             value={switchValue}
             onValueChange={(next) => {
-              hapticSelect();
+              // Direction-aware toggle feedback (Toggle_On/Off on Android,
+              // Rigid/Soft on iOS) rather than a flat selection tick.
+              hapticToggle(next);
               onSwitchChange?.(next);
             }}
             disabled={disabled}

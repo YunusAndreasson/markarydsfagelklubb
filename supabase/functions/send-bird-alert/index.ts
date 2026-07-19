@@ -47,6 +47,57 @@ function json(body: unknown, status: number): Response {
   });
 }
 
+type AlertObs = {
+  id: string;
+  user_id: string;
+  count: number | null;
+  observed_at: string | null;
+  species_id: number | null;
+  location_id: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  species: { swedish_name?: string } | null;
+  location: { name?: string; latitude?: number | null; longitude?: number | null } | null;
+};
+
+// Write one durable, denormalized `alerts` row for this larm. Snapshots the
+// species/location/observer names + coordinates so the record stays meaningful
+// after the source rows are deleted. Idempotent per observation, so an edge-fn
+// retry (or an observation already covered by the one-time backfill) never
+// doubles a row.
+async function logAlert(
+  admin: ReturnType<typeof createClient>,
+  obs: AlertObs,
+  reporter: { display_name?: string | null } | null,
+  recipientCount: number,
+): Promise<void> {
+  const { data: existing } = await admin
+    .from('alerts')
+    .select('id')
+    .eq('observation_id', obs.id)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+
+  const loc = obs.location;
+  const { error } = await admin.from('alerts').insert({
+    observation_id: obs.id,
+    location_id: obs.location_id,
+    species_id: obs.species_id,
+    location_name: loc?.name ?? null,
+    species_name: obs.species?.swedish_name ?? null,
+    observer_user_id: obs.user_id,
+    observer_name: reporter?.display_name ?? null,
+    latitude: obs.latitude ?? loc?.latitude ?? null,
+    longitude: obs.longitude ?? loc?.longitude ?? null,
+    count: obs.count,
+    observed_at: obs.observed_at,
+    recipient_count: recipientCount,
+    // sent_at defaults to now()
+  });
+  if (error) throw error;
+}
+
 Deno.serve(async (req) => {
   try {
     const { observationId, placeLabel } = await req.json();
@@ -65,10 +116,14 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Service role → RLS bypassed. Load just enough to build the notification.
+    // Service role → RLS bypassed. Load enough to build the notification AND to
+    // snapshot a durable `alerts` row (species/location/observer/coords).
     const { data: obs, error: obsErr } = await admin
       .from('observations')
-      .select('id,user_id,count,alert_requested,species:species(swedish_name),location:locations(name)')
+      .select(
+        'id,user_id,count,alert_requested,observed_at,species_id,location_id,latitude,longitude,' +
+          'species:species(swedish_name),location:locations(name,latitude,longitude)',
+      )
       .eq('id', observationId)
       .maybeSingle();
     if (obsErr) throw obsErr;
@@ -85,7 +140,20 @@ Deno.serve(async (req) => {
       .select('token')
       .neq('user_id', obs.user_id);
     if (tokErr) throw tokErr;
-    if (!tokens || tokens.length === 0) return json({ sent: 0 }, 200);
+    const recipients = (tokens ?? []) as { token: string }[];
+
+    // Preserve the larm as a durable, denormalized record BEFORE delivery — so it
+    // survives a push failure, later deletion of the observation, and gives the
+    // Lokaler screen its per-lokal larm history. De-duped on observation_id
+    // (edge-fn retry + one-time backfill safe). Best-effort: a logging failure must
+    // never block the actual fan-out, which is this function's primary job.
+    try {
+      await logAlert(admin, obs, reporter, recipients.length);
+    } catch (logErr) {
+      console.error('[send-bird-alert] failed to log alert', logErr);
+    }
+
+    if (recipients.length === 0) return json({ sent: 0, logged: true }, 200);
 
     const species =
       (obs.species as { swedish_name?: string } | null)?.swedish_name ?? 'Ny observation';
@@ -96,7 +164,7 @@ Deno.serve(async (req) => {
     const who = reporter?.display_name ?? 'en medlem';
     const body = [place, `${obs.count} st`].filter(Boolean).join(' · ') + ` — av ${who}`;
 
-    const messages: ExpoMessage[] = tokens.map((t: { token: string }) => ({
+    const messages: ExpoMessage[] = recipients.map((t: { token: string }) => ({
       to: t.token,
       title: species,
       body,
@@ -137,7 +205,7 @@ Deno.serve(async (req) => {
       await admin.from('expo_push_tokens').delete().in('token', dead);
     }
 
-    return json({ sent: messages.length, pruned: dead.length }, 200);
+    return json({ sent: messages.length, pruned: dead.length, logged: true }, 200);
   } catch (err) {
     return json({ error: String(err) }, 500);
   }

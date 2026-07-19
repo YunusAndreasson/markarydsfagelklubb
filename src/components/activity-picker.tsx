@@ -1,28 +1,14 @@
 /**
- * Aktivitet-väljaren — single-select of what the bird was doing. Required (no
- * silent default), mirroring the web. The 10 activities are shown alphabetically
- * by their Swedish label (web parity — not in the enum's storage order); legacy
- * activity keys are accepted on read elsewhere but never offered here.
+ * Aktivitet-väljaren — the report-form FIELD. Tapping it opens the native
+ * `picker/activity` sheet (`presentation: 'formSheet'`) and awaits the chosen
+ * value via the picker bridge. Required (no silent default), mirroring the web.
  */
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 
-import { CHECK, Icon } from '@/components/icon';
 import { PickerField } from '@/components/picker-field';
-import { PickerSheet } from '@/components/picker-sheet';
-import { PressableScale } from '@/components/pressable-scale';
-import { ThemedText } from '@/components/themed-text';
-import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
-import { ACTIVITIES, type Activity } from '@/lib/validation/observation';
-
-// Sorted once at module load — the picker is alphabetical by label.
-const OPTIONS = [...ACTIVITIES]
-  .map((value) => ({ value, label: sv.observation.activity[value] }))
-  .sort((a, b) => a.label.localeCompare(b.label, 'sv'));
+import { requestPick } from '@/lib/picker-bridge';
+import { type Activity } from '@/lib/validation/observation';
 
 export function ActivityPicker({
   value,
@@ -35,67 +21,24 @@ export function ActivityPicker({
   invalid?: boolean;
   error?: string | null;
 }) {
-  const theme = useTheme();
-  const [open, setOpen] = useState(false);
+  async function open() {
+    const picked = await requestPick<Activity>(() =>
+      router.push({
+        pathname: '/picker/activity',
+        params: value ? { current: value } : {},
+      }),
+    );
+    if (picked != null) onChange(picked);
+  }
 
   return (
-    <>
-      <PickerField
-        label={sv.observation.activityLabel}
-        value={value ? sv.observation.activity[value] : null}
-        placeholder={sv.observation.activityPlaceholder}
-        invalid={invalid}
-        error={error}
-        onPress={() => setOpen(true)}
-      />
-      <PickerSheet
-        visible={open}
-        title={sv.observation.activityPickTitle}
-        onClose={() => setOpen(false)}
-      >
-        <View style={styles.list}>
-          {OPTIONS.map((opt) => {
-            const selected = opt.value === value;
-            return (
-              <PressableScale
-                key={opt.value}
-                variant="row"
-                haptic={false}
-                onPress={() => {
-                  hapticSelect();
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                style={[styles.row, selected && { backgroundColor: theme.muted }]}
-              >
-                <ThemedText
-                  type="default"
-                  themeColor={selected ? 'tint' : 'foreground'}
-                  style={styles.label}
-                >
-                  {opt.label}
-                </ThemedText>
-                {selected ? <Icon name={CHECK} size={18} color={theme.tint} /> : null}
-              </PressableScale>
-            );
-          })}
-        </View>
-      </PickerSheet>
-    </>
+    <PickerField
+      label={sv.observation.activityLabel}
+      value={value ? sv.observation.activity[value] : null}
+      placeholder={sv.observation.activityPlaceholder}
+      invalid={invalid}
+      error={error}
+      onPress={() => void open()}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  list: { gap: Spacing.half },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: 52,
-    paddingHorizontal: Spacing.three,
-    borderRadius: SurfaceRadius.sm,
-  },
-  label: { flex: 1 },
-});

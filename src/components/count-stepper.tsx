@@ -8,12 +8,13 @@
 import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
-import { Icon, MINUS, PLUS } from '@/components/icon';
+import { EDIT, Icon, MINUS, PLUS } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceStyles } from '@/constants/surface';
-import { FontSize, Spacing } from '@/constants/theme';
+import { FontSize, IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { hapticError, hapticPress } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 
 const MIN = 1;
@@ -48,13 +49,22 @@ export function CountStepper({
       <View style={[styles.row, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <PressableScale
           variant="button"
-          disabled={atMin}
-          onPress={() => onChange(clamp(value - 1))}
+          // Stays pressable at MIN: a refused decrement fires an error haptic
+          // (the ✕ still reads dimmed) rather than a silent dead tap. `haptic`
+          // off so we pick press-vs-error ourselves.
+          haptic={false}
+          onPress={() => {
+            if (atMin) hapticError();
+            else {
+              hapticPress();
+              onChange(value - 1);
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel={sv.observation.countDecrease}
           style={styles.stepBtn}
         >
-          <Icon name={MINUS} size={20} color={atMin ? theme.mutedForeground : theme.foreground} />
+          <Icon name={MINUS} size={IconSize.close} color={atMin ? theme.mutedForeground : theme.foreground} />
         </PressableScale>
 
         {editing ? (
@@ -85,19 +95,31 @@ export function CountStepper({
             accessibilityLabel={sv.observation.countEditHint}
             style={styles.countWrap}
           >
+            {/* Bare, the number reads as a static total. A muted pencil is the
+                signifier that tapping it opens a numeric field to type a value
+                directly — otherwise the tap-to-type affordance is invisible to
+                sighted users (Norman — discoverability). */}
             <ThemedText type="subtitle">{value}</ThemedText>
+            <Icon name={EDIT} size={IconSize.meta} color={theme.mutedForeground} />
           </PressableScale>
         )}
 
         <PressableScale
           variant="button"
-          disabled={atMax}
-          onPress={() => onChange(clamp(value + 1))}
+          // Symmetric with MIN: a refused increment at MAX fires an error haptic.
+          haptic={false}
+          onPress={() => {
+            if (atMax) hapticError();
+            else {
+              hapticPress();
+              onChange(value + 1);
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel={sv.observation.countIncrease}
           style={styles.stepBtn}
         >
-          <Icon name={PLUS} size={20} color={atMax ? theme.mutedForeground : theme.foreground} />
+          <Icon name={PLUS} size={IconSize.close} color={atMax ? theme.mutedForeground : theme.foreground} />
         </PressableScale>
       </View>
     </View>
@@ -122,8 +144,10 @@ const styles = StyleSheet.create({
   countWrap: {
     flex: 1,
     minHeight: 56,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.one,
   },
   input: {
     flex: 1,

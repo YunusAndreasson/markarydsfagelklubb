@@ -87,7 +87,9 @@ type RawProfileRow = {
   phone: string | null;
 };
 
-function sinceIso(days: number): string {
+/** ISO timestamp `days` days ago — the lower bound for the rolling feed/activity
+ *  windows. Shared with `locations.ts` (per-lokal activity). */
+export function sinceIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
@@ -100,10 +102,14 @@ async function toFeedObservations(rows: RawObservationRow[]): Promise<FeedObserv
   if (rows.length === 0) return [];
 
   const userIds = [...new Set(rows.map((r) => r.user_id))];
-  const { data: profileRows } = await supabase
+  // Throw on failure (like every other query here) so React Query retries or
+  // shows the error state — swallowing it would render every observer as
+  // "Okänd observatör" and persist that to the on-disk cache as if it were real.
+  const { data: profileRows, error: profileError } = await supabase
     .from('profiles')
     .select('user_id,display_name,avatar_path,phone')
     .in('user_id', userIds);
+  if (profileError) throw profileError;
   const profiles = new Map<string, RawProfileRow>(
     ((profileRows ?? []) as RawProfileRow[]).map((p) => [p.user_id, p]),
   );
@@ -300,7 +306,8 @@ export async function updateObservation(input: UpdateObservationInput): Promise<
       comment: parsed.comment ?? null,
       image_path: parsed.imagePath ?? null,
       activity: parsed.activity,
-      alert_requested: parsed.alertRequested,
+      // `alert_requested` is a create-time fact (did this report fan out?) —
+      // an edit must not rewrite it, so it is deliberately absent here.
       updated_at: new Date().toISOString(),
     })
     .eq('id', parsed.id);

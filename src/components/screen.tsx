@@ -1,4 +1,4 @@
-import { forwardRef, type ReactElement, type ReactNode } from 'react';
+import { type ReactElement, type ReactNode, type Ref } from 'react';
 import { ScrollView, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { sharedStyles } from '@/constants/shared-styles';
@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
  * wrap this component in another container at the route root.
  */
 export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
+  ref?: Ref<ScrollView>;
   inset?: 'tab' | 'sub';
   refreshControl?: ReactElement;
   /**
@@ -36,10 +37,16 @@ export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
   children: ReactNode;
 };
 
-export const Screen = forwardRef<ScrollView, ScreenProps>(function Screen(
-  { inset = 'tab', refreshControl, keyboardAware = false, contentContainerStyle, style, children, ...rest },
+export function Screen({
   ref,
-) {
+  inset = 'tab',
+  refreshControl,
+  keyboardAware = false,
+  contentContainerStyle,
+  style,
+  children,
+  ...rest
+}: ScreenProps) {
   const theme = useTheme();
   const base = inset === 'sub' ? sharedStyles.scrollContentInset : sharedStyles.scrollContent;
   return (
@@ -58,4 +65,4 @@ export const Screen = forwardRef<ScrollView, ScreenProps>(function Screen(
       {children}
     </ScrollView>
   );
-});
+}

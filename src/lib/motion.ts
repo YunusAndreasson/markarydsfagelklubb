@@ -4,7 +4,7 @@
  * here so list reflows stay consistent across screens (and one number changes
  * them all).
  */
-import { FadeInDown, Keyframe } from 'react-native-reanimated';
+import { Keyframe } from 'react-native-reanimated';
 
 import { Duration, Stagger, type StaggerSpeed } from '@/constants/motion';
 
@@ -18,7 +18,17 @@ type MotionGate = <T>(value: T) => T | undefined;
  */
 export function listEntrance(index: number, speed: StaggerSpeed = 'default') {
   const delay = Math.min(index * Stagger[speed], 240);
-  return FadeInDown.duration(Duration.quick).delay(delay);
+  // Explicit Keyframe, NOT the predefined `FadeInDown`: its 100 % frame hard-sets
+  // opacity 1 / translateY 0, so an entrance interrupted mid-flight by a sibling
+  // re-render (activity / blocked / reverse-geocode queries settling within the
+  // ~160ms window) still settles fully visible. The predefined variant left the
+  // topmost card — the one actually animating at that instant — stuck ~50 % opaque.
+  return new Keyframe({
+    0: { opacity: 0, transform: [{ translateY: 8 }] },
+    100: { opacity: 1, transform: [{ translateY: 0 }] },
+  })
+    .duration(Duration.quick)
+    .delay(delay);
 }
 
 /**

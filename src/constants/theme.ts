@@ -98,31 +98,32 @@ export const SurfaceOverlay = {
 } as const;
 
 /**
- * Rarity "heat" tints for the feed card's rarity badge — a small chip showing
- * the rarity number 0–5. The scale runs 0 = rarest (a true rarity) → 5 = most
- * common, so the color cools that way: red/0 → orange → amber → grey/5. Each
- * level is a `{ background, foreground }` pair — a soft tinted chip with a
- * legible number. Hues stay clear of the brand green so the badge never reads as
- * a primary/own-observation marker. Kept off `Colors` (like {@link
- * SurfaceOverlay}) so it doesn't widen `ThemeColor`; resolved with the active
- * scheme by `@/lib/rarity`. Light = pale tint + dark number; dark = translucent
- * fill + bright number, lifted for contrast against the dark card surface.
+ * Rarity "heat" scale for the rarity badge — a small chip showing the rarity
+ * number 0–5, running 0 = rarest (a true rarity) → 5 = most common. Prominence is
+ * *graded*, not just hue: the rare end (0/1) is a SOLID, saturated fill so an
+ * alarm-worthy bird pops out of the feed and the species list even from the
+ * card's top-right corner, while the common end stays quiet but still *stepped*
+ * so adjacent levels never blur together: amber (2) → warm tan (3) → cool
+ * blue-grey (4) → faint neutral (5). Hues stay clear of the brand green (and the
+ * cool 4 leans blue, not teal) so the badge never reads as a primary marker. Kept
+ * off `Colors` (like {@link SurfaceOverlay}) so it doesn't widen `ThemeColor`;
+ * resolved with the active scheme by `@/lib/rarity`.
  */
 export const RarityScale = {
   light: {
-    0: { background: '#FBE1DF', foreground: '#C42A20' },
-    1: { background: '#FBE7D8', foreground: '#BC530E' },
-    2: { background: '#F9EFD8', foreground: '#946E08' },
-    3: { background: '#F4F1E9', foreground: '#867457' },
-    4: { background: '#EEEFF1', foreground: '#6B727B' },
+    0: { background: '#C42A20', foreground: '#FFFFFF' },
+    1: { background: '#C4610E', foreground: '#FFFFFF' },
+    2: { background: '#F2E1AE', foreground: '#8A6606' },
+    3: { background: '#E7DEBE', foreground: '#756535' },
+    4: { background: '#E2E7ED', foreground: '#5F6771' },
     5: { background: '#F2F2F2', foreground: '#6F6F6F' },
   },
   dark: {
-    0: { background: 'rgba(255,90,76,0.18)', foreground: '#FF877F' },
-    1: { background: 'rgba(245,130,55,0.18)', foreground: '#F5A968' },
-    2: { background: 'rgba(240,180,60,0.16)', foreground: '#EBC063' },
-    3: { background: 'rgba(205,190,150,0.14)', foreground: '#CDBE93' },
-    4: { background: 'rgba(255,255,255,0.09)', foreground: '#AAB1B8' },
+    0: { background: '#D23B2E', foreground: '#FFF3F1' },
+    1: { background: '#C4650F', foreground: '#FFF6EE' },
+    2: { background: 'rgba(240,180,60,0.22)', foreground: '#EBC063' },
+    3: { background: 'rgba(202,185,140,0.20)', foreground: '#D2C08C' },
+    4: { background: 'rgba(150,172,196,0.15)', foreground: '#A6B2C0' },
     5: { background: 'rgba(255,255,255,0.07)', foreground: '#9AA49D' },
   },
 } as const;

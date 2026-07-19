@@ -22,8 +22,79 @@ export type Database = {
   }
   public: {
     Tables: {
-      // M14: hand-added ahead of applying the migration to the shared DB.
-      // Regenerate (supabase gen types) once `expo_push_tokens` is live.
+      alerts: {
+        Row: {
+          count: number | null
+          id: string
+          latitude: number | null
+          location_id: number | null
+          location_name: string | null
+          longitude: number | null
+          observation_id: string | null
+          observed_at: string | null
+          observer_name: string | null
+          observer_user_id: string | null
+          recipient_count: number | null
+          sent_at: string
+          species_id: number | null
+          species_name: string | null
+        }
+        Insert: {
+          count?: number | null
+          id?: string
+          latitude?: number | null
+          location_id?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          observation_id?: string | null
+          observed_at?: string | null
+          observer_name?: string | null
+          observer_user_id?: string | null
+          recipient_count?: number | null
+          sent_at?: string
+          species_id?: number | null
+          species_name?: string | null
+        }
+        Update: {
+          count?: number | null
+          id?: string
+          latitude?: number | null
+          location_id?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          observation_id?: string | null
+          observed_at?: string | null
+          observer_name?: string | null
+          observer_user_id?: string | null
+          recipient_count?: number | null
+          sent_at?: string
+          species_id?: number | null
+          species_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "observations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_species_id_fkey"
+            columns: ["species_id"]
+            isOneToOne: false
+            referencedRelation: "species"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expo_push_tokens: {
         Row: {
           created_at: string

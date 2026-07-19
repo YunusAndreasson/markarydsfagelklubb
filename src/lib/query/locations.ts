@@ -1,6 +1,8 @@
 import { queryOptions } from '@tanstack/react-query';
 
+import { distanceMeters } from '@/lib/geo';
 import { queryKeys } from '@/lib/query/keys';
+import { sinceIso } from '@/lib/query/observations';
 import { requireUserId } from '@/lib/query/session';
 import { supabase } from '@/lib/supabase';
 import { createLocationInput, type CreateLocationInput } from '@/lib/validation/location';
@@ -12,6 +14,35 @@ export type Location = {
   latitude: number | null;
   longitude: number | null;
 };
+
+/** A lokal known to have coordinates — a candidate for GPS snapping. */
+export type LocatedLocation = Location & { latitude: number; longitude: number };
+
+/**
+ * The named lokal closest to a point, if one lies within `radiusMeters`. Used to
+ * snap a GPS "min position" fix onto a manually-named site so the report is filed
+ * against the lokal rather than a bare coordinate. Only lokaler that have
+ * coordinates are candidates; ties resolve to the nearer one. Returns null when
+ * nothing is close enough, so the caller keeps the raw point.
+ */
+export function nearestLocationWithin(
+  latitude: number,
+  longitude: number,
+  locations: readonly Location[],
+  radiusMeters: number,
+): LocatedLocation | null {
+  let best: LocatedLocation | null = null;
+  let bestDistance = radiusMeters;
+  for (const loc of locations) {
+    if (loc.latitude == null || loc.longitude == null) continue;
+    const d = distanceMeters(latitude, longitude, loc.latitude, loc.longitude);
+    if (d <= bestDistance) {
+      bestDistance = d;
+      best = loc as LocatedLocation;
+    }
+  }
+  return best;
+}
 
 type RawLocationRow = {
   id: number;
@@ -39,6 +70,37 @@ export async function listLocations(): Promise<Location[]> {
 
 export function locationsQueryOptions() {
   return queryOptions({ queryKey: queryKeys.locations, queryFn: listLocations });
+}
+
+/** Rolling window for "does this lokal have current activity?" (matches the feed). */
+const ACTIVITY_WINDOW_DAYS = 14;
+
+/**
+ * Observation count per lokal over the last 14 days, keyed by `location_id`.
+ * Drives the Lokaler map's active-vs-quiet pin colour and the peek sheet's
+ * "N obs senaste 14 dagarna" line. One lightweight query (ids only); pin-drop
+ * observations (no `location_id`) are excluded.
+ */
+export async function listLocationActivity(): Promise<Record<number, number>> {
+  const { data, error } = await supabase
+    .from('observations')
+    .select('location_id')
+    .not('location_id', 'is', null)
+    .gte('observed_at', sinceIso(ACTIVITY_WINDOW_DAYS));
+  if (error) throw error;
+  const counts: Record<number, number> = {};
+  for (const row of (data ?? []) as { location_id: number | null }[]) {
+    if (row.location_id != null) counts[row.location_id] = (counts[row.location_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export function locationActivityQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.locationsActivity,
+    queryFn: listLocationActivity,
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 /** A lokal offered as a quick pick — coordinates guaranteed (the pick must be

@@ -63,7 +63,20 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return classify(await Notifications.requestPermissionsAsync());
 }
 
-/** Android needs an explicit channel for heads-up delivery. No-op elsewhere. */
+/**
+ * Android needs an explicit channel for heads-up delivery (no-op elsewhere).
+ *
+ * SOUND — the channel intentionally OMITS `sound`, which is how you request the
+ * *standard* notification sound. On Android 8+ the sound is a per-channel
+ * property, and expo-notifications only calls `setSound` when a `sound` key is
+ * present; with it absent the channel keeps `Settings.System.DEFAULT_NOTIFICATION_URI`
+ * (the system default), and `importance: HIGH` keeps that sound audible.
+ * ⚠️ Do NOT add `sound: 'default'` here — that string is treated as a res/raw
+ * FILENAME, and with no `res/raw/default` it resolves to SILENCE. Omission is the
+ * only way to get the default. (The push payload also sends `sound: 'default'`
+ * and the foreground handler sets `shouldPlaySound: true`, so a standard sound
+ * plays whether the app is foreground, background, or killed.)
+ */
 export async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {

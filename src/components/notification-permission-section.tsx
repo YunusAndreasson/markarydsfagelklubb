@@ -14,6 +14,7 @@ import { SettingsRow } from '@/components/settings/settings-row';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import {
+  getCachedPushToken,
   getExpoPushToken,
   getNotificationPermission,
   requestNotificationPermission,
@@ -75,7 +76,10 @@ export function NotificationPermissionSection() {
     setBusy(true);
     setPushOptedOut(true);
     setOptedOut(true);
-    const token = await getExpoPushToken();
+    // The session-cached token suffices to delete our row — only fall back to
+    // re-minting one from Expo's push service when nothing was cached (also
+    // lets the opt-out delete work offline-ish).
+    const token = getCachedPushToken() ?? (await getExpoPushToken());
     if (token) {
       try {
         await unregisterPushToken(token);

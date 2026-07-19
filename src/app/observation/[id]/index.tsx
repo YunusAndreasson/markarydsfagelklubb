@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -7,8 +6,9 @@ import { StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/avatar';
 import { Badge } from '@/components/badge';
 import { HeaderButton } from '@/components/header-button';
-import { ALERT, CLOCK, Icon, LOCATION } from '@/components/icon';
+import { ALERT, CHEVRON, CLOCK, Icon, LOCATION } from '@/components/icon';
 import { ObservationMap } from '@/components/observation-map';
+import { PhotoView } from '@/components/photo-view';
 import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { ReportBlockButton } from '@/components/report-block-button';
@@ -16,7 +16,6 @@ import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
-import { Duration } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -90,12 +89,10 @@ export default function ObservationDetailScreen() {
 
     body = (
       <View style={styles.body}>
+        {/* Name-first (matches the feed card): the species name is the flush-left
+            hero, sharing its left edge with the badges + meta below; the rarity
+            grade sits top-right, centered on the title's first line. */}
         <View style={styles.titleRow}>
-          {/* Rarity badge in its own leading column, centered on the title's first
-              line, so the title + scientific name align cleanly. */}
-          <View style={styles.badgeColumn}>
-            <RarityBadge level={level} size="lg" />
-          </View>
           <View style={styles.titleText}>
             <ThemedText type="card">{obs.speciesSwedishName}</ThemedText>
             {obs.speciesScientificName ? (
@@ -103,6 +100,9 @@ export default function ObservationDetailScreen() {
                 {obs.speciesScientificName}
               </ThemedText>
             ) : null}
+          </View>
+          <View style={styles.badgeColumn}>
+            <RarityBadge level={level} size="lg" />
           </View>
         </View>
 
@@ -132,15 +132,10 @@ export default function ObservationDetailScreen() {
         ) : null}
 
         {obs.imageUrl ? (
-          <Image
-            // Cache by the stable storage path, not the rotating signed URL (see
-            // ObservationCard) — so the full photo survives refetches + restarts.
-            source={{ uri: obs.imageUrl, cacheKey: obs.imagePath ?? undefined }}
-            style={[styles.image, { backgroundColor: theme.muted }]}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={Duration.quick}
-          />
+          // Tappable → fullscreen viewer. Cache is keyed by the stable storage
+          // path, not the rotating signed URL (see ObservationCard), so the full
+          // photo survives refetches + restarts.
+          <PhotoView uri={obs.imageUrl} cacheKey={obs.imagePath ?? undefined} />
         ) : null}
 
         {obs.comment ? (
@@ -162,6 +157,8 @@ export default function ObservationDetailScreen() {
           <ThemedText type="small" themeColor="mutedForeground" style={styles.flex} numberOfLines={1}>
             {obs.observerDisplayName ?? sv.feed.unknownObserver}
           </ThemedText>
+          {/* Chevron signifies this row navigates → the observer's profile. */}
+          <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
         </PressableScale>
       </View>
     );
@@ -197,15 +194,14 @@ export default function ObservationDetailScreen() {
 const styles = StyleSheet.create({
   body: { gap: Spacing.three },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
-  // Leading column for the rarity badge — height matches the `card` title line
-  // height so `justifyContent: center` aligns the badge with the title.
+  // Trailing column for the rarity badge — height matches the `card` title line
+  // height so `justifyContent: center` aligns the badge with the title's first line.
   badgeColumn: { height: 36, justifyContent: 'center' },
   titleText: { flex: 1, minWidth: 0, gap: Spacing.half },
   scientific: { fontStyle: 'italic' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   flex: { flex: 1 },
-  image: { width: '100%', aspectRatio: 4 / 3, borderRadius: SurfaceRadius.md },
   comment: { padding: Spacing.three, borderRadius: SurfaceRadius.md },
   footer: {
     flexDirection: 'row',

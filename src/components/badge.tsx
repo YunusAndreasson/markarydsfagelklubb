@@ -41,7 +41,9 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Badge
 const styles = StyleSheet.create({
   pill: {
     alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.two,
+    // Tight internal padding so the pill hugs its label (vertical is already at
+    // the 2px floor); the pill radius keeps it reading as a badge, not a box.
+    paddingHorizontal: Spacing.one,
     paddingVertical: Spacing.half,
     borderRadius: SurfaceRadius.pill,
   },

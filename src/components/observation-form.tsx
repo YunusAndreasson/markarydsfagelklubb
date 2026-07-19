@@ -11,19 +11,18 @@
  * border + a one-shot `hapticError`, both built into `PickerField` — matching the
  * app's own Profile form (M7), not the web's scroll-to-error.
  */
-import { useIsFocused } from 'expo-router';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { findNodeHandle, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityPicker } from '@/components/activity-picker';
 import { Button } from '@/components/button';
 import { CountStepper } from '@/components/count-stepper';
 import { DateTimePicker } from '@/components/date-time-picker';
+import { FieldLabel } from '@/components/field-label';
 import { ImageUpload } from '@/components/image-upload';
 import { LocationPicker, type LocationValue } from '@/components/location-picker';
 import { SpeciesPicker } from '@/components/species-picker';
 import { TextField } from '@/components/text-field';
-import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
 import { Spacing } from '@/constants/theme';
 import { confirm } from '@/lib/confirm';
@@ -80,15 +79,13 @@ export function formToInput(value: ObservationFormValue): CreateObservationInput
 export type ObservationFormHandle = { submit: () => void };
 
 export type ObservationFormProps = {
+  ref?: Ref<ObservationFormHandle>;
   initial?: ObservationFormValue;
   mode: 'create' | 'edit';
   onSubmit: (value: ObservationFormValue) => void;
   onDelete?: () => void;
   submitting?: boolean;
   deleting?: boolean;
-  /** The observation id (edit) — used as the image `draftId` so a replaced photo
-   *  overwrites `…/observations/{id}.jpg` in place. */
-  observationId?: string;
   /** The enclosing `Screen`'s ScrollView — lets an invalid submit scroll the
    *  first errored field into view (it may be off-screen on this tall form).
    *  Structurally typed so any ref object (Mutable/RefObject) is accepted. */
@@ -96,40 +93,69 @@ export type ObservationFormProps = {
   /** When the route hosts the primary submit in the nav header, hide the inline
    *  submit button (the destructive delete stays inline). */
   submitInHeader?: boolean;
+  /** Fires whenever the form's "has unsaved input" state flips. The route uses it
+   *  to guard an accidental dismiss (swipe/Avbryt) — the Mail/Calendar "Discard
+   *  changes?" convention (Norman: forgiveness). */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
-export const ObservationForm = forwardRef<ObservationFormHandle, ObservationFormProps>(
-  function ObservationForm(
-    {
-      initial,
-      mode,
-      onSubmit,
-      onDelete,
-      submitting,
-      deleting,
-      observationId,
-      scrollRef,
-      submitInHeader,
-    },
-    ref,
-  ) {
-  const [value, setValue] = useState<ObservationFormValue>(initial ?? emptyObservation());
+/** Do two location values point at the same place? Used by the dirty check. */
+function sameLocation(a: LocationValue, b: LocationValue): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'saved' && b.kind === 'saved') return a.id === b.id;
+  if (a.kind === 'coords' && b.kind === 'coords')
+    return a.latitude === b.latitude && a.longitude === b.longitude;
+  return true; // both 'none'
+}
+
+/**
+ * Has the user entered anything worth guarding on dismiss? Any field that
+ * differs from the mount-time snapshot — the blank defaults in **create**, the
+ * loaded record in **edit**. A changed time counts too: it is set only by an
+ * explicit picker choice, so it is always user intent.
+ */
+function computeDirty(value: ObservationFormValue, initial: ObservationFormValue): boolean {
+  return (
+    value.speciesId !== initial.speciesId ||
+    value.count !== initial.count ||
+    value.observedAt.getTime() !== initial.observedAt.getTime() ||
+    !sameLocation(value.location, initial.location) ||
+    value.comment.trim() !== initial.comment.trim() ||
+    value.imagePath !== initial.imagePath ||
+    value.activity !== initial.activity
+  );
+}
+
+export function ObservationForm({
+  ref,
+  initial,
+  mode,
+  onSubmit,
+  onDelete,
+  submitting,
+  deleting,
+  scrollRef,
+  submitInHeader,
+  onDirtyChange,
+}: ObservationFormProps) {
+  // The mount-time snapshot the dirty check compares against. Both hosting
+  // routes are modals that unmount on dismiss, so a fresh mount (with a fresh
+  // "now" in create mode) happens on every open — no reset-on-focus needed.
+  // (An earlier snap-observedAt-to-now-on-focus effect is deliberately gone: the
+  // pickers are pushed routes now, so returning from one refocuses this form and
+  // the snap silently overwrote a manually chosen time.)
+  const [initialValue] = useState<ObservationFormValue>(() => initial ?? emptyObservation());
+  const [value, setValue] = useState<ObservationFormValue>(initialValue);
   const [showErrors, setShowErrors] = useState(false);
   const busy = !!submitting || !!deleting;
 
-  // Larma is a long-lived tab — it stays mounted, so the `observedAt` captured
-  // by `emptyObservation()` at first mount drifts stale (it would otherwise read
-  // "now" only on the very first open, or right after a submit). The user
-  // reaching this screen is reporting a bird they're seeing *now*, so snap the
-  // time to the present every time the create form regains focus. Edit mode is
-  // left alone — it shows the observation's real recorded time. A manual time
-  // change made during the same visit is preserved (focus hasn't changed).
-  const isFocused = useIsFocused();
+  // Surface "has unsaved input" to the route so it can guard an accidental
+  // dismiss. `onDirtyChange` from `useState`'s setter is stable, so this only
+  // fires when the boolean actually flips.
+  const dirty = computeDirty(value, initialValue);
   useEffect(() => {
-    if (isFocused && mode === 'create') {
-      setValue((v) => ({ ...v, observedAt: new Date() }));
-    }
-  }, [isFocused, mode]);
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   // Wrappers around the three fields that can fail validation, so an invalid
   // submit can scroll the first one into view.
@@ -159,10 +185,12 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
           : null;
     const scroller = scrollRef?.current;
     if (!target || !scroller) return;
-    const scrollNode = findNodeHandle(scroller);
-    if (scrollNode == null) return;
+    // Measure against the ScrollView's host view directly — the modern
+    // `measureLayout(HostInstance)` form; `findNodeHandle` is deprecated.
+    const scrollHost = scroller.getNativeScrollRef();
+    if (!scrollHost) return;
     target.measureLayout(
-      scrollNode,
+      scrollHost,
       (_x, y) => scroller.scrollTo({ y: Math.max(0, y - Spacing.three), animated: true }),
       () => {},
     );
@@ -187,11 +215,10 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
     onSubmit(value);
   }
 
-  // A stable submit() that always runs the latest handleSubmit (which closes over
-  // the current value + callbacks) — driven by the nav-header action.
-  const submitRef = useRef(handleSubmit);
-  submitRef.current = handleSubmit;
-  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), []);
+  // Driven by the nav-header action. No dependency array on purpose: the handle
+  // is re-created each render, so `submit` always closes over the latest form
+  // value — no mutable-ref-during-render hack needed.
+  useImperativeHandle(ref, () => ({ submit: handleSubmit }));
 
   async function confirmDelete() {
     // ConfirmSheet fires the warning haptic itself as the sheet presents.
@@ -239,6 +266,7 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
 
       <TextField
         label={sv.observation.commentLabel}
+        optional
         value={value.comment}
         onChangeText={(t) => update('comment', t)}
         placeholder={sv.observation.commentPlaceholder}
@@ -251,15 +279,17 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
       />
 
       <View style={styles.imageField}>
-        <ThemedText type="smallBold" themeColor="mutedForeground">
-          {sv.observation.imageLabel}
-        </ThemedText>
+        <FieldLabel label={sv.observation.imageLabel} optional />
         <ImageUpload
           value={value.imagePath}
           onChange={(path) => update('imagePath', path)}
           purpose="observation"
           shape="rectangle"
-          draftId={observationId}
+          // The saved photo (edit) must survive until Spara commits: "Ta bort"
+          // only clears the field, and a replace uploads to a fresh draft path.
+          // The route's save flow deletes the old object once the update lands —
+          // so discarding the edit never destroys (or silently swaps) the photo.
+          preservePath={mode === 'edit' ? (initialValue.imagePath ?? null) : null}
           disabled={busy}
         />
       </View>
@@ -288,7 +318,7 @@ export const ObservationForm = forwardRef<ObservationFormHandle, ObservationForm
       ) : null}
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   form: { gap: Spacing.three },

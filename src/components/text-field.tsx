@@ -1,7 +1,8 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { FieldLabel } from '@/components/field-label';
 import { ThemedText } from '@/components/themed-text';
 import { Duration } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
@@ -11,7 +12,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { hapticError } from '@/lib/haptics';
 
 export type TextFieldProps = TextInputProps & {
+  ref?: Ref<TextInput>;
   label: string;
+  /** Mark the field optional — appends a muted "(valfritt)" to the label. */
+  optional?: boolean;
   /**
    * Inline error message rendered below the input. When set, the border switches
    * to the destructive tint and the reason is announced to screen readers via the
@@ -26,10 +30,18 @@ export type TextFieldProps = TextInputProps & {
  * Focus and error states are anchored on the input border (1.5px to telegraph
  * the state change without a layout shift, since the resting border is 1px).
  */
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
-  { label, style, error, onFocus, onBlur, accessibilityHint, clearButtonMode, ...rest },
+export function TextField({
   ref,
-) {
+  label,
+  optional,
+  style,
+  error,
+  onFocus,
+  onBlur,
+  accessibilityHint,
+  clearButtonMode,
+  ...rest
+}: TextFieldProps) {
   const theme = useTheme();
   const { motion } = useMotion();
   const [focused, setFocused] = useState(false);
@@ -47,9 +59,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
 
   return (
     <View style={styles.container}>
-      <ThemedText type="smallBold" themeColor="mutedForeground">
-        {label}
-      </ThemedText>
+      <FieldLabel label={label} optional={optional} />
       <TextInput
         ref={ref}
         accessibilityLabel={label}
@@ -96,7 +106,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       ) : null}
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.one },

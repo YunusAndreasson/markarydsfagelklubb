@@ -14,6 +14,9 @@ export const sv = {
     done: 'Klar',
     comingSoon: 'Kommer snart',
     refreshFailed: 'Kunde inte uppdatera. Försök igen.',
+    // Marker efter etiketten på fält man kan hoppa över (t.ex. bild, kommentar).
+    // Bara valfria fält märks — övriga är underförstått obligatoriska (Jakobs lag).
+    optional: '(valfritt)',
   },
   nav: {
     home: 'Hem',
@@ -22,8 +25,7 @@ export const sv = {
     logOut: 'Logga ut',
   },
   bottomNav: {
-    feed: 'Hem',
-    newObservation: 'Larm',
+    feed: 'Larm',
     locations: 'Lokaler',
     profile: 'Profil',
   },
@@ -50,6 +52,7 @@ export const sv = {
     sentTo: (email: string) => `Vi har skickat en inloggningslänk till ${email}.`,
     sentHelp: 'Öppna länken på den här enheten. Du kan stänga sidan.',
     sentSpamHint: 'Hittar du inget mejl? Kolla skräpposten — det kan ta någon minut.',
+    openMail: 'Öppna e-post',
     useDifferentEmail: 'Använd en annan e-post',
     // Liten samtyckesrad (App Store kräver villkor/integritetspolicy för appar med
     // innehåll som användare skapar). Delarna sätts ihop till klickbara länkar.
@@ -86,7 +89,7 @@ export const sv = {
     error: 'Kunde inte spara. Försök igen.',
   },
   feed: {
-    title: 'Hem',
+    title: 'Larm',
     empty: 'Inga observationer ännu. Bli den första att larma!',
     today: 'Idag',
     yesterday: 'Igår',
@@ -136,7 +139,7 @@ export const sv = {
   filter: {
     button: 'Filter',
     buttonActive: (n: number) => `Filter · ${n}`,
-    title: 'Filtrera',
+    title: 'Filtrera larm',
     scopeAll: 'Alla',
     scopeMine: 'Mina',
     scopeLabel: 'Visning',
@@ -208,7 +211,11 @@ export const sv = {
     speciesPlaceholder: 'Välj art',
     speciesSearch: 'Sök art…',
     speciesEmpty: 'Inga arter matchar.',
+    // MATCH KEY — must equal the species row's `swedish_name` in the DB (used to
+    // find the unlisted row). The visible label is `speciesUnlistedLabel`, so don't
+    // repurpose this for display.
     speciesUnlisted: 'Olistad art',
+    speciesUnlistedLabel: 'Olistad fågelart',
     speciesUnlistedHint: 'Art som saknas i listan – beskriv den i kommentaren',
     speciesOther: 'Övrigt (ej fågel)',
     speciesOtherHint: 'Något annat än en fågel – beskriv det i kommentaren',
@@ -250,6 +257,10 @@ export const sv = {
     locationMapPick: 'Välj på karta',
     locationCurrent: 'Använd min position',
     locationCurrentDetecting: 'Hämtar position…',
+    // Snap: din GPS-position ligger nära en namngiven lokal → föreslå den.
+    locationNearby: (name: string) => `Du verkar vara vid ${name}`,
+    locationUseNearby: (name: string) => `Använd ${name}`,
+    locationUseExact: 'Använd exakt plats',
     locationUpdate: 'Uppdatera position',
     locationRemove: 'Ta bort position',
     locationNone: 'Ingen plats angiven',
@@ -259,6 +270,8 @@ export const sv = {
     locationCleared: 'Plats borttagen',
     mapExpand: 'Förstora kartan',
     mapClose: 'Stäng karta',
+    photoExpand: 'Förstora bilden',
+    photoClose: 'Stäng bild',
     locationGpsError: 'Kunde inte hämta din position.',
     locationBlockedHelp:
       'Platsdelning är blockerad för den här sidan. Tillåt Plats i webbläsarens sidoinställningar (lås-/AA-ikonen i adressfältet) och ladda om — eller markera fyndplatsen direkt på kartan.',
@@ -268,7 +281,7 @@ export const sv = {
     locationBlockedHelpNative:
       'Platsdelning är avstängd. Slå på den i enhetens inställningar — eller markera fyndplatsen direkt på kartan.',
     commentLabel: 'Kommentar',
-    commentPlaceholder: 'T.ex. beteende, miljö, antal hanar/honor…',
+    commentPlaceholder: 'T.ex. beteende, miljö, antal hanar/honor, andrahandsuppgift…',
     submitNew: 'Larma',
     submitEdit: 'Spara ändringar',
     submitting: 'Sparar…',
@@ -276,6 +289,17 @@ export const sv = {
     deleteTitle: 'Radera observationen?',
     deleteConfirm: 'Detta går inte att ångra.',
     deleting: 'Raderar…',
+    // Skydd mot att av misstag stänga formuläret (svep eller Avbryt) med ifyllda
+    // uppgifter — samma "Kasta ändringar?"-vana som Mail/Kalender.
+    discard: {
+      createTitle: 'Avbryt rapporten?',
+      createMessage: 'Det du har fyllt i sparas inte.',
+      createConfirm: 'Avbryt rapport',
+      editTitle: 'Kasta ändringar?',
+      editMessage: 'Dina ändringar sparas inte.',
+      editConfirm: 'Kasta ändringar',
+      keepEditing: 'Fortsätt',
+    },
     alertLabel: 'Skicka notis till klubben',
     alertHint: 'Andra medlemmar som aktiverat fågelnotiser får ett pling om detta fynd.',
     // Visas vid rapportknappen så att utskicket inte sker tyst.
@@ -307,6 +331,8 @@ export const sv = {
       övrigaLäten: 'Övriga läten',
       häckande: 'Häckande',
       sträckande: 'Sträckande',
+      drogIväg: 'Drog iväg/ej kvar',
+      svårsedd: 'Svårsedd',
       // Äldre nycklar — visas inte i pickern men renderas på gamla observationer
       spelande: 'Spel/sång',
     } as const,
@@ -348,6 +374,23 @@ export const sv = {
     saveFailed: 'Kunde inte spara lokalen.',
     forbidden: 'Bara administratörer kan lägga till lokaler.',
     onMapLink: 'Visa på karta',
+    // Lokaler-skärmen (kart-vy). Grön pin = aktiv (obs senaste 14 dagarna),
+    // grå = inga nya. Tryck på en pin → panel med lokalens larm.
+    loadError: 'Kunde inte hämta lokaler.',
+    noCoords: 'Inga lokaler med koordinater ännu.',
+    // Sök-fältet (native) i kart-headern + "visa alla"-knappen.
+    searchPlaceholder: 'Sök lokal',
+    searchEmpty: 'Inga lokaler matchar sökningen.',
+    showAll: 'Visa alla lokaler',
+    legendActive: 'Aktiv',
+    legendQuiet: 'Inga nya',
+    legendWindow: 'senaste 14 dagarna',
+    activityRecent: (n: number) =>
+      `${n} ${n === 1 ? 'observation' : 'observationer'} senaste 14 dagarna`,
+    activityNone: 'Inga observationer senaste 14 dagarna',
+    larmsHeader: 'Larm härifrån',
+    larmsEmpty: 'Inga larm härifrån ännu.',
+    larmsError: 'Kunde inte hämta larm.',
   },
   profile: {
     title: 'Profil',

@@ -1,6 +1,7 @@
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
-import { QueryClient } from '@tanstack/react-query';
+import { onlineManager, QueryClient } from '@tanstack/react-query';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
+import * as Network from 'expo-network';
 import 'expo-sqlite/localStorage/install';
 import { parse as superjsonParse, stringify as superjsonStringify } from 'superjson';
 
@@ -29,6 +30,27 @@ export const queryClient = new QueryClient({
     // forms surface the error and let the user retry deliberately.
     mutations: { retry: 0 },
   },
+});
+
+// ── Network awareness ────────────────────────────────────────────────────────
+// React Native has no `navigator.onLine`, so by default TanStack Query treats the
+// device as permanently online: an offline query fires and burns its retries (with
+// backoff) into the void, and nothing refetches when the signal returns. Wiring
+// `onlineManager` to expo-network fixes both — queries PAUSE while offline (no
+// wasted retries / battery) and auto-refetch on reconnect (`refetchOnReconnect`
+// defaults on). "Online" = internet reachable, falling back to a live connection
+// when reachability is unknown, and to `true` when nothing is known yet (never
+// strand the app in a false-offline state). This is the one connectivity source;
+// the persisted cache still paints last-known data while paused.
+onlineManager.setEventListener((setOnline) => {
+  const isOnline = (s: { isInternetReachable?: boolean; isConnected?: boolean }) =>
+    s.isInternetReachable ?? s.isConnected ?? true;
+  // Seed the current state — the listener only fires on subsequent changes.
+  void Network.getNetworkStateAsync()
+    .then((s) => setOnline(isOnline(s)))
+    .catch(() => setOnline(true));
+  const subscription = Network.addNetworkStateListener((s) => setOnline(isOnline(s)));
+  return () => subscription.remove();
 });
 
 // ── Offline persistence ──────────────────────────────────────────────────────

@@ -1,24 +1,29 @@
 /**
  * The app's bottom-anchored picker sheet — a themed wrapper over the native RN
- * `Modal` (no `@gorhom/bottom-sheet`, matching `observation-map.tsx` and the
- * edenmind reference). It slides up from the bottom, dims the backdrop (tap to
- * dismiss), and gives the body a card surface with rounded top corners and a
- * header (title + close). The caller owns the body — the species picker fills it
- * with a search field + `FlatList`, the activity picker with a short option list.
+ * `Modal` (no `@gorhom/bottom-sheet`, matching `confirm-sheet.tsx` and the
+ * edenmind reference).
  *
- * The card is height-driven up to `maxHeight: 85%`; a `FlatList` child with
- * `flex: 1` then scrolls within the clamped card.
+ * Motion: `animationType="fade"` so the **scrim fades** in/out (the stock `slide`
+ * dragged the opaque backdrop up with the card and read as janky), and the card
+ * additionally **springs up + fades** via a Reanimated `entering` — a native sheet
+ * feel without the backdrop sliding. The Modal owns the exit timing, so no
+ * keep-mounted state machine is needed. A grabber sits on top as the native "this
+ * is a sheet" signifier; dismissal is scrim-tap / back / the close button.
+ *
+ * The card is height-driven up to `maxHeight: 85%`; a `FlatList`/`ScrollView`
+ * child then scrolls within the clamped card.
  */
 import { type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CLOSE, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing, SurfaceOverlay } from '@/constants/theme';
+import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
@@ -34,32 +39,27 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
   const theme = useTheme();
   const { colorScheme } = useThemeMode();
   const insets = useSafeAreaInsets();
+  const { motion } = useMotion();
 
   return (
     // The app is edge-to-edge (`edgeToEdgeEnabled`), so `insets.bottom` below is
-    // the nav-bar height. Both *Translucent flags make the modal's own window
-    // draw under the system bars too — without `navigationBarTranslucent` the
-    // window stops at the top of the nav bar, and the card's `insets.bottom`
-    // padding then stacks on top of it as a redundant dead band at the bottom.
+    // the nav-bar height. Both *Translucent flags make the modal's own window draw
+    // under the system bars too — without `navigationBarTranslucent` the window
+    // stops at the top of the nav bar, and the card's `insets.bottom` padding then
+    // stacks on top of it as a redundant dead band at the bottom.
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
       statusBarTranslucent
       navigationBarTranslucent
     >
-      {/* Keyboard avoidance for the bottom-anchored card. A native `Modal` gets
-          its own window that does NOT honor the Activity's `adjustResize`, so the
-          sheet handles the keyboard itself — but per platform:
-          • Android: `behavior="height"` shrinks the container so the flex-end card
-            rises above the keyboard.
-          • iOS: NO behavior. The old `padding` left a large dark band at the
-            bottom — an in-`Modal` KeyboardAvoidingView keeps a residual bottom
-            inset after the keyboard hides, exposing the backdrop below the card.
-            Instead the scrollable bodies (species `FlatList`, etc.) use
-            `automaticallyAdjustKeyboardInsets` (the app's `Screen` pattern), which
-            insets the list under the keyboard without lifting the whole card. */}
+      {/* Keyboard avoidance for the bottom-anchored card. A native `Modal` gets its
+          own window that does NOT honor the Activity's `adjustResize`, so the sheet
+          handles the keyboard itself — Android shrinks the container so the
+          flex-end card rises above the keyboard; iOS lets the scrollable bodies
+          inset themselves (the app's `Screen` pattern). */}
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === 'android' ? 'height' : undefined}
@@ -70,9 +70,21 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
           accessibilityRole="button"
           accessibilityLabel={sv.common.close}
         />
-        <ThemedView
-          style={[styles.card, { borderColor: theme.border, paddingBottom: insets.bottom + Spacing.three }]}
+        <Animated.View
+          entering={motion(FadeInUp.springify().damping(22).mass(0.9).stiffness(220))}
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              paddingBottom: insets.bottom + Spacing.three,
+            },
+          ]}
         >
+          {/* Grabber — the native "this is a sheet" signifier. */}
+          <View style={styles.grabberArea} accessible={false}>
+            <View style={[styles.grabber, { backgroundColor: theme.mutedForeground }]} />
+          </View>
           <View style={styles.header}>
             <ThemedText type="card">{title}</ThemedText>
             <PressableScale
@@ -85,7 +97,7 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
             </PressableScale>
           </View>
           {children}
-        </ThemedView>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -143,8 +155,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: SurfaceRadius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
+    paddingTop: Spacing.one,
     gap: Spacing.two,
+  },
+  grabberArea: {
+    alignItems: 'center',
+    paddingTop: Spacing.one,
+    paddingBottom: Spacing.two,
+  },
+  grabber: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.4,
   },
   header: {
     flexDirection: 'row',

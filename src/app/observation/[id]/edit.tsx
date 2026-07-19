@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useRef, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ConfirmSheet } from '@/components/confirm-sheet';
 import { HeaderButton } from '@/components/header-button';
+import { HeaderDismissButton } from '@/components/header-dismiss-button';
 import { ALERT } from '@/components/icon';
 import {
   ObservationForm,
@@ -19,6 +20,8 @@ import { showToast } from '@/components/toast';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useHardwareBackGuard } from '@/hooks/use-hardware-back-guard';
+import { confirm } from '@/lib/confirm';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -29,6 +32,7 @@ import {
   updateObservation,
   type FeedObservation,
 } from '@/lib/query/observations';
+import { type Species } from '@/lib/query/species';
 import { deleteUpload } from '@/lib/query/storage';
 
 // Observation edit (owner-only) — a modal over the tabs. Repopulates the shared
@@ -43,6 +47,31 @@ export default function ObservationEditScreen() {
   const obs = q.data;
   const formRef = useRef<ObservationFormHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Guard an accidental dismiss of unsaved edits (swipe/Avbryt) — the iOS
+  // "Discard changes?" convention (Norman: forgiveness). Swipe is disabled while
+  // dirty so the guarded Avbryt is the only exit.
+  const [dirty, setDirty] = useState(false);
+
+  // Void-returning + memoized on `dirty` so it drives the Avbryt button and the
+  // hardware-back guard alike (see the compose modal for the full rationale).
+  const handleDismiss = useCallback(() => {
+    if (!dirty) {
+      router.back();
+      return;
+    }
+    void (async () => {
+      const ok = await confirm({
+        title: sv.observation.discard.editTitle,
+        message: sv.observation.discard.editMessage,
+        confirmLabel: sv.observation.discard.editConfirm,
+        cancelLabel: sv.observation.discard.keepEditing,
+        destructive: true,
+      });
+      if (ok) router.back();
+    })();
+  }, [dirty]);
+
+  useHardwareBackGuard(dirty, handleDismiss);
 
   const updateMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => updateObservation({ id, ...formToInput(value) }),
@@ -61,9 +90,10 @@ export default function ObservationEditScreen() {
     onSuccess: (_data, value) => {
       hapticSuccess();
       showToast(sv.observation.updated, 'success');
-      // The photo path is deterministic on edit (`draftId = id`), so a replace
-      // overwrites in place. Only a path that genuinely changed (e.g. the old row
-      // had a random create-time path) leaves an orphan to clean up.
+      // A replaced/removed photo uploads to (or clears to) a NEW path — the old
+      // object is deleted only now, once the update has committed. Deleting any
+      // earlier (the form's `preservePath` guard) would let a discarded edit
+      // destroy a photo the row still references.
       if (value.imagePath !== obs?.imagePath && obs?.imagePath) {
         void deleteUpload(obs.imagePath).catch(() => {});
       }
@@ -177,9 +207,9 @@ export default function ObservationEditScreen() {
         ref={formRef}
         mode="edit"
         initial={initial}
-        observationId={obs.id}
         scrollRef={scrollRef}
         submitInHeader
+        onDirtyChange={setDirty}
         onSubmit={(v) => {
           updateMutation.mutate(v);
           router.back();
@@ -205,20 +235,27 @@ export default function ObservationEditScreen() {
 
   return (
     <>
-      {canEdit ? (
-        <Stack.Screen
-          options={{
-            headerRight: () => (
-              <HeaderButton
-                title={sv.observation.submitEdit}
-                onPress={() => formRef.current?.submit()}
-                loading={updateMutation.isPending}
-                disabled={deleteMutation.isPending}
-              />
-            ),
-          }}
-        />
-      ) : null}
+      {/* Dismiss always present (text "Avbryt" on iOS, ✕ on Android) — even the
+          not-found / not-yours states need a visible way out, not just a swipe.
+          Spara only when the row is actually editable. */}
+      <Stack.Screen
+        options={{
+          // Block the native swipe-to-dismiss while there are unsaved edits so the
+          // guarded Avbryt below is the only way out.
+          gestureEnabled: !dirty,
+          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} />,
+          headerRight: canEdit
+            ? () => (
+                <HeaderButton
+                  title={sv.observation.submitEdit}
+                  onPress={() => formRef.current?.submit()}
+                  loading={updateMutation.isPending}
+                  disabled={deleteMutation.isPending}
+                />
+              )
+            : undefined,
+        }}
+      />
       <Screen ref={scrollRef} inset="sub" keyboardAware keyboardShouldPersistTaps="handled">
         {body}
       </Screen>
@@ -232,8 +269,25 @@ export default function ObservationEditScreen() {
 
 /** Apply a form value onto a cached feed/detail row for the optimistic update. */
 function patchRow(row: FeedObservation, value: ObservationFormValue): FeedObservation {
+  // A changed art resolves its display fields from the warm species cache, so
+  // the optimistic row doesn't flash the OLD species name/rarity until the
+  // refetch lands. On a (rare) cache miss the old fields stand until then.
+  const species =
+    value.speciesId != null && value.speciesId !== row.speciesId
+      ? queryClient
+          .getQueryData<Species[]>(queryKeys.species)
+          ?.find((s) => s.id === value.speciesId)
+      : null;
   return {
     ...row,
+    ...(species
+      ? {
+          speciesId: species.id,
+          speciesSwedishName: species.swedishName,
+          speciesScientificName: species.scientificName,
+          speciesRarity: species.rarity,
+        }
+      : null),
     count: value.count,
     observedAt: value.observedAt,
     comment: value.comment.trim() || null,

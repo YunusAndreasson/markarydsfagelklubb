@@ -8,7 +8,7 @@
  * (M6 navigation, M8 maps, M10 images, etc).
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolView, type AnimationSpec, type SFSymbol } from 'expo-symbols';
+import { SymbolView, type AnimationSpec, type SFSymbol, type SymbolWeight } from 'expo-symbols';
 import { Platform } from 'react-native';
 
 export type IconName = {
@@ -67,8 +67,28 @@ export const MY_LOCATION: IconName = { sf: 'location.fill', material: 'my-locati
 /** Maximize affordance — expand an inline map to fullscreen. */
 export const EXPAND: IconName = { sf: 'arrow.up.left.and.arrow.down.right', material: 'fullscreen' };
 
+/** Fit-to-bounds — reframe the Lokaler map so every pin is back in view (the
+ *  "visa alla" control, paired with fly-to-a-pin from search). */
+export const FIT: IconName = { sf: 'arrow.up.left.and.arrow.down.right', material: 'zoom-out-map' };
+
 /** Bell — the push-notification (fågelnotiser) settings row. */
 export const BELL: IconName = { sf: 'bell', material: 'notifications-none' };
+
+/** Filter funnel — the feed's narrow-by header control. `line.3.horizontal.decrease`
+ *  is the iOS filter idiom (Photos/Mail); `.circle` gives it a nav-bar tap target.
+ *  MaterialIcons `filter-list` is the matching Android funnel. */
+export const FILTER: IconName = {
+  sf: 'line.3.horizontal.decrease.circle',
+  material: 'filter-list',
+};
+
+/** Filter, active — the "smart" filled state shown when one or more filters are
+ *  on (mirrors iOS Photos filling the funnel). Paired with a tint color at the
+ *  call site so an active filter reads as lit. */
+export const FILTER_ACTIVE: IconName = {
+  sf: 'line.3.horizontal.decrease.circle.fill',
+  material: 'filter-alt',
+};
 
 /** Door-out — the sign-out settings row. */
 export const SIGN_OUT: IconName = { sf: 'rectangle.portrait.and.arrow.right', material: 'logout' };
@@ -99,11 +119,18 @@ export function Icon({
   name,
   size = 17,
   color,
+  weight,
   animationSpec,
 }: {
   name: IconName;
   size?: number;
   color: string;
+  /**
+   * Optional SF Symbol weight (iOS) — e.g. `heavy` for a bold, prominent glyph
+   * like the "+" create action. Ignored on Android, where the Material glyph has
+   * no weight axis (bump `size` there for extra heft).
+   */
+  weight?: SymbolWeight;
   /**
    * Optional SF Symbol animation (iOS 17+). Pass a stable, module-level spec
    * (e.g. {@link BOUNCE_ONCE}) so re-renders don't restart the effect. Ignored
@@ -118,6 +145,7 @@ export function Icon({
         size={size}
         tintColor={color}
         type="monochrome"
+        weight={weight}
         animationSpec={animationSpec}
       />
     );
