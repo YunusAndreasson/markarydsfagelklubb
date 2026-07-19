@@ -15,7 +15,7 @@
 -- exists (WHERE NOT EXISTS on name), so re-running is safe. `created_by_user_id`
 -- and `description` stay NULL to match the official register rows.
 --
--- Dedup (7 of the 24 supplied rows are DELIBERATELY OMITTED below):
+-- Dedup (6 of the 24 supplied rows are DELIBERATELY OMITTED below):
 --   • Already in the DB by exact name — Örnafälla (104), Åmot (103),
 --     Reningsdammarna (102), Skärsjön (101), Södergårdsdammarna (31),
 --     Fjärholma (34). All converted to within ≤421 m of their existing rows —
@@ -28,11 +28,9 @@
 -- Note: "Ribersdals ängar" is ~2 km from the existing "Ribersdals reningsdammar"
 --   (id 6) despite the shared name-family — a separate spot per the supplied coords.
 --
--- Correction (per the club, 2026-07-19): the existing "Tånnerydsdammen" (id 5) is
--- a wrong entry for this spot — "Hydroviken" (below, ~176 m away) is the correct
--- lokal — so id 5 is removed. Verified 0 observations reference it (the FK is
--- non-cascading), so nothing is orphaned.
-delete from public.locations where id = 5 and name = 'Tånnerydsdammen';
+-- Legacy duplicates and incorrect seed coordinates are handled centrally by
+-- locations_markaryd_2026-07-cleanup.sql. Keeping destructive cleanup out of a
+-- batch insert makes this file safe to rerun after new observations exist.
 
 insert into public.locations (name, latitude, longitude)
 select v.name, v.lat, v.lng

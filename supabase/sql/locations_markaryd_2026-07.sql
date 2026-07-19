@@ -1,5 +1,5 @@
 -- Markaryd lokaler — batch import (2026-07-18)
--- 17 birding sites the club supplied as coordinates (a mix of DMS and decimal).
+-- 18 birding sites the club supplied as coordinates (a mix of DMS and decimal).
 -- Normalised here to one homogeneous shape: sentence-case Swedish names +
 -- decimal lat/lng at 6 dp (~0.1 m). `created_by_user_id` is left NULL to match
 -- every existing club lokal (an "official" register entry, not a user's private
@@ -13,11 +13,12 @@
 --
 -- Spelling / collision notes (all confirmed by the club 2026-07-18):
 --   • "Klintbadet" — de-typo of the supplied "klntbadet".
---   • "Hammarsjön (Strömsnäsbruk)" — deliberately distinct from the existing
---     Markaryd "Hammarsjön" (id 4); a different lake ~11 km away, not a duplicate.
+--   • "Hammarsjön" — the real lake by Strömsnäsbruk. The old seed row with this
+--     name inside Markaryd tätort was an erroneous duplicate and is removed by
+--     locations_markaryd_2026-07-cleanup.sql.
 --   • "Ridbanan Strömsnäsbruk" — fixes the supplied "strämnsnäsbruk".
---   • "Altaböke sjö torn" — a separate spot ~8.7 km from "Altaböke sjö" (id 3);
---     the supplied coordinates are correct.
+--   • "Altaböke sjö torn" — the exact tower point within the Altaböke sjö area,
+--     ~146 m from the club map's general location coordinate.
 
 insert into public.locations (name, latitude, longitude)
 select v.name, v.lat, v.lng
@@ -30,8 +31,8 @@ from (values
   ('Örnafälla',                  56.487417, 13.554722),
   ('Ängabäcks ängar',            56.490306, 13.497556),
   ('Anderslöv',                  56.473944, 13.608778),
-  ('Hulstasjön rastplats',       56.541472, 13.612917),
-  ('Hammarsjön (Strömsnäsbruk)', 56.542611, 13.724667),
+  ('Hultasjön rastplats',        56.541472, 13.612917),
+  ('Hammarsjön',                 56.542611, 13.724667),
   ('Klintbadet',                 56.546963, 13.724527),
   ('Ridbanan Strömsnäsbruk',     56.555806, 13.737444),
   ('Bruksområdet',               56.554721, 13.730190),
