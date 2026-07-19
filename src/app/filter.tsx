@@ -11,7 +11,7 @@
  * count feedback ("Visa N träffar").
  */
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
@@ -20,7 +20,6 @@ import { router } from 'expo-router';
 import { Button } from '@/components/button';
 import { FilterChip } from '@/components/filter-chip';
 import { RarityBadge } from '@/components/rarity-badge';
-import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SegmentedPicker } from '@/components/segmented-picker';
 import { Spacing } from '@/constants/theme';
@@ -84,11 +83,22 @@ export default function FilterSheet() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      {/* Built on the app's `Screen` scroller (a flex:1 ScrollView that paints the
-          theme background and adjusts insets) — the same recipe as the pickers and
-          the lokal peek. A plain ScrollView here didn't fill the sheet, so dragging
-          up to the taller detent exposed an unpainted (black) area. */}
-      <Screen contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      {/* A flex:1 ScrollView that paints the theme background, so dragging up to
+          the taller detent can't expose an unpainted (black) area.
+          NOT the app's `Screen`: that hard-codes
+          `contentInsetAdjustmentBehavior="automatic"`, which is meant for a
+          top-level scroller under an iOS large title. Inside a `formSheet` that
+          resizes between detents, iOS re-derives the adjusted inset on every
+          resize and pushed the whole content past the bottom of the sheet on
+          expand — the sheet looked painted but EMPTY. The native sheet header
+          already lays this content out below itself, so `never` is correct here
+          and the padding is explicit. */}
+      <ScrollView
+        style={[styles.scroller, { backgroundColor: theme.background }]}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.section}>
           <SectionHeader title={sv.filter.scopeLabel} />
           <SegmentedPicker<Scope>
@@ -158,7 +168,7 @@ export default function FilterSheet() {
             </View>
           </View>
         ) : null}
-      </Screen>
+      </ScrollView>
 
       <View
         style={[
@@ -186,9 +196,13 @@ export default function FilterSheet() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // Horizontal padding + background come from `Screen`; only the sheet-appropriate
-  // top/bottom padding and the wider section gap are overridden here.
-  scroll: { gap: Spacing.four, paddingTop: Spacing.two, paddingBottom: Spacing.three },
+  scroller: { flex: 1 },
+  scroll: {
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.three,
+    gap: Spacing.four,
+  },
   section: { gap: Spacing.two },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   footer: {
