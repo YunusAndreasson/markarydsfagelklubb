@@ -11,8 +11,16 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "deps:check": "bash ./scripts/update-deps.sh",
+    "deps:update": "bash ./scripts/update-deps.sh --apply",
+    "deps:update:latest": "bash ./scripts/update-deps.sh --apply --latest",
     "test": "vitest run",
-    "verify": "npm run typecheck && npm run lint && npm run test"
+    "verify": "npm run typecheck && npm run lint && npm run test",
+    "release": "./scripts/release.sh all",
+    "release:check": "./scripts/release.sh --check all",
+    "release:ios": "./scripts/release.sh ios",
+    "release:android": "./scripts/release.sh android",
+    "release:all": "./scripts/release.sh all"
   },
   "dependencies": {
     "@expo/ui": "~57.0.7",
