@@ -16,12 +16,13 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CLOSE, EXPAND, Icon } from '@/components/icon';
+import { ExpandBadge, FloatingIconButton } from '@/components/floating-control';
+import { CLOSE, EXPAND } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedView } from '@/components/themed-view';
 import { Duration } from '@/constants/motion';
-import { SurfaceRadius } from '@/constants/surface';
-import { IconSize, Spacing } from '@/constants/theme';
+import { SurfaceStyles } from '@/constants/surface';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 
@@ -58,12 +59,7 @@ export function PhotoView({ uri, cacheKey }: PhotoViewProps) {
           cachePolicy="memory-disk"
           transition={Duration.quick}
         />
-        <View
-          style={[styles.badge, { backgroundColor: theme.card, borderColor: theme.border }]}
-          pointerEvents="none"
-        >
-          <Icon name={EXPAND} size={IconSize.meta} color={theme.foreground} />
-        </View>
+        <ExpandBadge icon={EXPAND} />
       </PressableScale>
 
       <Modal
@@ -89,18 +85,12 @@ export function PhotoView({ uri, cacheKey }: PhotoViewProps) {
               transition={Duration.quick}
             />
           </Pressable>
-          <PressableScale
-            variant="icon"
-            onPress={() => setExpanded(false)}
-            accessibilityRole="button"
+          <FloatingIconButton
+            icon={CLOSE}
             accessibilityLabel={sv.observation.photoClose}
-            style={[
-              styles.close,
-              { top: insets.top + Spacing.two, backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <Icon name={CLOSE} size={IconSize.close} color={theme.foreground} />
-          </PressableScale>
+            onPress={() => setExpanded(false)}
+            style={[styles.close, { top: insets.top + Spacing.two }]}
+          />
         </ThemedView>
       </Modal>
     </View>
@@ -108,31 +98,8 @@ export function PhotoView({ uri, cacheKey }: PhotoViewProps) {
 }
 
 const styles = StyleSheet.create({
-  preview: {
-    borderRadius: SurfaceRadius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
+  preview: SurfaceStyles.clippedCard,
   image: { width: '100%', aspectRatio: 4 / 3 },
-  badge: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    padding: Spacing.one,
-    borderRadius: SurfaceRadius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   full: { flex: 1 },
-  close: {
-    position: 'absolute',
-    right: Spacing.three,
-    // ≥44pt visible target (Apple HIG / Material), independent of the icon
-    // variant's hitSlop — the viewer's primary dismiss control should be easy to hit.
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: SurfaceRadius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  close: { right: Spacing.three },
 });

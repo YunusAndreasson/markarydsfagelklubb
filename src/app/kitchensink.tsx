@@ -17,6 +17,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
+import { SelectRow } from '@/components/select-row';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { SpeciesPicker } from '@/components/species-picker';
 import { StateBlock } from '@/components/state-block';
@@ -109,6 +110,7 @@ export default function KitchenSink() {
 
   // Confirm/action-sheet demo state.
   const [choice, setChoice] = useState<string | null>(null);
+  const [selectRow, setSelectRow] = useState<string | null>('stationär');
   const [menuDemo, setMenuDemo] = useState(false);
 
   // M9 form-field state.
@@ -201,6 +203,26 @@ export default function KitchenSink() {
               Sparad
             </ThemedText>
           }
+        />
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader
+          title="Valrader"
+          caption="Enkelval i väljarblad — samma geometri som inställningsrader"
+        />
+        <SelectRow
+          label="Stationär"
+          selected={selectRow === 'stationär'}
+          onPress={() => setSelectRow('stationär')}
+        />
+        <SelectRow
+          label="Steglits"
+          secondary="Carduelis carduelis"
+          size="tall"
+          leading={<RarityBadge level={3} />}
+          selected={selectRow === 'steglits'}
+          onPress={() => setSelectRow('steglits')}
         />
       </View>
 

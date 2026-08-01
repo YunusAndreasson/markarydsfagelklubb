@@ -10,12 +10,14 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { Icon, type IconName } from '@/components/icon';
+import { ALERT, Icon, type IconName } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { sharedStyles } from '@/constants/shared-styles';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { errorCopy } from '@/lib/errors';
 import { hapticError } from '@/lib/haptics';
+import { sv } from '@/lib/i18n/sv';
 
 export type StateBlockProps = {
   icon?: IconName;
@@ -37,7 +39,7 @@ export function StateBlock({ icon, title, message, tone = 'muted', action }: Sta
       {icon ? (
         <Icon
           name={icon}
-          size={26}
+          size={IconSize.header}
           color={tone === 'error' ? theme.destructive : theme.mutedForeground}
         />
       ) : null}
@@ -60,6 +62,37 @@ export function StateBlock({ icon, title, message, tone = 'muted', action }: Sta
         />
       ) : null}
     </View>
+  );
+}
+
+/**
+ * The failed-query state block. Wraps {@link StateBlock} with the one recipe every
+ * data screen was repeating by hand: the alert glyph, network-aware copy from
+ * `errorCopy` (so a dropped connection says so instead of "något gick fel"), and
+ * a "Försök igen" action that shows the refetch in flight.
+ *
+ * Pass `onRetry` for anything refetchable; omit it for a terminal failure. Always
+ * prefer this over hand-writing the `tone="error"` StateBlock — two screens had
+ * drifted onto hardcoded generic copy and lost the offline case.
+ */
+export function ErrorBlock({
+  error,
+  onRetry,
+  retrying,
+}: {
+  error: unknown;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
+  return (
+    <StateBlock
+      tone="error"
+      icon={ALERT}
+      {...errorCopy(error)}
+      action={
+        onRetry ? { label: sv.errors.tryAgain, onPress: onRetry, loading: retrying } : undefined
+      }
+    />
   );
 }
 

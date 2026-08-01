@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView } from 'react-native';
 
 import { ConfirmSheet } from '@/components/confirm-sheet';
@@ -15,14 +15,14 @@ import {
 } from '@/components/observation-form';
 import { showToast } from '@/components/toast';
 import { useAuth } from '@/hooks/use-auth';
-import { useHardwareBackGuard } from '@/hooks/use-hardware-back-guard';
+import { useDiscardGuard } from '@/hooks/use-discard-guard';
 import { reverseGeocodePlaceName } from '@/hooks/use-reverse-geocode';
-import { confirm } from '@/lib/confirm';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { createObservation, type FeedObservation } from '@/lib/query/observations';
+import { beginOptimistic, rollback } from '@/lib/query/optimistic';
 import { type MyProfile } from '@/lib/query/profile';
 import { requestBirdAlert } from '@/lib/query/push-tokens';
 import { type Species } from '@/lib/query/species';
@@ -47,8 +47,7 @@ export default function NewObservationScreen() {
   const createMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => createObservation(formToInput(value)),
     onMutate: async (value) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.feed });
-      const previous = queryClient.getQueryData<FeedObservation[]>(queryKeys.feed);
+      const snapshots = await beginOptimistic([queryKeys.feed]);
       const optimistic = user ? buildOptimisticRow(value, user.id) : null;
       if (optimistic) {
         queryClient.setQueryData<FeedObservation[]>(queryKeys.feed, (prev) => [
@@ -56,7 +55,7 @@ export default function NewObservationScreen() {
           ...(prev ?? []),
         ]);
       }
-      return { previous };
+      return snapshots;
     },
     onSuccess: (newId, value) => {
       hapticSuccess();
@@ -83,14 +82,8 @@ export default function NewObservationScreen() {
         })().catch(() => {});
       }
     },
-    onError: (_err, _value, context) => {
-      if (context) {
-        if (context.previous === undefined) {
-          queryClient.removeQueries({ queryKey: queryKeys.feed, exact: true });
-        } else {
-          queryClient.setQueryData(queryKeys.feed, context.previous);
-        }
-      }
+    onError: (_err, _value, snapshots) => {
+      rollback(snapshots);
       hapticError();
       showToast(sv.observation.saveFailed, 'error');
     },
@@ -100,26 +93,7 @@ export default function NewObservationScreen() {
   // per-call success continuation and make a successful report look stuck. A
   // clean form closes immediately; a dirty one still gets the discard guard.
   const busy = createMutation.isPending;
-  const handleDismiss = useCallback(() => {
-    if (busy) return;
-    if (!dirty) {
-      router.back();
-      return;
-    }
-    void (async () => {
-      const ok = await confirm({
-        title: sv.observation.discard.createTitle,
-        message: sv.observation.discard.createMessage,
-        confirmLabel: sv.observation.discard.createConfirm,
-        cancelLabel: sv.observation.discard.keepEditing,
-        destructive: true,
-      });
-      if (ok) router.back();
-    })();
-  }, [busy, dirty]);
-
-  // Android hardware back is a second dismiss path `gestureEnabled` can't cover.
-  useHardwareBackGuard(dirty || busy, handleDismiss);
+  const { dismiss, gestureEnabled } = useDiscardGuard({ mode: 'create', dirty, busy });
 
   return (
     <>
@@ -128,11 +102,11 @@ export default function NewObservationScreen() {
           // While the form is dirty, block the native swipe-to-dismiss so a draft
           // can't vanish with an accidental drag — the guarded Avbryt below is the
           // only way out, and it confirms.
-          gestureEnabled: !dirty && !busy,
+          gestureEnabled,
           // Compose-modal chrome: dismiss (text "Avbryt" on iOS, ✕ on Android)
           // cancels, Larma submits (via the form's imperative handle). Both live
           // in the native bar, not the body.
-          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} disabled={busy} />,
+          headerLeft: () => <HeaderDismissButton onPress={dismiss} disabled={busy} />,
           headerRight: () => (
             <HeaderButton
               title={sv.observation.submitNew}

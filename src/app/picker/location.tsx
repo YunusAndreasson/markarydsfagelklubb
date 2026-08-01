@@ -16,13 +16,16 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/components/button';
-import { CHECK, CLOSE, Icon, LOCATION, MY_LOCATION, type IconName } from '@/components/icon';
+import { FloatingIconButton } from '@/components/floating-control';
+import { CLOSE, Icon, LOCATION, MY_LOCATION, type IconName } from '@/components/icon';
 import { Map } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
+import { SelectRow } from '@/components/select-row';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { sharedStyles } from '@/constants/shared-styles';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -77,8 +80,9 @@ export default function LocationPickerSheet() {
     setNearby(null);
   }
 
+  // No haptic here: both callers already tick — `SelectRow` fires the select
+  // haptic, and the "använd <lokal>" Button its own press haptic.
   function pickLocation(loc: Location) {
-    hapticSelect();
     choose({
       kind: 'saved',
       id: loc.id,
@@ -154,30 +158,14 @@ export default function LocationPickerSheet() {
             <ThemedText type="smallBold" themeColor="mutedForeground" style={styles.listHeader}>
               {sv.observation.locationListHeader}
             </ThemedText>
-            {locations.map((loc) => {
-              const selected = selectedId === loc.id;
-              return (
-                <PressableScale
-                  key={loc.id}
-                  variant="row"
-                  haptic={false}
-                  onPress={() => pickLocation(loc)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                  style={[styles.row, selected && { backgroundColor: theme.muted }]}
-                >
-                  <ThemedText
-                    type="default"
-                    themeColor={selected ? 'tint' : 'foreground'}
-                    numberOfLines={1}
-                    style={styles.rowLabel}
-                  >
-                    {loc.name}
-                  </ThemedText>
-                  {selected ? <Icon name={CHECK} size={IconSize.control} color={theme.tint} /> : null}
-                </PressableScale>
-              );
-            })}
+            {locations.map((loc) => (
+              <SelectRow
+                key={loc.id}
+                label={loc.name}
+                selected={selectedId === loc.id}
+                onPress={() => pickLocation(loc)}
+              />
+            ))}
           </>
         ) : null}
       </Screen>
@@ -202,18 +190,12 @@ export default function LocationPickerSheet() {
             />
           ) : null}
 
-          <PressableScale
-            variant="icon"
-            onPress={() => setMapOpen(false)}
-            accessibilityRole="button"
+          <FloatingIconButton
+            icon={CLOSE}
             accessibilityLabel={sv.common.close}
-            style={[
-              styles.close,
-              { top: insets.top + Spacing.two, backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <Icon name={CLOSE} size={IconSize.close} color={theme.foreground} />
-          </PressableScale>
+            onPress={() => setMapOpen(false)}
+            style={[styles.close, { top: insets.top + Spacing.two }]}
+          />
 
           <View style={[styles.fullBottom, { bottom: insets.bottom + Spacing.three }]}>
             <View style={[styles.hintPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -231,7 +213,7 @@ export default function LocationPickerSheet() {
             {nearby ? (
               <View style={[styles.suggestion, { backgroundColor: theme.card, borderColor: theme.tint }]}>
                 <Icon name={LOCATION} size={IconSize.control} color={theme.tint} />
-                <ThemedText type="smallBold" themeColor="foreground" style={styles.flex} numberOfLines={2}>
+                <ThemedText type="smallBold" themeColor="foreground" style={sharedStyles.flex} numberOfLines={2}>
                   {sv.observation.locationNearby(nearby.name)}
                 </ThemedText>
               </View>
@@ -327,29 +309,10 @@ const styles = StyleSheet.create({
   },
   loadingRows: { gap: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three },
   listHeader: { paddingHorizontal: Spacing.one, paddingTop: Spacing.two },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: 52,
-    paddingHorizontal: Spacing.three,
-    borderRadius: SurfaceRadius.sm,
-  },
-  rowLabel: { flex: 1 },
   full: { flex: 1 },
   fullMap: { flex: 1, height: '100%' },
-  close: {
-    position: 'absolute',
-    right: Spacing.three,
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: SurfaceRadius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  close: { right: Spacing.three },
   fullBottom: { position: 'absolute', left: Spacing.three, right: Spacing.three, gap: Spacing.two },
-  flex: { flex: 1 },
   suggestion: {
     flexDirection: 'row',
     alignItems: 'center',

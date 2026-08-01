@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ConfirmSheet } from '@/components/confirm-sheet';
@@ -15,13 +15,12 @@ import {
 } from '@/components/observation-form';
 import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { showToast } from '@/components/toast';
 import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { useHardwareBackGuard } from '@/hooks/use-hardware-back-guard';
-import { confirm } from '@/lib/confirm';
+import { useDiscardGuard } from '@/hooks/use-discard-guard';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
@@ -32,6 +31,7 @@ import {
   updateObservation,
   type FeedObservation,
 } from '@/lib/query/observations';
+import { beginOptimistic, rollback } from '@/lib/query/optimistic';
 import { type Species } from '@/lib/query/species';
 import { deleteUpload } from '@/lib/query/storage';
 
@@ -54,19 +54,14 @@ export default function ObservationEditScreen() {
   const updateMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => updateObservation({ id, ...formToInput(value) }),
     onMutate: async (value) => {
-      await Promise.all([
-        queryClient.cancelQueries({ queryKey: queryKeys.feed }),
-        queryClient.cancelQueries({ queryKey: queryKeys.observation(id) }),
-      ]);
-      const previousFeed = queryClient.getQueryData<FeedObservation[]>(queryKeys.feed);
-      const previousObs = queryClient.getQueryData<FeedObservation | null>(queryKeys.observation(id));
+      const snapshots = await beginOptimistic([queryKeys.feed, queryKeys.observation(id)]);
       queryClient.setQueryData<FeedObservation[]>(queryKeys.feed, (prev) =>
         (prev ?? []).map((row) => (row.id === id ? patchRow(row, value) : row)),
       );
       queryClient.setQueryData<FeedObservation | null>(queryKeys.observation(id), (prev) =>
         prev ? patchRow(prev, value) : prev,
       );
-      return { previousFeed, previousObs };
+      return snapshots;
     },
     onSuccess: (_data, value) => {
       hapticSuccess();
@@ -83,19 +78,8 @@ export default function ObservationEditScreen() {
       // The owner's member-profile feed also embeds this row.
       if (obs) void queryClient.invalidateQueries({ queryKey: queryKeys.member(obs.userId) });
     },
-    onError: (_err, _value, context) => {
-      if (context) {
-        if (context.previousFeed === undefined) {
-          queryClient.removeQueries({ queryKey: queryKeys.feed, exact: true });
-        } else {
-          queryClient.setQueryData(queryKeys.feed, context.previousFeed);
-        }
-        if (context.previousObs === undefined) {
-          queryClient.removeQueries({ queryKey: queryKeys.observation(id), exact: true });
-        } else {
-          queryClient.setQueryData(queryKeys.observation(id), context.previousObs);
-        }
-      }
+    onError: (_err, _value, snapshots) => {
+      rollback(snapshots);
       hapticError();
       showToast(sv.observation.saveFailed, 'error');
     },
@@ -104,12 +88,11 @@ export default function ObservationEditScreen() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteObservation(id),
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.feed });
-      const previousFeed = queryClient.getQueryData<FeedObservation[]>(queryKeys.feed);
+      const snapshots = await beginOptimistic([queryKeys.feed]);
       queryClient.setQueryData<FeedObservation[]>(queryKeys.feed, (prev) =>
         (prev ?? []).filter((row) => row.id !== id),
       );
-      return { previousFeed };
+      return snapshots;
     },
     onSuccess: () => {
       hapticSuccess();
@@ -124,14 +107,8 @@ export default function ObservationEditScreen() {
       // Drop the now-deleted row from the owner's member-profile feed too.
       if (obs) void queryClient.invalidateQueries({ queryKey: queryKeys.member(obs.userId) });
     },
-    onError: (_err, _value, context) => {
-      if (context) {
-        if (context.previousFeed === undefined) {
-          queryClient.removeQueries({ queryKey: queryKeys.feed, exact: true });
-        } else {
-          queryClient.setQueryData(queryKeys.feed, context.previousFeed);
-        }
-      }
+    onError: (_err, _value, snapshots) => {
+      rollback(snapshots);
       hapticError();
       showToast(sv.observation.saveFailed, 'error');
     },
@@ -140,25 +117,7 @@ export default function ObservationEditScreen() {
   const busy = updateMutation.isPending || deleteMutation.isPending;
   // Keep the modal mounted until its write settles. This preserves both the
   // mutation continuation and the form needed to retry a failure.
-  const handleDismiss = useCallback(() => {
-    if (busy) return;
-    if (!dirty) {
-      router.back();
-      return;
-    }
-    void (async () => {
-      const ok = await confirm({
-        title: sv.observation.discard.editTitle,
-        message: sv.observation.discard.editMessage,
-        confirmLabel: sv.observation.discard.editConfirm,
-        cancelLabel: sv.observation.discard.keepEditing,
-        destructive: true,
-      });
-      if (ok) router.back();
-    })();
-  }, [busy, dirty]);
-
-  useHardwareBackGuard(dirty || busy, handleDismiss);
+  const { dismiss, gestureEnabled } = useDiscardGuard({ mode: 'edit', dirty, busy });
 
   let body: ReactNode;
   if (q.isLoading) {
@@ -172,15 +131,7 @@ export default function ObservationEditScreen() {
       </View>
     );
   } else if (q.isError) {
-    body = (
-      <StateBlock
-        tone="error"
-        icon={ALERT}
-        title={sv.errors.somethingWrong}
-        message={sv.errors.somethingWrongHelp}
-        action={{ label: sv.errors.tryAgain, onPress: () => void q.refetch(), loading: q.isFetching }}
-      />
-    );
+    body = <ErrorBlock error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />;
   } else if (!obs) {
     body = (
       <StateBlock
@@ -260,8 +211,8 @@ export default function ObservationEditScreen() {
         options={{
           // Block the native swipe-to-dismiss while there are unsaved edits so the
           // guarded Avbryt below is the only way out.
-          gestureEnabled: !dirty && !busy,
-          headerLeft: () => <HeaderDismissButton onPress={handleDismiss} disabled={busy} />,
+          gestureEnabled,
+          headerLeft: () => <HeaderDismissButton onPress={dismiss} disabled={busy} />,
           headerRight: canEdit
             ? () => (
                 <HeaderButton

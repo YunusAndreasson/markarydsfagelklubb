@@ -9,12 +9,12 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CLOSE, EXPAND, Icon } from '@/components/icon';
+import { ExpandBadge, FloatingIconButton } from '@/components/floating-control';
+import { CLOSE, EXPAND } from '@/components/icon';
 import { Map } from '@/components/map';
-import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { SurfaceRadius } from '@/constants/surface';
+import { SurfaceRadius, SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
@@ -44,9 +44,7 @@ export function ObservationMap({ latitude, longitude, label, height = 160 }: Obs
           accessibilityRole="button"
           accessibilityLabel={sv.observation.mapExpand}
         />
-        <View style={[styles.badge, { backgroundColor: theme.card, borderColor: theme.border }]} pointerEvents="none">
-          <Icon name={EXPAND} size={16} color={theme.foreground} />
-        </View>
+        <ExpandBadge icon={EXPAND} />
       </View>
 
       <Modal
@@ -62,15 +60,12 @@ export function ObservationMap({ latitude, longitude, label, height = 160 }: Obs
               <ThemedText type="smallBold">{label}</ThemedText>
             </View>
           ) : null}
-          <PressableScale
-            variant="icon"
-            onPress={() => setExpanded(false)}
-            accessibilityRole="button"
+          <FloatingIconButton
+            icon={CLOSE}
             accessibilityLabel={sv.observation.mapClose}
-            style={[styles.close, { top: insets.top + Spacing.two, backgroundColor: theme.card, borderColor: theme.border }]}
-          >
-            <Icon name={CLOSE} size={20} color={theme.foreground} />
-          </PressableScale>
+            onPress={() => setExpanded(false)}
+            style={[styles.close, { top: insets.top + Spacing.two }]}
+          />
         </ThemedView>
       </Modal>
     </View>
@@ -78,19 +73,7 @@ export function ObservationMap({ latitude, longitude, label, height = 160 }: Obs
 }
 
 const styles = StyleSheet.create({
-  preview: {
-    borderRadius: SurfaceRadius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
-  badge: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    padding: Spacing.one,
-    borderRadius: SurfaceRadius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  preview: SurfaceStyles.clippedCard,
   full: { flex: 1 },
   // Override the Map's default fixed height so it fills the flex parent.
   fullMap: { flex: 1, height: '100%' },
@@ -102,16 +85,5 @@ const styles = StyleSheet.create({
     borderRadius: SurfaceRadius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  close: {
-    position: 'absolute',
-    right: Spacing.three,
-    // ≥44pt visible target (Apple HIG / Material), independent of the icon
-    // variant's hitSlop — the modal's primary dismiss control should be easy to hit.
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: SurfaceRadius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  close: { right: Spacing.three },
 });

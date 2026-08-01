@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useMemo, type ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { FilterChip } from '@/components/filter-chip';
 import { HeaderButton } from '@/components/header-button';
-import { ALERT, FILTER, FILTER_ACTIVE, Icon, PLUS, TRAY } from '@/components/icon';
+import { FILTER, FILTER_ACTIVE, Icon, PLUS, TRAY } from '@/components/icon';
 import { ListItemEntrance } from '@/components/list-item-entrance';
 import { ObservationCard } from '@/components/observation-card';
 import { PressableScale } from '@/components/pressable-scale';
@@ -13,15 +13,13 @@ import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SkeletonCard } from '@/components/skeleton';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useMotion } from '@/hooks/use-motion';
-import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { useBlockedUsers } from '@/lib/blocks';
-import { errorCopy } from '@/lib/errors';
 import { groupFeed, type FeedBucket } from '@/lib/feed';
 import {
   activeFilterCount,
@@ -59,7 +57,6 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const { motion } = useMotion();
   const feed = useQuery(feedQueryOptions());
-  const { refreshing, onRefresh } = usePullToRefresh(feed.refetch);
 
   // Filter lives in a shared store so the native filter sheet (a separate route)
   // and this feed read/write the same value — the sheet's toggles update the feed
@@ -136,11 +133,10 @@ export default function FeedScreen() {
     );
   } else if (feed.isError) {
     body = (
-      <StateBlock
-        tone="error"
-        icon={ALERT}
-        {...errorCopy(feed.error)}
-        action={{ label: sv.errors.tryAgain, onPress: () => void feed.refetch(), loading: feed.isFetching }}
+      <ErrorBlock
+        error={feed.error}
+        onRetry={() => void feed.refetch()}
+        retrying={feed.isFetching}
       />
     );
   } else {
@@ -194,19 +190,7 @@ export default function FeedScreen() {
           ),
         }}
       />
-      <Screen
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            // tintColor drives the iOS spinner; colors + progressBackgroundColor
-            // are the Android pair — without them Android shows the stock palette.
-            tintColor={theme.primary}
-            colors={[theme.primary]}
-            progressBackgroundColor={theme.card}
-          />
-        }
-      >
+      <Screen refresh={feed.refetch}>
         {total > 0 && count > 0 ? (
           <ScrollView
             horizontal

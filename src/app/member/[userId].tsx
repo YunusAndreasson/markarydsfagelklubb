@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode } from 'react';
-import { Linking, RefreshControl, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
@@ -12,16 +12,14 @@ import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { showToast } from '@/components/toast';
+import { sharedStyles } from '@/constants/shared-styles';
 import { AvatarSize } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useMotion } from '@/hooks/use-motion';
-import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
-import { useTheme } from '@/hooks/use-theme';
 import { unblockUser, useBlockedUsers } from '@/lib/blocks';
-import { errorCopy } from '@/lib/errors';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { deletableListItemMotion } from '@/lib/motion';
@@ -37,11 +35,9 @@ import { digitsForTel } from '@/lib/validation/profile';
 // member's name once loaded (web parity) via an inline `Stack.Screen`.
 export default function MemberScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
-  const theme = useTheme();
   const { user } = useAuth();
   const { motion } = useMotion();
   const q = useQuery(memberQueryOptions(userId));
-  const { refreshing, onRefresh } = usePullToRefresh(q.refetch);
   const blocked = useBlockedUsers();
 
   const profile = q.data?.profile ?? null;
@@ -81,14 +77,7 @@ export default function MemberScreen() {
       </View>
     );
   } else if (q.isError) {
-    body = (
-      <StateBlock
-        tone="error"
-        icon={ALERT}
-        {...errorCopy(q.error)}
-        action={{ label: sv.errors.tryAgain, onPress: () => void q.refetch(), loading: q.isFetching }}
-      />
-    );
+    body = <ErrorBlock error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />;
   } else if (!profile) {
     body = (
       <StateBlock
@@ -108,7 +97,7 @@ export default function MemberScreen() {
           <Avatar size="lg" name={name} uri={profile.avatarUrl} />
           {/* The member's name is the native header title (set below, edenmind
               parity) — don't repeat it as a content heading. */}
-          <View style={styles.flex} />
+          <View style={sharedStyles.flex} />
           {telHref ? (
             <Button
               title={sv.feed.callButtonGeneric}
@@ -157,20 +146,7 @@ export default function MemberScreen() {
               ),
         }}
       />
-      <Screen
-        inset="sub"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            // tintColor drives the iOS spinner; colors + progressBackgroundColor
-            // are the Android pair — without them Android shows the stock palette.
-            tintColor={theme.primary}
-            colors={[theme.primary]}
-            progressBackgroundColor={theme.card}
-          />
-        }
-      >
+      <Screen inset="sub" refresh={q.refetch}>
         {body}
       </Screen>
     </>
@@ -180,5 +156,4 @@ export default function MemberScreen() {
 const styles = StyleSheet.create({
   body: { gap: Spacing.three },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  flex: { flex: 1 },
 });

@@ -9,7 +9,8 @@
  * moment a user could have flipped the OS permission from Settings).
  */
 import * as Location from 'expo-location';
-import { AppState } from 'react-native';
+
+import { watchOnForeground } from '@/lib/app-state';
 
 export type GeoPosition = {
   latitude: number;
@@ -99,18 +100,5 @@ export async function getGeoPermission(): Promise<GeoPermission> {
  * changed it in Settings while away). Returns an unsubscribe function.
  */
 export function watchGeoPermission(onChange: (state: GeoPermission) => void): () => void {
-  let active = true;
-  const emit = () => {
-    void getGeoPermission().then((state) => {
-      if (active) onChange(state);
-    });
-  };
-  emit();
-  const sub = AppState.addEventListener('change', (next) => {
-    if (next === 'active') emit();
-  });
-  return () => {
-    active = false;
-    sub.remove();
-  };
+  return watchOnForeground(getGeoPermission, onChange);
 }

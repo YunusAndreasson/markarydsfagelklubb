@@ -16,17 +16,15 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 
-import { ALERT, CHECK, Icon } from '@/components/icon';
-import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
+import { SelectRow } from '@/components/select-row';
 import { Skeleton } from '@/components/skeleton';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { sharedStyles } from '@/constants/shared-styles';
 import { SurfaceRadius } from '@/constants/surface';
-import { IconSize, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { usePickerResult } from '@/lib/picker-bridge';
 import { speciesQueryOptions, type Species } from '@/lib/query/species';
@@ -80,58 +78,31 @@ export default function SpeciesPickerSheet() {
     badge: RarityBadgeCustom,
     displayName?: string,
   ) {
-    const selected = item.id === currentId;
     return (
-      <PressableScale
-        variant="row"
-        haptic={false}
-        onPress={() => {
-          hapticSelect();
-          choose(item.id);
-        }}
-        accessibilityRole="radio"
-        accessibilityState={{ selected }}
-        style={[styles.pinned, selected && { backgroundColor: theme.muted }]}
-      >
-        <RarityBadge custom={badge} />
-        <View style={styles.rowText}>
-          <ThemedText type="smallBold" numberOfLines={1} themeColor={selected ? 'tint' : 'foreground'}>
-            {displayName ?? item.swedishName}
-          </ThemedText>
-          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={2}>
-            {hint}
-          </ThemedText>
-        </View>
-        {selected ? <Icon name={CHECK} size={IconSize.control} color={theme.tint} /> : null}
-      </PressableScale>
+      <SelectRow
+        size="tall"
+        leading={<RarityBadge custom={badge} />}
+        label={displayName ?? item.swedishName}
+        secondary={hint}
+        secondaryLines={2}
+        selected={item.id === currentId}
+        onPress={() => choose(item.id)}
+      />
     );
   }
 
   function renderRow({ item }: { item: Species }) {
-    const selected = item.id === currentId;
     return (
-      <PressableScale
-        variant="row"
-        haptic={false}
-        onPress={() => {
-          hapticSelect();
-          choose(item.id);
-        }}
-        accessibilityRole="radio"
-        accessibilityState={{ selected }}
-        style={[styles.row, selected && { backgroundColor: theme.muted }]}
-      >
-        {item.rarity != null ? <RarityBadge level={item.rarity as RarityLevel} /> : null}
-        <View style={styles.rowText}>
-          <ThemedText type="smallBold" numberOfLines={1} themeColor={selected ? 'tint' : 'foreground'}>
-            {item.swedishName}
-          </ThemedText>
-          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1}>
-            {item.scientificName}
-          </ThemedText>
-        </View>
-        {selected ? <Icon name={CHECK} size={IconSize.control} color={theme.tint} /> : null}
-      </PressableScale>
+      <SelectRow
+        size="tall"
+        leading={
+          item.rarity != null ? <RarityBadge level={item.rarity as RarityLevel} /> : undefined
+        }
+        label={item.swedishName}
+        secondary={item.scientificName}
+        selected={item.id === currentId}
+        onPress={() => choose(item.id)}
+      />
     );
   }
 
@@ -139,9 +110,9 @@ export default function SpeciesPickerSheet() {
   const listEmpty = speciesQuery.isPending ? (
     <View style={styles.loading}>
       {[0, 1, 2, 3, 4, 5].map((n) => (
-        <View key={n} style={styles.row}>
+        <View key={n} style={styles.skeletonRow}>
           <Skeleton width={20} height={20} radius={SurfaceRadius.xs} />
-          <View style={styles.rowText}>
+          <View style={styles.skeletonText}>
             <Skeleton width="55%" height={14} />
             <Skeleton width="40%" height={12} />
           </View>
@@ -149,12 +120,10 @@ export default function SpeciesPickerSheet() {
       ))}
     </View>
   ) : speciesQuery.isError ? (
-    <StateBlock
-      icon={ALERT}
-      tone="error"
-      title={sv.errors.somethingWrong}
-      message={sv.errors.somethingWrongHelp}
-      action={{ label: sv.errors.tryAgain, onPress: () => void speciesQuery.refetch() }}
+    <ErrorBlock
+      error={speciesQuery.error}
+      onRetry={() => void speciesQuery.refetch()}
+      retrying={speciesQuery.isFetching}
     />
   ) : (
     <ThemedText type="small" themeColor="mutedForeground" style={styles.empty}>
@@ -218,23 +187,15 @@ export default function SpeciesPickerSheet() {
 const styles = StyleSheet.create({
   listContent: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four },
   loading: { paddingTop: Spacing.two },
-  row: {
+  // Mirrors a `SelectRow size="tall"` so the skeleton occupies the same space
+  // the real rows will.
+  skeletonRow: {
     height: ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    borderRadius: SurfaceRadius.sm,
+    paddingHorizontal: Spacing.three,
   },
-  pinned: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: ROW_HEIGHT,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    borderRadius: SurfaceRadius.sm,
-  },
-  rowText: { flex: 1, gap: Spacing.half },
+  skeletonText: { flex: 1, gap: Spacing.half },
   empty: { paddingVertical: Spacing.four, textAlign: 'center' },
 });

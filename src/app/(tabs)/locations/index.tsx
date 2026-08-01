@@ -21,7 +21,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 
+import { FloatingIconButton } from '@/components/floating-control';
 import { CHEVRON, FIT, Icon, LOCATION } from '@/components/icon';
+import { ActivityDot } from '@/components/location-activity';
 import { Map, type MapMarker } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { StateBlock } from '@/components/state-block';
@@ -149,7 +151,6 @@ export default function LocationsScreen() {
 
   function renderResult({ item }: { item: PinnedLocation }) {
     const count = activity[item.id] ?? 0;
-    const active = count > 0;
     return (
       <PressableScale
         variant="row"
@@ -160,13 +161,13 @@ export default function LocationsScreen() {
         pressedBackgroundColor={theme.backgroundSelected}
         style={styles.resultRow}
       >
-        <View style={[styles.dot, { backgroundColor: active ? theme.tint : theme.mutedForeground }]} />
+        <ActivityDot active={count > 0} />
         <View style={styles.resultText}>
           <ThemedText type="default" numberOfLines={1}>
             {item.name}
           </ThemedText>
           <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1}>
-            {active ? sv.locations.activityRecent(count) : sv.locations.activityNone}
+            {count > 0 ? sv.locations.activityRecent(count) : sv.locations.activityNone}
           </ThemedText>
         </View>
         <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
@@ -214,13 +215,12 @@ export default function LocationsScreen() {
           ]}
         >
           <View style={styles.legendRow}>
-            <View style={[styles.dot, { backgroundColor: theme.tint }]} />
+            <ActivityDot active />
             <ThemedText type="small" themeColor="foreground">
               {sv.locations.legendActive}
             </ThemedText>
-            <View
-              style={[styles.dot, { backgroundColor: theme.mutedForeground, marginLeft: Spacing.two }]}
-            />
+            <View style={styles.legendGap} />
+            <ActivityDot active={false} />
             <ThemedText type="small" themeColor="foreground">
               {sv.locations.legendQuiet}
             </ThemedText>
@@ -234,18 +234,13 @@ export default function LocationsScreen() {
       {/* "Visa alla" — reframe every pin after a fly-to zoom (bottom-right, opposite
           the legend). Needs 2+ pins to fit; hidden while results cover the map. */}
       {markers.length >= 2 && !resultsVisible ? (
-        <PressableScale
-          variant="icon"
-          onPress={handleFit}
-          accessibilityRole="button"
+        <FloatingIconButton
+          icon={FIT}
+          size={IconSize.control}
           accessibilityLabel={sv.locations.showAll}
-          style={[
-            styles.fab,
-            { bottom: insets.bottom + Spacing.three, backgroundColor: theme.card, borderColor: theme.border },
-          ]}
-        >
-          <Icon name={FIT} size={IconSize.control} color={theme.foreground} />
-        </PressableScale>
+          onPress={handleFit}
+          style={[styles.fab, { bottom: insets.bottom + Spacing.three }]}
+        />
       ) : null}
 
       {/* Native-search results, overlaid on the map while typing. */}
@@ -308,17 +303,9 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  fab: {
-    position: 'absolute',
-    right: Spacing.three,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  // Separates the two legend pairs so "aktiv" and "tyst" don't read as one run.
+  legendGap: { width: Spacing.two },
+  fab: { right: Spacing.three },
   resultsContent: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,

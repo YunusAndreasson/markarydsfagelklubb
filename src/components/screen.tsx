@@ -1,7 +1,14 @@
 import { type ReactElement, type ReactNode, type Ref } from 'react';
-import { ScrollView, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  RefreshControl,
+  ScrollView,
+  type ScrollViewProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { sharedStyles } from '@/constants/shared-styles';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -20,6 +27,14 @@ import { useTheme } from '@/hooks/use-theme';
 export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
   ref?: Ref<ScrollView>;
   inset?: 'tab' | 'sub';
+  /**
+   * Turn on pull-to-refresh. Pass the screen's refetch (`query.refetch`, or a
+   * `() => Promise.all([...])` for several) — `Screen` owns the gesture state and
+   * the themed spinner, so every list refreshes with the same feel and the same
+   * failure toast. Prefer this over building a `refreshControl` by hand.
+   */
+  refresh?: () => Promise<unknown>;
+  /** Escape hatch for a non-standard control; `refresh` covers the normal case. */
   refreshControl?: ReactElement;
   /**
    * Keep a focused input above the keyboard (iOS insets the scroll content for
@@ -37,9 +52,13 @@ export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
   children: ReactNode;
 };
 
+/** Stable stand-in so the refresh hook can run unconditionally (rules of hooks). */
+const NO_REFRESH = () => Promise.resolve();
+
 export function Screen({
   ref,
   inset = 'tab',
+  refresh,
   refreshControl,
   keyboardAware = false,
   contentContainerStyle,
@@ -49,6 +68,23 @@ export function Screen({
 }: ScreenProps) {
   const theme = useTheme();
   const base = inset === 'sub' ? sharedStyles.scrollContentInset : sharedStyles.scrollContent;
+
+  // Always called; inert until a `refresh` is supplied.
+  const { refreshing, onRefresh } = usePullToRefresh(refresh ?? NO_REFRESH);
+  const control =
+    refreshControl ??
+    (refresh ? (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        // tintColor drives the iOS spinner; colors + progressBackgroundColor are
+        // the Android pair — without them Android shows the stock palette.
+        tintColor={theme.primary}
+        colors={[theme.primary]}
+        progressBackgroundColor={theme.card}
+      />
+    ) : undefined);
+
   return (
     <ScrollView
       ref={ref}
@@ -59,7 +95,7 @@ export function Screen({
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[base, contentContainerStyle]}
-      refreshControl={refreshControl}
+      refreshControl={control}
       {...rest}
     >
       {children}

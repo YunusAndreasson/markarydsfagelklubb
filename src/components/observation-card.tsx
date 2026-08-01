@@ -40,6 +40,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Curve, Duration } from '@/constants/motion';
+import { sharedStyles } from '@/constants/shared-styles';
 import { elevationStyle, SurfaceRadius, SurfaceStyles } from '@/constants/surface';
 import { Elevation, IconSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
@@ -146,7 +147,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
               hanging indent. The rarity grade and the time cluster top-right as
               compact metadata; the grade's colour (loud when rare) still carries. */}
           <View style={styles.header}>
-            <ThemedText type="heading" numberOfLines={1} style={styles.flex}>
+            <ThemedText type="heading" numberOfLines={1} style={sharedStyles.flex}>
               {observation.speciesSwedishName}
             </ThemedText>
             <View style={styles.metaRight}>
@@ -199,7 +200,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           style={[styles.footer, { borderTopColor: theme.border }]}
         >
           <Avatar size="sm" name={observation.observerDisplayName} uri={observation.observerAvatarUrl} />
-          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1} style={styles.flex}>
+          <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1} style={sharedStyles.flex}>
             {observation.observerDisplayName ?? sv.feed.unknownObserver}
           </ThemedText>
           {/* Chevron signifies the observer row is its own tap target → their
@@ -225,7 +226,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   metaRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  flex: { flex: 1 },
   // Full-bleed photo: no horizontal margin (touches the clipped edges); a gap
   // above separates it from the text block.
   image: { width: '100%', aspectRatio: 4 / 3, marginTop: Spacing.three },

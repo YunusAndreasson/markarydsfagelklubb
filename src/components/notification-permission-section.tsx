@@ -7,10 +7,11 @@
  * links to device settings (the OS won't re-prompt once denied).
  */
 import { useEffect, useState } from 'react';
-import { AppState, Linking } from 'react-native';
+import { Linking } from 'react-native';
 
 import { BELL } from '@/components/icon';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { watchOnForeground } from '@/lib/app-state';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import {
@@ -30,22 +31,7 @@ export function NotificationPermissionSection() {
 
   // Read on mount, and re-read when returning from system settings so a flip
   // there reflects back without a manual refresh.
-  useEffect(() => {
-    let active = true;
-    const sync = () => {
-      void getNotificationPermission().then((p) => {
-        if (active) setPermission(p);
-      });
-    };
-    sync();
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') sync();
-    });
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
+  useEffect(() => watchOnForeground(getNotificationPermission, setPermission), []);
 
   const enabled = permission === 'granted' && !optedOut;
 

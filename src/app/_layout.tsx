@@ -15,8 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConfirmSheet } from '@/components/confirm-sheet';
-import { ALERT } from '@/components/icon';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock } from '@/components/state-block';
 import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
@@ -60,6 +59,24 @@ export default function RootLayout() {
       </ThemeModeProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * The app's native-sheet recipe, shared by every `formSheet` route (the lokal
+ * peek, the three report-form pickers, the feed filter). Grabber, corner radius
+ * and a shown header are identical across all of them by design — only the
+ * detents differ, so those are the argument. Keeps a new sheet from drifting
+ * onto a different corner radius or losing its grabber.
+ */
+function sheetOptions(detents: number[], title?: string) {
+  return {
+    headerShown: true,
+    title,
+    presentation: 'formSheet' as const,
+    sheetAllowedDetents: detents,
+    sheetGrabberVisible: true,
+    sheetCornerRadius: SurfaceRadius.lg,
+  };
 }
 
 // Feeds our token palette into React Navigation's theme so screen backgrounds,
@@ -110,16 +127,10 @@ function ThemedNavigation() {
   if (session && profileQuery.isError) {
     return (
       <ThemedView style={styles.errorScreen}>
-        <StateBlock
-          icon={ALERT}
-          tone="error"
-          title={sv.errors.somethingWrong}
-          message={sv.errors.somethingWrongHelp}
-          action={{
-            label: sv.errors.tryAgain,
-            onPress: () => void profileQuery.refetch(),
-            loading: profileQuery.isFetching,
-          }}
+        <ErrorBlock
+          error={profileQuery.error}
+          onRetry={() => void profileQuery.refetch()}
+          retrying={profileQuery.isFetching}
         />
       </ThemedView>
     );
@@ -194,66 +205,26 @@ function ThemedNavigation() {
           {/* The title lives in the native sheet header (headerShown), not in the
               content — a custom in-content title overlapped the first row. The
               header title is set inline from the lokal name. */}
-          <Stack.Screen
-            name="location/[id]"
-            options={{
-              headerShown: true,
-              presentation: 'formSheet',
-              sheetAllowedDetents: [0.5, 0.9],
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-            }}
-          />
+          <Stack.Screen name="location/[id]" options={sheetOptions([0.5, 0.9])} />
           {/* Report-form pickers — each is a REAL native sheet (formSheet). The
               field opens the route and awaits its selection via the picker bridge
               (`lib/picker-bridge`). Title in the native header; grabber +
               swipe-to-dismiss come from the OS. */}
           <Stack.Screen
             name="picker/activity"
-            options={{
-              headerShown: true,
-              title: sv.observation.activityPickTitle,
-              presentation: 'formSheet',
-              sheetAllowedDetents: [0.6],
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-            }}
+            options={sheetOptions([0.6], sv.observation.activityPickTitle)}
           />
           <Stack.Screen
             name="picker/species"
-            options={{
-              headerShown: true,
-              title: sv.observation.speciesLabel,
-              presentation: 'formSheet',
-              sheetAllowedDetents: [0.9],
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-            }}
+            options={sheetOptions([0.9], sv.observation.speciesLabel)}
           />
           <Stack.Screen
             name="picker/location"
-            options={{
-              headerShown: true,
-              title: sv.observation.locationLabel,
-              presentation: 'formSheet',
-              sheetAllowedDetents: [0.6, 0.9],
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-            }}
+            options={sheetOptions([0.6, 0.9], sv.observation.locationLabel)}
           />
           {/* Larm feed filter — a native sheet like the pickers; reads/writes the
               shared feed-filter store so the feed behind updates live as chips toggle. */}
-          <Stack.Screen
-            name="filter"
-            options={{
-              headerShown: true,
-              title: sv.filter.title,
-              presentation: 'formSheet',
-              sheetAllowedDetents: [0.6, 0.9],
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-            }}
-          />
+          <Stack.Screen name="filter" options={sheetOptions([0.6, 0.9], sv.filter.title)} />
           <Stack.Screen
             name="blocked"
             options={{ headerShown: true, title: sv.blockedMembers.title }}

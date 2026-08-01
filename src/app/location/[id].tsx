@@ -10,6 +10,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
 
+import { LocationActivity } from '@/components/location-activity';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
@@ -30,7 +31,6 @@ export default function LocationSheet() {
   }>();
   const locationId = Number(id);
   const count = Number(activityCount ?? '0');
-  const active = count > 0;
 
   const alertsQuery = useQuery(locationAlertsQueryOptions(locationId));
   const alerts = alertsQuery.data ?? [];
@@ -40,13 +40,8 @@ export default function LocationSheet() {
       {/* Lokal name lives in the native sheet header (set from the param). */}
       <Stack.Screen options={{ title: name ?? '' }} />
 
-      {/* Activity summary — a dot signifier + one line. */}
-      <View style={styles.activity}>
-        <View style={[styles.dot, { backgroundColor: active ? theme.tint : theme.mutedForeground }]} />
-        <ThemedText type="small" themeColor="mutedForeground">
-          {active ? sv.locations.activityRecent(count) : sv.locations.activityNone}
-        </ThemedText>
-      </View>
+      {/* Activity summary — a dot signifier + one line, sharing the map's code. */}
+      <LocationActivity count={count} />
 
       <SectionHeader title={sv.locations.larmsHeader} />
 
@@ -78,8 +73,6 @@ export default function LocationSheet() {
 
 const styles = StyleSheet.create({
   content: { gap: Spacing.two, paddingTop: Spacing.two },
-  activity: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  dot: { width: 10, height: 10, borderRadius: 5 },
   loading: { gap: Spacing.three, paddingVertical: Spacing.two },
   row: {
     flexDirection: 'row',

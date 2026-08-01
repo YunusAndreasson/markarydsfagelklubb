@@ -14,14 +14,14 @@ import { RarityBadge } from '@/components/rarity-badge';
 import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
+import { sharedStyles } from '@/constants/shared-styles';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
-import { errorCopy } from '@/lib/errors';
 import { activityLabel, sv } from '@/lib/i18n/sv';
 import { observationQueryOptions } from '@/lib/query/observations';
 import { rarityFor } from '@/lib/rarity';
@@ -60,14 +60,7 @@ export default function ObservationDetailScreen() {
       </View>
     );
   } else if (q.isError) {
-    body = (
-      <StateBlock
-        tone="error"
-        icon={ALERT}
-        {...errorCopy(q.error)}
-        action={{ label: sv.errors.tryAgain, onPress: () => void q.refetch(), loading: q.isFetching }}
-      />
-    );
+    body = <ErrorBlock error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />;
   } else if (!q.data) {
     body = (
       <StateBlock
@@ -122,7 +115,7 @@ export default function ObservationDetailScreen() {
         {locationLabel ? (
           <View style={styles.metaRow}>
             <Icon name={LOCATION} size={IconSize.meta} color={theme.mutedForeground} />
-            <ThemedText type="small" themeColor="mutedForeground" style={styles.flex} numberOfLines={1}>
+            <ThemedText type="small" themeColor="mutedForeground" style={sharedStyles.flex} numberOfLines={1}>
               {locationLabel}
             </ThemedText>
           </View>
@@ -155,7 +148,7 @@ export default function ObservationDetailScreen() {
           style={[styles.footer, { borderTopColor: theme.border }]}
         >
           <Avatar size="sm" name={obs.observerDisplayName} uri={obs.observerAvatarUrl} />
-          <ThemedText type="small" themeColor="mutedForeground" style={styles.flex} numberOfLines={1}>
+          <ThemedText type="small" themeColor="mutedForeground" style={sharedStyles.flex} numberOfLines={1}>
             {obs.observerDisplayName ?? sv.feed.unknownObserver}
           </ThemedText>
           {/* Chevron signifies this row navigates → the observer's profile. */}
@@ -187,7 +180,12 @@ export default function ObservationDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ headerRight }} />
-      <Screen inset="sub">{body}</Screen>
+      {/* Pull-to-refresh here too: the feed and member lists both have it, and a
+          detail you can't refresh reads as broken next to them. NOT added to the
+          formSheet routes — a pull there fights the sheet's drag-to-dismiss. */}
+      <Screen inset="sub" refresh={q.refetch}>
+        {body}
+      </Screen>
     </>
   );
 }
@@ -202,7 +200,6 @@ const styles = StyleSheet.create({
   scientific: { fontStyle: 'italic' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
-  flex: { flex: 1 },
   comment: { padding: Spacing.three, borderRadius: SurfaceRadius.md },
   footer: {
     flexDirection: 'row',
