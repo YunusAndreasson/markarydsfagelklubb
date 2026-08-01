@@ -75,22 +75,7 @@ function toPosition(pos: Location.LocationObject): GeoPosition {
  * 6371 km; the small-distance error of a spherical model is negligible at the
  * scale we care about (tens–hundreds of metres).
  */
-export function distanceMeters(
-  aLat: number,
-  aLng: number,
-  bLat: number,
-  bLng: number,
-): number {
-  const R = 6_371_000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(bLat - aLat);
-  const dLng = toRad(bLng - aLng);
-  const lat1 = toRad(aLat);
-  const lat2 = toRad(bLat);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
-}
+export { distanceMeters } from '@/lib/lokal-proximity';
 
 /**
  * Current foreground-location permission as a 4-state value (web parity).

@@ -31,6 +31,7 @@ import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { usePickerResult } from '@/lib/picker-bridge';
 import {
+  LOKAL_RADIUS_M,
   locationsQueryOptions,
   nearestLocationWithin,
   type Location,
@@ -39,15 +40,6 @@ import {
 import { type LocationValue } from '@/components/location-picker';
 
 const MARKARYD = { latitude: 56.46, longitude: 13.6 };
-
-// Snap radius for "min position": if the GPS fix lands within this many metres of
-// a named lokal, offer that lokal instead of a bare coordinate. 150 m is a
-// deliberate middle ground — loose enough to catch "I'm standing at the site"
-// given a Balanced (~100 m) fix and lokal points that mark a viewpoint/parking,
-// yet tight enough that it rarely reaches a *different* nearby lokal. It stays a
-// SUGGESTION (the user confirms it, or keeps the exact point), so a stray hit is
-// harmless.
-const SNAP_RADIUS_M = 150;
 
 export default function LocationPickerSheet() {
   const theme = useTheme();
@@ -63,7 +55,7 @@ export default function LocationPickerSheet() {
   const [point, setPoint] = useState<{ latitude: number; longitude: number; accuracy?: number } | null>(
     null,
   );
-  // A named lokal near the current GPS point (within SNAP_RADIUS_M) — the snap
+  // A named lokal near the current GPS point (within LOKAL_RADIUS_M) — the snap
   // suggestion. Only ever set from a GPS fix; a manual map pick clears it (a
   // deliberate point placement shouldn't be second-guessed).
   const [nearby, setNearby] = useState<LocatedLocation | null>(null);
@@ -124,7 +116,7 @@ export default function LocationPickerSheet() {
           res.position.latitude,
           res.position.longitude,
           locations,
-          SNAP_RADIUS_M,
+          LOKAL_RADIUS_M,
         ),
       );
       recenterTo(res.position.latitude, res.position.longitude);

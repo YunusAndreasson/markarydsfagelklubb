@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { distanceMeters } from '@/lib/geo';
+import { LOKAL_RADIUS_M, nearestLocationWithin } from '@/lib/lokal-proximity';
 import { queryKeys } from '@/lib/query/keys';
 import { sinceIso } from '@/lib/query/observations';
 import { requireUserId } from '@/lib/query/session';
@@ -18,31 +18,7 @@ export type Location = {
 /** A lokal known to have coordinates — a candidate for GPS snapping. */
 export type LocatedLocation = Location & { latitude: number; longitude: number };
 
-/**
- * The named lokal closest to a point, if one lies within `radiusMeters`. Used to
- * snap a GPS "min position" fix onto a manually-named site so the report is filed
- * against the lokal rather than a bare coordinate. Only lokaler that have
- * coordinates are candidates; ties resolve to the nearer one. Returns null when
- * nothing is close enough, so the caller keeps the raw point.
- */
-export function nearestLocationWithin(
-  latitude: number,
-  longitude: number,
-  locations: readonly Location[],
-  radiusMeters: number,
-): LocatedLocation | null {
-  let best: LocatedLocation | null = null;
-  let bestDistance = radiusMeters;
-  for (const loc of locations) {
-    if (loc.latitude == null || loc.longitude == null) continue;
-    const d = distanceMeters(latitude, longitude, loc.latitude, loc.longitude);
-    if (d <= bestDistance) {
-      bestDistance = d;
-      best = loc as LocatedLocation;
-    }
-  }
-  return best;
-}
+export { LOKAL_RADIUS_M, nearestLocationWithin } from '@/lib/lokal-proximity';
 
 type RawLocationRow = {
   id: number;
@@ -52,6 +28,16 @@ type RawLocationRow = {
   longitude: number | null;
 };
 
+function toLocation(row: RawLocationRow): Location {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    latitude: row.latitude,
+    longitude: row.longitude,
+  };
+}
+
 /** All saved locations, ordered by name (`listLocationsFn`). */
 export async function listLocations(): Promise<Location[]> {
   const { data, error } = await supabase
@@ -59,13 +45,7 @@ export async function listLocations(): Promise<Location[]> {
     .select('id,name,description,latitude,longitude')
     .order('name', { ascending: true });
   if (error) throw error;
-  return ((data ?? []) as RawLocationRow[]).map((row) => ({
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    latitude: row.latitude,
-    longitude: row.longitude,
-  }));
+  return ((data ?? []) as RawLocationRow[]).map(toLocation);
 }
 
 export function locationsQueryOptions() {
@@ -76,21 +56,50 @@ export function locationsQueryOptions() {
 const ACTIVITY_WINDOW_DAYS = 14;
 
 /**
- * Observation count per lokal over the last 14 days, keyed by `location_id`.
- * Drives the Lokaler map's active-vs-quiet pin colour and the peek sheet's
- * "N obs senaste 14 dagarna" line. One lightweight query (ids only); pin-drop
- * observations (no `location_id`) are excluded.
+ * Observation count per lokal over the last 14 days. Drives the Lokaler map's
+ * active-vs-quiet pin colour and the peek sheet's "N obs senaste 14 dagarna".
+ *
+ * An observation counts toward a lokal when it either names it (`location_id`)
+ * OR was pinned within {@link LOKAL_RADIUS_M} of it. That second clause is the
+ * whole point: members overwhelmingly report by dropping a pin — 104 of 121
+ * observations carry coordinates and no `location_id` — so counting only named
+ * reports left the map showing ONE active pin out of 61 despite 49 observations
+ * in the window. Attributing by proximity as well takes that to 18 observations
+ * across 5 lokaler, which is what the map is actually trying to say.
+ *
+ * Proximity is resolved client-side: 61 lokaler × a two-week window is a trivial
+ * loop, and it keeps the rule identical to the one the report picker applies.
  */
 export async function listLocationActivity(): Promise<Record<number, number>> {
-  const { data, error } = await supabase
-    .from('observations')
-    .select('location_id')
-    .not('location_id', 'is', null)
-    .gte('observed_at', sinceIso(ACTIVITY_WINDOW_DAYS));
-  if (error) throw error;
+  const [locRes, obsRes] = await Promise.all([
+    supabase.from('locations').select('id,name,description,latitude,longitude'),
+    supabase
+      .from('observations')
+      .select('location_id,latitude,longitude')
+      .gte('observed_at', sinceIso(ACTIVITY_WINDOW_DAYS)),
+  ]);
+  if (locRes.error) throw locRes.error;
+  if (obsRes.error) throw obsRes.error;
+
+  const locations = ((locRes.data ?? []) as RawLocationRow[]).map(toLocation);
   const counts: Record<number, number> = {};
-  for (const row of (data ?? []) as { location_id: number | null }[]) {
-    if (row.location_id != null) counts[row.location_id] = (counts[row.location_id] ?? 0) + 1;
+  const bump = (id: number) => {
+    counts[id] = (counts[id] ?? 0) + 1;
+  };
+
+  type RawActivityRow = {
+    location_id: number | null;
+    latitude: number | null;
+    longitude: number | null;
+  };
+  for (const row of (obsRes.data ?? []) as RawActivityRow[]) {
+    if (row.location_id != null) {
+      bump(row.location_id);
+      continue;
+    }
+    if (row.latitude == null || row.longitude == null) continue;
+    const near = nearestLocationWithin(row.latitude, row.longitude, locations, LOKAL_RADIUS_M);
+    if (near) bump(near.id);
   }
   return counts;
 }
