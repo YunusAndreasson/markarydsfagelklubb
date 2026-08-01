@@ -35,7 +35,7 @@ import {
   type FeedFilter,
 } from '@/lib/feed-filter';
 import { setFeedFilter, useFeedFilter } from '@/lib/feed-filter-store';
-import { sv } from '@/lib/i18n/sv';
+import { activityLabel, sv } from '@/lib/i18n/sv';
 import { feedQueryOptions, type FeedObservation } from '@/lib/query/observations';
 import type { RarityLevel } from '@/lib/rarity';
 import type { Activity } from '@/lib/validation/observation';
@@ -71,10 +71,14 @@ export default function FilterSheet() {
   );
 
   // Activities carry only their raw value; resolve labels + sort A–Ö (sv).
+  // `activityLabel` (not a direct map lookup) because the sort dereferences the
+  // label — an activity this build predates would be `undefined` here and
+  // `undefined.localeCompare` throws mid-render. That crashed the June build for
+  // every Android user the day `svårsedd` was first reported.
   const activityOptions = useMemo(
     () =>
       options.activities
-        .map((a) => ({ ...a, label: sv.observation.activity[a.value] }))
+        .map((a) => ({ ...a, label: activityLabel(a.value) }))
         .sort((a, b) => a.label.localeCompare(b.label, 'sv')),
     [options.activities],
   );

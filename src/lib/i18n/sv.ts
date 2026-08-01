@@ -506,3 +506,21 @@ export const sv = {
     dark: 'Mörkt',
   },
 } as const
+
+/**
+ * Aktivitetsetikett som ALLTID ger en sträng.
+ *
+ * `observations.activity` är fritext med ett CHECK-villkor i den DELADE databasen,
+ * så en klient kan möta ett värde den är äldre än — nya värden läggs till i
+ * databasen medan gamla appar fortfarande används. En direkt uppslagning
+ * (`sv.observation.activity[x]`) ger då `undefined`, vilket har kraschat appen på
+ * riktigt: filterarket sorterar på etiketten (`label.localeCompare(...)`), och
+ * `undefined.localeCompare` kastar mitt i renderingen.
+ *
+ * Slå därför ALLTID upp etiketten här, aldrig direkt i objektet. Okända värden
+ * faller tillbaka på nyckeln — fult men läsbart, och framför allt aldrig `undefined`.
+ */
+export function activityLabel(activity: string): string {
+  const labels: Record<string, string | undefined> = sv.observation.activity
+  return labels[activity] ?? activity
+}

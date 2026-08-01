@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { errorCopy } from '@/lib/errors';
-import { sv } from '@/lib/i18n/sv';
+import { activityLabel, sv } from '@/lib/i18n/sv';
 import { observationQueryOptions } from '@/lib/query/observations';
 import { rarityFor } from '@/lib/rarity';
 
@@ -84,6 +84,7 @@ export default function ObservationDetailScreen() {
     const lng = obs.longitude ?? obs.locationLongitude;
     const mine = !!user && obs.userId === user.id;
     const level = rarityFor(obs);
+    const activity = obs.activity ? activityLabel(obs.activity) : null;
     const locationLabel =
       obs.locationName ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
@@ -108,7 +109,7 @@ export default function ObservationDetailScreen() {
 
         <View style={styles.badges}>
           <Badge label={sv.feed.count(obs.count)} tone="neutral" />
-          {obs.activity ? <Badge label={sv.observation.activity[obs.activity]} tone="outline" /> : null}
+          {activity ? <Badge label={activity} tone="outline" /> : null}
           {mine ? <Badge label={sv.feed.mine} tone="primary" /> : null}
         </View>
         <View style={styles.metaRow}>

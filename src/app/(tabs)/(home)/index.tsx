@@ -30,7 +30,7 @@ import {
   EMPTY_FILTER,
 } from '@/lib/feed-filter';
 import { setFeedFilter, useFeedFilter } from '@/lib/feed-filter-store';
-import { sv } from '@/lib/i18n/sv';
+import { activityLabel, sv } from '@/lib/i18n/sv';
 import { deletableListItemMotion } from '@/lib/motion';
 import { feedQueryOptions } from '@/lib/query/observations';
 
@@ -238,11 +238,11 @@ export default function FeedScreen() {
             {filter.activities.map((a) => (
               <FilterChip
                 key={`a-${a}`}
-                label={sv.observation.activity[a]}
+                label={activityLabel(a)}
                 onRemove={() =>
                   setFeedFilter({ ...filter, activities: filter.activities.filter((x) => x !== a) })
                 }
-                accessibilityLabel={sv.filter.removeChip(sv.observation.activity[a])}
+                accessibilityLabel={sv.filter.removeChip(activityLabel(a))}
               />
             ))}
             {filter.locationIds.map((id) => {

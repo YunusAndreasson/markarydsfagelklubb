@@ -45,7 +45,7 @@ import { Elevation, IconSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
-import { sv } from '@/lib/i18n/sv';
+import { activityLabel, sv } from '@/lib/i18n/sv';
 import { type FeedObservation } from '@/lib/query/observations';
 import { rarityFor } from '@/lib/rarity';
 
@@ -103,7 +103,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
   // left margin as the name and location, so nothing reads as misaligned.
   const meta = [
     sv.feed.count(observation.count),
-    observation.activity ? sv.observation.activity[observation.activity] : null,
+    observation.activity ? activityLabel(observation.activity) : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -117,7 +117,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
     sv.rarity.a11y(level),
     observation.speciesSwedishName,
     sv.feed.count(observation.count),
-    observation.activity ? sv.observation.activity[observation.activity] : null,
+    observation.activity ? activityLabel(observation.activity) : null,
     sv.observation.timeFriendly(observation.observedAt, clock),
     locationLabel,
     observation.observerDisplayName ? sv.feed.reportedBy(observation.observerDisplayName) : null,

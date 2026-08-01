@@ -1,10 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider,
+  type ErrorBoundaryProps,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -13,8 +19,10 @@ import { ALERT } from '@/components/icon';
 import { StateBlock } from '@/components/state-block';
 import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { SurfaceRadius } from '@/constants/surface';
+import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePushRegistration } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemeModeProvider, useThemeMode } from '@/hooks/use-theme-mode';
@@ -264,6 +272,67 @@ function ThemedNavigation() {
   );
 }
 
+/**
+ * App-wide render-error net.
+ *
+ * Expo Router wraps a route in a React error boundary whenever its file exports
+ * `ErrorBoundary` — this being the root layout, that covers everything below it.
+ * Without one, a single throw during render is an uncaught JS error, which in a
+ * release build kills the process (Play Vitals reports it as
+ * `com.facebook.react.common.JavascriptException`). With one, the user gets a
+ * screen they can retry from, and the app survives.
+ *
+ * It renders in place of the provider subtree it is catching, so it must not
+ * reach for `useTheme`/`useThemeMode` (those would throw on a missing provider
+ * and take the boundary down with them). It reads the palette straight off
+ * `Colors` using React Native's own `useColorScheme`.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const palette = Colors[scheme];
+
+  // A throw *before* the gate opens leaves the splash up (only the `ready` effect
+  // hides it, and that subtree is gone) — which would hide this screen behind it.
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
+  return (
+    <View style={[styles.errorScreen, { backgroundColor: palette.background }]}>
+      <Text style={[styles.errorTitle, { color: palette.foreground }]}>
+        {sv.errors.somethingWrong}
+      </Text>
+      <Text style={[styles.errorMessage, { color: palette.mutedForeground }]}>
+        {sv.errors.somethingWrongHelp}
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => void retry()}
+        style={[styles.errorButton, { backgroundColor: palette.primary }]}
+      >
+        <Text style={[styles.errorButtonLabel, { color: palette.primaryForeground }]}>
+          {sv.errors.tryAgain}
+        </Text>
+      </Pressable>
+      {/* The message is the one thing that makes a user's screenshot actionable;
+          it is never shown anywhere else once the tree is gone. */}
+      {__DEV__ ? (
+        <Text style={[styles.errorDetail, { color: palette.mutedForeground }]}>{error.message}</Text>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  errorScreen: { flex: 1, justifyContent: 'center', padding: Spacing.three },
+  errorScreen: { flex: 1, justifyContent: 'center', padding: Spacing.three, gap: Spacing.two },
+  errorTitle: { fontSize: 20, fontWeight: '600' },
+  errorMessage: { fontSize: FontSize.input, lineHeight: 22 },
+  errorButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: SurfaceRadius.sm,
+  },
+  errorButtonLabel: { fontSize: FontSize.input, fontWeight: '600' },
+  errorDetail: { fontSize: 12 },
 });

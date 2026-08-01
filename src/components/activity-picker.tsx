@@ -6,7 +6,7 @@
 import { router } from 'expo-router';
 
 import { PickerField } from '@/components/picker-field';
-import { sv } from '@/lib/i18n/sv';
+import { activityLabel, sv } from '@/lib/i18n/sv';
 import { requestPick } from '@/lib/picker-bridge';
 import { type Activity } from '@/lib/validation/observation';
 
@@ -34,7 +34,7 @@ export function ActivityPicker({
   return (
     <PickerField
       label={sv.observation.activityLabel}
-      value={value ? sv.observation.activity[value] : null}
+      value={value ? activityLabel(value) : null}
       placeholder={sv.observation.activityPlaceholder}
       invalid={invalid}
       error={error}
