@@ -14,7 +14,7 @@
  * Full-bleed map, so this is NOT the `Screen` ScrollView — a flex `ThemedView`
  * with the `Map` filling it and overlays on top (see `location-picker.tsx`).
  */
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import { FlatList, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -88,17 +88,25 @@ export default function LocationsScreen() {
   const q = query.trim().toLowerCase();
   const resultsVisible = showResults && q.length > 0;
 
+  // Only the *filter* input is deferred, not `q` itself: the panel's visibility
+  // above still tracks the typed value, so it opens on the first keystroke while
+  // the list below is free to lag a frame. Matches the species picker, which
+  // defers the same way — this list does strictly more work per keystroke (a
+  // Swedish-collation `localeCompare` sort on top of the scan), so it had the
+  // stronger claim on deferral of the two.
+  const deferredQ = useDeferredValue(q);
+
   const results = useMemo(() => {
-    if (!q) return [];
+    if (!deferredQ) return [];
     return withCoords
-      .filter((l) => l.name.toLowerCase().includes(q))
+      .filter((l) => l.name.toLowerCase().includes(deferredQ))
       // Active lokaler first (the ones worth heading to), then A–Ö.
       .sort((a, b) => {
         const aRank = (activity[a.id] ?? 0) > 0 ? 0 : 1;
         const bRank = (activity[b.id] ?? 0) > 0 ? 0 : 1;
         return aRank - bRank || a.name.localeCompare(b.name, 'sv');
       });
-  }, [withCoords, q, activity]);
+  }, [withCoords, deferredQ, activity]);
 
   // Stable handlers so the native search bar isn't reconfigured on every keystroke.
   const onChangeSearch = useCallback((e: { nativeEvent: { text: string } }) => {

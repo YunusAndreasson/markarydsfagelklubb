@@ -15,6 +15,13 @@ import { BackHandler, Platform } from 'react-native';
 
 import { useFocusEffect } from 'expo-router';
 
+// Deliberately NOT `useEffectEvent` (React 19.2), despite looking like the
+// textbook case for it. Two rules-of-hooks constraints block it here: expo-router's
+// `useFocusEffect` is a custom hook, not an Effect, so the linter won't accept an
+// Effect Event being called from it; and the handler has to be *handed to*
+// `BackHandler.addEventListener`, while Effect Events may never be passed down.
+// The re-subscribe on `active`/`onIntercept` change is cheap (one native listener
+// swap), so the reactive dependency array stays.
 export function useHardwareBackGuard(active: boolean, onIntercept: () => void): void {
   useFocusEffect(
     useCallback(() => {
