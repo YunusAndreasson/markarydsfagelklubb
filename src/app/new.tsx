@@ -3,7 +3,6 @@ import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ScrollView } from 'react-native';
 
-import { ConfirmSheet } from '@/components/confirm-sheet';
 import { HeaderButton } from '@/components/header-button';
 import { HeaderDismissButton } from '@/components/header-dismiss-button';
 import { Screen } from '@/components/screen';
@@ -129,9 +128,6 @@ export default function NewObservationScreen() {
           submitting={createMutation.isPending}
         />
       </Screen>
-      {/* Own confirm host: this route is a native-stack modal, so the root-mounted
-          host's RN Modal would present BEHIND it (same reason as the edit modal). */}
-      <ConfirmSheet />
     </>
   );
 }

@@ -3,7 +3,6 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { ConfirmSheet } from '@/components/confirm-sheet';
 import { HeaderButton } from '@/components/header-button';
 import { HeaderDismissButton } from '@/components/header-dismiss-button';
 import { ALERT } from '@/components/icon';
@@ -228,10 +227,6 @@ export default function ObservationEditScreen() {
       <Screen ref={scrollRef} inset="sub" keyboardAware keyboardShouldPersistTaps="handled">
         {body}
       </Screen>
-      {/* Own confirm host: this route is a native-stack modal on iOS, and the
-          root-mounted host's RN Modal would present BEHIND it. Registered on
-          top of the root host while the modal is open (see lib/confirm). */}
-      <ConfirmSheet />
     </>
   );
 }

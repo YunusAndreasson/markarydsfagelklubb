@@ -1,23 +1,30 @@
 /**
- * Imperative confirm service — the themed replacement for `Alert.alert`
- * two-button confirms. Call `confirm({...})` from anywhere (components,
- * mutation callbacks, plain lib functions) and await the user's choice.
+ * Imperative confirm service — a two-button confirm you can `await` from
+ * anywhere (components, mutation callbacks, plain lib functions).
  *
- * Hosts register as a STACK, not a singleton. The root layout mounts one
- * `<ConfirmSheet />` at app start; the edit modal mounts a second one while
- * it's open. This matters because the sheet renders inside an RN `Modal`, and
- * an RN `Modal` hosted in the root layout presents *behind* a native-stack
- * modal (the edit screen) — it can't float above it. So the frontmost modal
- * needs its own host inside its own view tree, the same reason edenmind
- * dual-mounts its toast. `confirm()` always routes to the TOPMOST registered
- * host, so the sheet appears inside whatever modal is currently frontmost.
+ * Backed by the **platform's own dialog** (`Alert.alert` → `UIAlertController`
+ * on iOS, a Material `AlertDialog` on Android). This replaced a hand-built
+ * themed sheet, and the swap deleted a lot of machinery that existed only to
+ * work around the sheet being an RN `Modal`:
  *
- * Module-level registry instead of React context so non-component callers
- * need no hook plumbing. If no host is mounted (tests), confirm resolves
- * false — the safe answer for a destructive prompt.
+ *  - a **host registry**: an RN `Modal` mounted in the root layout renders
+ *    *behind* a native-stack modal, so every screen presented modally had to
+ *    mount its own `<ConfirmSheet/>` and `confirm()` had to route to the
+ *    topmost one. A native dialog is a real platform window — it is always
+ *    frontmost, so there is nothing to host and nothing to register.
+ *  - a **deferred-resolution state machine**: callers navigate in the
+ *    continuation (`doBlock` → `router.back()`), and navigating while an RN
+ *    `Modal` is still dismissing fails silently on iOS. The native dialog is
+ *    fully gone by the time a button handler runs, so resolving directly is
+ *    safe.
  *
- * Ported from the edenmind reference.
+ * The trade is the branded look — this is the system dialog, matching the OS
+ * rather than the app's palette. That is the point: it reads as native.
  */
+import { Alert } from 'react-native';
+
+import { hapticWarning } from '@/lib/haptics';
+import { sv } from '@/lib/i18n/sv';
 
 export type ConfirmOptions = {
   title: string;
@@ -26,33 +33,46 @@ export type ConfirmOptions = {
   confirmLabel: string;
   /** Defaults to `sv.common.cancel` ("Avbryt"). */
   cancelLabel?: string;
-  /** Renders the confirm button filled red and fires a firmer haptic. */
+  /** Renders the confirm button in the platform's destructive style. */
   destructive?: boolean;
 };
 
-type ConfirmHandler = (options: ConfirmOptions) => Promise<boolean>;
-
-// Topmost host wins. The root host registers first (app start); a modal's own
-// host pushes on top while it's open and pops on unmount, restoring the root.
-const handlers: ConfirmHandler[] = [];
-
-/** Called by each `<ConfirmSheet />` host on mount. Returns an unregister fn. */
-export function registerConfirmHandler(next: ConfirmHandler): () => void {
-  handlers.push(next);
-  return () => {
-    const index = handlers.lastIndexOf(next);
-    if (index !== -1) handlers.splice(index, 1);
-  };
-}
-
 /**
- * Resolves true when the user taps the confirm action, false otherwise.
- * Settles only after the sheet has fully closed, so callers can navigate
- * (`router.back()`, push) directly in the continuation — navigating while the
- * sheet's Modal is still presented silently fails on iOS native-stack modals.
+ * Resolves true when the user taps the confirm action, false otherwise —
+ * including an Android back-press or outside tap, which is why `onDismiss` is
+ * wired too. Settles only once: on Android `onDismiss` fires *in addition to*
+ * the pressed button's handler, so the first answer wins.
  */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
-  const handler = handlers[handlers.length - 1];
-  if (!handler) return Promise.resolve(false);
-  return handler(options);
+  // Fires as the dialog presents, matching the old sheet's behavior — see the
+  // note at `observation-form.tsx`'s delete action, which relies on it.
+  hapticWarning();
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    Alert.alert(
+      options.title,
+      options.message,
+      [
+        {
+          text: options.cancelLabel ?? sv.common.cancel,
+          style: 'cancel',
+          onPress: () => settle(false),
+        },
+        {
+          text: options.confirmLabel,
+          style: options.destructive ? 'destructive' : 'default',
+          onPress: () => settle(true),
+        },
+      ],
+      // Android only: back-press / tap-outside dismisses without a button.
+      { cancelable: true, onDismiss: () => settle(false) },
+    );
+  });
 }

@@ -244,7 +244,7 @@ export default function KitchenSink() {
       <View style={styles.section}>
         <SectionHeader
           title="Bekräfta"
-          caption="confirm() — det märkta arket som ersätter Alert.alert · åtgärdsark"
+          caption="confirm() — systemets egen dialog (UIAlertController / Material AlertDialog)"
         />
         <Button
           title="Bekräfta (vanlig)"

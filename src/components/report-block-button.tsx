@@ -1,20 +1,29 @@
 /**
  * The overflow (⋯) action shown in the native header on content the signed-in
- * user does NOT own — another member's observation or profile. Opens a themed
- * action sheet to **report** the content (Apple Guideline 1.2) or **block** the
+ * user does NOT own — another member's observation or profile. Opens a **native
+ * platform menu** (SwiftUI `Menu` on iOS, Compose `DropdownMenu` on Android, via
+ * `@expo/ui`) to **report** the content (Apple Guideline 1.2) or **block** the
  * member (hides their content locally; see `blocks.ts`). Blocking is confirmed
  * (via the `confirm()` sheet) because it changes what the user sees; reporting
  * opens a pre-filled mail to the club.
+ *
+ * This used to be a JS `PickerSheet` (an RN `Modal`), which forced a 350 ms
+ * `setTimeout` before presenting the confirm sheet or the mail composer — on iOS
+ * a second presentation while the first Modal is still sliding away fails
+ * silently. A native menu is not a Modal: it tears down before `onPressAction`
+ * fires, so the follow-up presents cleanly and the delay is gone.
+ *
+ * Icons are SF Symbol names, so they render on iOS only; Compose renders the
+ * actions as text, which is the idiomatic Material 3 dropdown anyway.
  */
+import { MenuView, type MenuAction } from '@expo/ui/community/menu';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { Linking } from 'react-native';
 
 import { BLOCKED, FLAG, Icon, MORE, VISIBLE } from '@/components/icon';
-import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
 import { showToast } from '@/components/toast';
-import { IconSize, Spacing } from '@/constants/theme';
+import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { blockUser, unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { confirm } from '@/lib/confirm';
@@ -32,6 +41,11 @@ export type ReportBlockButtonProps = {
   onBlocked?: () => void;
 };
 
+/** Action ids — the value `onPressAction` reports back. */
+const REPORT = 'report';
+const BLOCK = 'block';
+const UNBLOCK = 'unblock';
+
 export function ReportBlockButton({
   userId,
   displayName,
@@ -42,10 +56,12 @@ export function ReportBlockButton({
   const blocked = useBlockedUsers();
   const isBlocked = blocked.has(userId);
   const name = displayName ?? sv.feed.unknownObserver;
-  const [menuOpen, setMenuOpen] = useState(false);
 
   function report() {
-    const url = reportMailtoUrl(sv.moderation.reportSubject(reportRef), sv.moderation.reportBody(reportRef));
+    const url = reportMailtoUrl(
+      sv.moderation.reportSubject(reportRef),
+      sv.moderation.reportBody(reportRef),
+    );
     Linking.openURL(url).catch(() => showToast(sv.moderation.reportFailed, 'error'));
   }
 
@@ -75,55 +91,40 @@ export function ReportBlockButton({
     showToast(sv.moderation.unblocked, 'success');
   }
 
-  /** Close the menu sheet, then run the chosen action. The menu is a JS Modal;
-   *  presenting the confirm sheet (another Modal) or the mail composer while it
-   *  is still sliding away fails silently on iOS — wait out the dismissal (the
-   *  same fix as the image chooser). */
-  async function runAction(action: () => void | Promise<void>) {
-    setMenuOpen(false);
-    if (Platform.OS === 'ios') await new Promise((resolve) => setTimeout(resolve, 350));
-    await action();
-  }
+  const actions: MenuAction[] = [
+    { id: REPORT, title: sv.moderation.report, image: FLAG.sf },
+    isBlocked
+      ? { id: UNBLOCK, title: sv.moderation.unblock, image: VISIBLE.sf }
+      : {
+          id: BLOCK,
+          title: sv.moderation.block(name),
+          image: BLOCKED.sf,
+          attributes: { destructive: true },
+        },
+  ];
 
   return (
-    <>
+    <MenuView
+      title={name}
+      actions={actions}
+      onPressAction={({ nativeEvent }) => {
+        if (nativeEvent.event === REPORT) report();
+        else if (nativeEvent.event === UNBLOCK) doUnblock();
+        else if (nativeEvent.event === BLOCK) void confirmBlock();
+      }}
+    >
+      {/* The menu anchors to this trigger. Understated in COLOR (muted, not a
+          brand-tinted CTA) but sized like a normal nav-bar glyph so it's
+          comfortably tappable on the iOS glass bar. `haptic={false}` — the
+          platform menu plays its own presentation feedback. */}
       <PressableScale
         variant="icon"
-        onPress={() => setMenuOpen(true)}
+        haptic={false}
         accessibilityRole="button"
         accessibilityLabel={sv.moderation.actionsLabel}
       >
-        {/* Understated in COLOR (muted, not a brand-tinted CTA) but sized like a
-            normal nav-bar glyph so it's comfortably tappable on the iOS glass bar. */}
         <Icon name={MORE} size={IconSize.header} color={theme.mutedForeground} />
       </PressableScale>
-      <PickerSheet visible={menuOpen} title={name} onClose={() => setMenuOpen(false)}>
-        <View style={styles.body}>
-          <SheetActionRow
-            icon={FLAG}
-            label={sv.moderation.report}
-            onPress={() => void runAction(report)}
-          />
-          {isBlocked ? (
-            <SheetActionRow
-              icon={VISIBLE}
-              label={sv.moderation.unblock}
-              onPress={() => void runAction(doUnblock)}
-            />
-          ) : (
-            <SheetActionRow
-              icon={BLOCKED}
-              label={sv.moderation.block(name)}
-              destructive
-              onPress={() => void runAction(confirmBlock)}
-            />
-          )}
-        </View>
-      </PickerSheet>
-    </>
+    </MenuView>
   );
 }
-
-const styles = StyleSheet.create({
-  body: { gap: Spacing.two, paddingTop: Spacing.one },
-});

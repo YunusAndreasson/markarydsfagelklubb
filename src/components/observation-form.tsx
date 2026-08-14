@@ -221,7 +221,7 @@ export function ObservationForm({
   useImperativeHandle(ref, () => ({ submit: handleSubmit }));
 
   async function confirmDelete() {
-    // ConfirmSheet fires the warning haptic itself as the sheet presents.
+    // `confirm()` fires the warning haptic itself as the dialog presents.
     const ok = await confirm({
       title: sv.observation.deleteTitle,
       message: sv.observation.deleteConfirm,

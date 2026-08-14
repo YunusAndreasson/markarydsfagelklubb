@@ -14,7 +14,6 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ConfirmSheet } from '@/components/confirm-sheet';
 import { ErrorBlock } from '@/components/state-block';
 import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
@@ -235,9 +234,6 @@ function ThemedNavigation() {
       {/* Root-mounted so a toast fired from a mutation callback survives the
           originating screen unmounting (e.g. report → navigate to Obsar). */}
       <ToastHost />
-      {/* Root confirm host. The edit modal mounts its own on top (an RN Modal
-          hosted here presents BEHIND a native-stack modal on iOS). */}
-      <ConfirmSheet />
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );
