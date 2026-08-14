@@ -24,19 +24,19 @@ export function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: n
 /**
  * How close a point has to be to count as "at this lokal", in metres.
  *
- * 300 m is measured, not guessed. Against the club's own 104 pin-drop
- * observations (2026-08-01), nearest-lokal distance clusters like this:
+ * 300 m is measured, not guessed. Against the club's own 158 pin-drop larms
+ * (2026-08-14), nearest-lokal distance clusters like this:
  *
- *   ≤150 m  17 obs      ← the radius this replaced
- *   ≤250 m  24 obs
- *   ≤300 m  25 obs
- *   ≤400 m  25 obs      ← nothing at all lands between 300 and 400 m
- *   ~800 m  +31 obs     ← a residential cluster 786–871 m from Hualtet
+ *   ≤150 m  22 larms     ← the radius this replaced
+ *   ≤250 m  31 larms
+ *   ≤300 m  36 larms
+ *   ≤400 m  42 larms     ← a handful of legitimate near-misses, 311–388 m
+ *   ~800 m  +54 larms    ← a residential cluster 786–871 m from Hualtet
  *
- * So 300 m sits in an empty gap: it picks up everything that plausibly means
- * "standing at the site" and still leaves a 2.6× margin before the houses near
+ * So 300 m still leaves a comfortable ~2.6× margin before the houses near
  * Hualtet, which six different members report from and which must never be
- * labelled as that lokal. Widening past ~500 m starts swallowing them.
+ * labelled as that lokal, even though the 300–400 m band is no longer empty.
+ * Widening past ~500 m starts swallowing the cluster.
  *
  * Several lokaler are closer to each other than this (Ängabäck and Ängabäcks
  * kraftstation share a point; Tröskeln/Rallvägen are 52–173 m apart), so a fix
