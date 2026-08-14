@@ -110,6 +110,13 @@ export default function FeedScreen() {
               ))}
             </View>
           ))}
+          {/* The feed is a rolling 14-day window, which nothing on screen said:
+              hitting the bottom of "Tidigare" read as "this is everything the
+              club has ever reported". A quiet end-of-list note makes the system's
+              scope visible without competing with the cards. */}
+          <ThemedText type="small" themeColor="mutedForeground" style={styles.windowNote}>
+            {sv.feed.windowNote}
+          </ThemedText>
         </>
       );
     } else {
@@ -144,6 +151,9 @@ export default function FeedScreen() {
       <StateBlock
         icon={TRAY}
         title={sv.feed.empty}
+        // Says WHY it's empty: nothing in the last 14 days — not "the club has
+        // never reported anything". Same note the populated list ends with.
+        message={sv.feed.windowNote}
         action={{ label: sv.feed.newObservation, onPress: () => router.navigate('/new') }}
       />
     );
@@ -266,4 +276,5 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.three },
   chipsRow: { gap: Spacing.two, alignItems: 'center', paddingVertical: Spacing.half },
   clearLink: { paddingHorizontal: Spacing.two, paddingVertical: Spacing.one },
+  windowNote: { textAlign: 'center', paddingTop: Spacing.two },
 });

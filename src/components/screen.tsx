@@ -1,5 +1,6 @@
 import { type ReactElement, type ReactNode, type Ref } from 'react';
 import {
+  Platform,
   RefreshControl,
   ScrollView,
   type ScrollViewProps,
@@ -7,7 +8,10 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { sharedStyles } from '@/constants/shared-styles';
+import { Spacing } from '@/constants/theme';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -45,6 +49,17 @@ export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
    */
   keyboardAware?: boolean;
   /**
+   * Add the device's bottom safe-area inset to the content padding.
+   *
+   * Turn this on for screens with NO tab bar under them — pushed sub-screens and
+   * modals. There the scroller runs to the window edge, and the fixed 24px
+   * bottom padding is entirely swallowed by Android's gesture pill: the last row
+   * (often a 44pt tap target, like the observer footer) ends up sitting right on
+   * it. Tab roots must leave this OFF — the tab bar already occupies that space,
+   * so adding the inset there just opens a dead gap under the last row.
+   */
+  bottomInset?: boolean;
+  /**
    * Optional override that's merged on top of the default padding. Use for
    * one-off tweaks (e.g. a tighter top padding under a hero card).
    */
@@ -61,13 +76,26 @@ export function Screen({
   refresh,
   refreshControl,
   keyboardAware = false,
+  bottomInset = false,
   contentContainerStyle,
   style,
   children,
   ...rest
 }: ScreenProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const base = inset === 'sub' ? sharedStyles.scrollContentInset : sharedStyles.scrollContent;
+  // Added to (not replacing) the base padding, so the last row clears the
+  // gesture pill instead of resting on it.
+  //
+  // ANDROID ONLY on purpose: this is a fix for Android's gesture pill eating the
+  // fixed 24px. On iOS `contentInsetAdjustmentBehavior="automatic"` already
+  // insets scroll content for the home indicator, so adding it again would
+  // double up into a visible dead gap under the last row.
+  const safeBottom =
+    bottomInset && Platform.OS === 'android'
+      ? { paddingBottom: Spacing.four + insets.bottom }
+      : null;
 
   // Always called; inert until a `refresh` is supplied.
   const { refreshing, onRefresh } = usePullToRefresh(refresh ?? NO_REFRESH);
@@ -94,7 +122,7 @@ export function Screen({
       automaticallyAdjustKeyboardInsets={keyboardAware}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[base, contentContainerStyle]}
+      contentContainerStyle={[base, safeBottom, contentContainerStyle]}
       refreshControl={control}
       {...rest}
     >

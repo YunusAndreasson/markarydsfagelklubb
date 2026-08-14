@@ -13,9 +13,10 @@
  * stable storage path, not the rotating signed URL (see `observation-card.tsx`).
  */
 import { Image, type ImageSource } from 'expo-image';
+import { StatusBar } from 'expo-status-bar';
 import { Modal, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useImperativeHandle, useRef, useState } from 'react';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   clamp,
   runOnJS,
@@ -28,7 +29,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExpandBadge, FloatingIconButton } from '@/components/floating-control';
 import { CLOSE, EXPAND } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { ThemedView } from '@/components/themed-view';
 import { Duration } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
@@ -41,7 +41,18 @@ export type PhotoViewProps = {
   /** Stable storage path — keys the disk/memory cache so the photo survives the
    *  signed URL's token rotating (matches the feed card + detail behavior). */
   cacheKey?: string;
+  /** What the photo shows (the species name) — spoken for the fullscreen image,
+   *  which otherwise reaches screen readers as an unlabelled blank. */
+  label?: string;
 };
+
+/**
+ * The fullscreen backdrop is deliberately NOT themed. It used to be a
+ * `ThemedView`, i.e. `theme.background` — pure white in light mode, which no
+ * photo viewer on either platform does (Photos, Google Photos, Instagram are all
+ * black). White also washes out the photo's own contrast. Black in both themes.
+ */
+const BACKDROP = '#000';
 
 /** How far a pinch/double-tap may zoom in, relative to the "fit" scale of 1. */
 const MAX_SCALE = 4;
@@ -75,10 +86,12 @@ const AnimatedImage = Animated.createAnimatedComponent(Image);
  */
 function ZoomableImage({
   source,
+  label,
   onDismiss,
   ref,
 }: {
   source: ImageSource;
+  label: string;
   onDismiss: () => void;
   ref?: React.Ref<ZoomableImageHandle>;
 }) {
@@ -177,9 +190,13 @@ function ZoomableImage({
       savedTranslateY.value = 0;
     });
 
+  // NO `.requireExternalGestureToFail(doubleTap)` here: `Gesture.Exclusive`
+  // below already gives the double tap priority and only lets this one run once
+  // that has failed. Declaring the relationship BOTH ways over-constrained it and
+  // the single tap never activated — tap-to-dismiss silently did nothing, leaving
+  // the ✕ as the only way out.
   const singleTap = Gesture.Tap()
     .numberOfTaps(1)
-    .requireExternalGestureToFail(doubleTap)
     .onEnd(() => {
       if (savedScale.value <= 1) runOnJS(onDismiss)();
     });
@@ -203,6 +220,11 @@ function ZoomableImage({
       <Animated.View style={StyleSheet.absoluteFill}>
         <AnimatedImage
           source={source}
+          // Without these the fullscreen viewer exposed ONLY its close button to
+          // screen readers — the photo itself wasn't in the tree at all.
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={label}
           style={[StyleSheet.absoluteFill, animatedStyle]}
           contentFit="contain"
           cachePolicy="memory-disk"
@@ -213,7 +235,7 @@ function ZoomableImage({
   );
 }
 
-export function PhotoView({ uri, cacheKey }: PhotoViewProps) {
+export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
@@ -249,16 +271,32 @@ export function PhotoView({ uri, cacheKey }: PhotoViewProps) {
 
       <Modal visible={expanded} animationType="fade" onRequestClose={close} statusBarTranslucent>
         {/* Pinch/double-tap to zoom, pan while zoomed, tap to dismiss while at
-            rest — plus an explicit close button for discoverability. */}
-        <ThemedView style={styles.full}>
-          <ZoomableImage ref={zoomRef} source={source} onDismiss={close} />
+            rest — plus an explicit close button for discoverability.
+
+            The `GestureHandlerRootView` is REQUIRED here even though the app is
+            already wrapped in one: an RN `Modal` renders into its own native
+            window, outside that root, so gesture handlers inside it receive
+            nothing. That silently killed EVERY gesture in this viewer — tap to
+            dismiss, pinch, pan and double-tap alike — leaving the ✕ (a plain
+            Pressable, not RNGH) as the only thing that worked. */}
+        <GestureHandlerRootView style={styles.full}>
+          {/* The bar sits over a black backdrop now, so its glyphs have to be
+              light regardless of the app theme (in light mode they'd be dark-on-
+              black and unreadable). Only mounted while the viewer is up. */}
+          {expanded ? <StatusBar style="light" /> : null}
+          <ZoomableImage
+            ref={zoomRef}
+            source={source}
+            label={label ?? sv.observation.imageLabel}
+            onDismiss={close}
+          />
           <FloatingIconButton
             icon={CLOSE}
             accessibilityLabel={sv.observation.photoClose}
             onPress={close}
             style={[styles.close, { top: insets.top + Spacing.two }]}
           />
-        </ThemedView>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );
@@ -267,6 +305,6 @@ export function PhotoView({ uri, cacheKey }: PhotoViewProps) {
 const styles = StyleSheet.create({
   preview: SurfaceStyles.clippedCard,
   image: { width: '100%', aspectRatio: 4 / 3 },
-  full: { flex: 1 },
+  full: { flex: 1, backgroundColor: BACKDROP },
   close: { right: Spacing.three },
 });

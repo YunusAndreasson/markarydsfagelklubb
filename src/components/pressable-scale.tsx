@@ -40,8 +40,12 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Curve, Duration, HitSlop } from '@/constants/motion';
+import { Opacity } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { hapticCommit, hapticPress, hapticSelect } from '@/lib/haptics';
+
+/** Module-level so the non-animated path doesn't allocate a style each render. */
+const DIMMED_STYLE = { opacity: Opacity.disabled } as const;
 
 export type PressableScaleVariant = 'button' | 'card' | 'row' | 'icon' | 'link';
 export type PressableScaleHaptic = 'press' | 'select' | 'commit' | false;
@@ -69,6 +73,21 @@ export type PressableScaleProps = Omit<PressableProps, 'style' | 'children' | 'o
    *  navigates away). Defaults to `'transparent'` (correct for rows with no own bg);
    *  surfaces with a background (e.g. ListCard) pass their card color. */
   restingBackgroundColor?: string;
+  /**
+   * Render at the disabled opacity.
+   *
+   * This has to be a prop rather than something the caller drops in `style`,
+   * because `animatedStyle` is applied AFTER `style` and always writes a
+   * concrete `opacity` — so a static `opacity: Opacity.disabled` from a caller
+   * was silently overwritten with `1` on every scale variant. Both `Button` and
+   * `SettingsRow` had exactly that, which is why a disabled button still looked
+   * fully enabled.
+   *
+   * It is deliberately NOT derived from `disabled`: `ListCard` passes
+   * `disabled` to mean "this card isn't interactive", and dimming those would
+   * wash out ordinary content.
+   */
+  dimmed?: boolean;
 };
 
 const VARIANT_DEFAULTS: Record<
@@ -93,6 +112,7 @@ export function PressableScale({
   pressScale,
   pressedBackgroundColor,
   restingBackgroundColor = 'transparent',
+  dimmed,
   hitSlop,
   onPress,
   onPressIn,
@@ -134,7 +154,14 @@ export function PressableScale({
     const p = pressedSV.value;
     const base: { transform: { scale: number }[]; opacity: number; backgroundColor?: string } = {
       transform: [{ scale: 1 - (1 - (effectiveScale ?? 1)) * p }],
-      opacity: effectiveOpacity !== undefined ? 1 - (1 - effectiveOpacity) * p : 1,
+      // A dimmed (disabled) surface holds the disabled opacity — this branch is
+      // why `dimmed` is a prop: whatever the caller put in `style` loses to the
+      // value written here.
+      opacity: dimmed
+        ? Opacity.disabled
+        : effectiveOpacity !== undefined
+          ? 1 - (1 - effectiveOpacity) * p
+          : 1,
     };
     // Always return a concrete backgroundColor when a tint is in play — omitting
     // it on release does NOT revert in Reanimated (it keeps the last value), which
@@ -194,6 +221,9 @@ export function PressableScale({
         style,
         pressed && pressedBackgroundColor ? { backgroundColor: pressedBackgroundColor } : null,
         pressed && effectiveOpacity !== undefined ? { opacity: effectiveOpacity } : null,
+        // Last, so a dimmed surface stays dim even mid-press — and so both the
+        // animated and non-animated paths agree on what `dimmed` looks like.
+        dimmed ? DIMMED_STYLE : null,
       ]}
       {...rest}
     >

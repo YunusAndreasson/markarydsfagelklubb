@@ -19,12 +19,16 @@ import { Button } from '@/components/button';
 import { CountStepper } from '@/components/count-stepper';
 import { DateTimePicker } from '@/components/date-time-picker';
 import { FieldLabel } from '@/components/field-label';
+import { BELL, Icon } from '@/components/icon';
 import { ImageUpload } from '@/components/image-upload';
 import { LocationPicker, type LocationValue } from '@/components/location-picker';
 import { SpeciesPicker } from '@/components/species-picker';
 import { TextField } from '@/components/text-field';
+import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
-import { Spacing } from '@/constants/theme';
+import { sharedStyles } from '@/constants/shared-styles';
+import { IconSize, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/confirm';
 import { sv } from '@/lib/i18n/sv';
 import { type Activity, type CreateObservationInput } from '@/lib/validation/observation';
@@ -138,6 +142,7 @@ export function ObservationForm({
   submitInHeader,
   onDirtyChange,
 }: ObservationFormProps) {
+  const theme = useTheme();
   // The mount-time snapshot the dirty check compares against. Both hosting
   // routes are modals that unmount on dismiss, so a fresh mount (with a fresh
   // "now" in create mode) happens on every open — no reset-on-focus needed.
@@ -294,6 +299,21 @@ export function ObservationForm({
         />
       </View>
 
+      {/* Every report fans out a push to the whole club (`alertRequested` is
+          always true on create — the per-report toggle was removed for web
+          parity), and nothing on screen said so: "Larma" alone doesn't tell you
+          it rings other people's phones. This caption is the disclosure that
+          was written for exactly this spot but never rendered. Create only —
+          an edit deliberately doesn't re-alert. */}
+      {mode === 'create' ? (
+        <View style={styles.alertNote}>
+          <Icon name={BELL} size={IconSize.meta} color={theme.mutedForeground} />
+          <ThemedText type="small" themeColor="mutedForeground" style={sharedStyles.flex}>
+            {sv.observation.alertCaption}
+          </ThemedText>
+        </View>
+      ) : null}
+
       {/* The primary submit lives in the nav header when `submitInHeader`; the
           inline button is the fallback (and keeps the form usable on its own). */}
       {!submitInHeader ? (
@@ -324,4 +344,6 @@ const styles = StyleSheet.create({
   form: { gap: Spacing.three },
   comment: { minHeight: 120, textAlignVertical: 'top' },
   imageField: { gap: Spacing.one },
+  // `flex-start` so the bell sits on the caption's FIRST line when it wraps.
+  alertNote: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
 });

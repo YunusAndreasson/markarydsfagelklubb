@@ -12,6 +12,9 @@ export const sv = {
     cancel: 'Avbryt',
     close: 'Stäng',
     done: 'Klar',
+    // Skärmläsaretikett för kryssrutan i sökfältet i pickerbladen (Android, där
+    // `clearButtonMode` inte finns). Inte "Rensa filter" — det är ett annat fält.
+    clearSearch: 'Rensa sökningen',
     comingSoon: 'Kommer snart',
     refreshFailed: 'Kunde inte uppdatera. Försök igen.',
     // Marker efter etiketten på fält man kan hoppa över (t.ex. bild, kommentar).
@@ -91,6 +94,11 @@ export const sv = {
   feed: {
     title: 'Larm',
     empty: 'Inga observationer ännu. Bli den första att larma!',
+    // Flödet är ett rullande 14-dagarsfönster (samma fönster som lokalernas
+    // aktivitet). Visas sist i listan och som förklaring i det tomma läget, så
+    // att slutet på "Tidigare" inte läses som "det här är allt klubben har
+    // rapporterat".
+    windowNote: 'Visar observationer från de senaste 14 dagarna.',
     today: 'Idag',
     yesterday: 'Igår',
     thisWeek: 'Denna vecka',
@@ -145,7 +153,11 @@ export const sv = {
     scopeLabel: 'Visning',
     clear: 'Rensa filter',
     clearShort: 'Rensa',
-    apply: (n: number) => (n === 1 ? 'Visa 1 träff' : `Visa ${n} träffar`),
+    // Kort nog att få plats på en halvbred knapp — "Visa 51 träffar" klipptes
+    // tyst till "Visa 51" i knappen medan skärmläsaren läste hela frasen.
+    // Den fullständiga frasen finns kvar som `applyA11y`.
+    apply: (n: number) => `Visa ${n}`,
+    applyA11y: (n: number) => (n === 1 ? 'Visa 1 träff' : `Visa ${n} träffar`),
     emptyTitle: 'Inga obsar matchar filtret.',
     emptyAction: 'Rensa filter',
     removeChip: (label: string) => `Ta bort filter: ${label}`,

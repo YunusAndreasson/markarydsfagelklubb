@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LocationActivity } from '@/components/location-activity';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
+import { SheetTitle } from '@/components/sheet-title';
 import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
@@ -37,8 +38,13 @@ export default function LocationSheet() {
 
   return (
     <Screen contentContainerStyle={styles.content}>
-      {/* Lokal name lives in the native sheet header (set from the param). */}
+      {/* Lokal name in the native sheet header — iOS only; Android formSheets
+          render no header, which left this sheet completely anonymous: you tap
+          one of ~60 pins and nothing on screen says which lokal you got. The
+          `SheetTitle` below is the Android half (no-op on iOS, where an
+          in-content title would double up with the header). */}
       <Stack.Screen options={{ title: name ?? '' }} />
+      <SheetTitle title={name} />
 
       {/* Activity summary — a dot signifier + one line, sharing the map's code. */}
       <LocationActivity count={count} />

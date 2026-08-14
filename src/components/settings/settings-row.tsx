@@ -130,7 +130,11 @@ export function SettingsRow({
         accessibilityRole={accessory === 'check' ? 'radio' : 'button'}
         accessibilityLabel={[label, sublabel, value].filter(Boolean).join(', ')}
         accessibilityState={{ disabled, selected: accessory === 'check' ? selected : undefined }}
-        style={[styles.row, disabled && styles.dimmed]}
+        // Same reason as `Button`: `row` is a scale variant, so its animated
+        // style overwrote the `styles.dimmed` opacity and a disabled row read as
+        // enabled. The static one still applies on the non-pressable branch below.
+        dimmed={disabled}
+        style={styles.row}
       >
         {body}
       </PressableScale>

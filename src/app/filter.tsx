@@ -193,6 +193,9 @@ export default function FilterSheet() {
         />
         <Button
           title={sv.filter.apply(resultCount)}
+          // The visible label is trimmed to fit a half-width button; screen
+          // readers still get the whole phrase.
+          accessibilityLabel={sv.filter.applyA11y(resultCount)}
           variant="primary"
           onPress={() => router.back()}
           style={styles.actionButton}

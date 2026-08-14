@@ -67,7 +67,7 @@ export default function RootLayout() {
  * detents differ, so those are the argument. Keeps a new sheet from drifting
  * onto a different corner radius or losing its grabber.
  */
-function sheetOptions(detents: number[], title?: string) {
+function sheetOptions(detents: number[] | 'fitToContents', title?: string) {
   return {
     headerShown: true,
     title,
@@ -204,7 +204,10 @@ function ThemedNavigation() {
           {/* The title lives in the native sheet header (headerShown), not in the
               content — a custom in-content title overlapped the first row. The
               header title is set inline from the lokal name. */}
-          <Stack.Screen name="location/[id]" options={sheetOptions([0.5, 0.9])} />
+          {/* `fitToContents`, not a fixed fraction: a lokal's peek is short (an
+              activity line + a handful of larm), so a half-screen detent left
+              ~40% of the sheet as blank white below the content. */}
+          <Stack.Screen name="location/[id]" options={sheetOptions('fitToContents')} />
           {/* Report-form pickers — each is a REAL native sheet (formSheet). The
               field opens the route and awaits its selection via the picker bridge
               (`lib/picker-bridge`). Title in the native header; grabber +
@@ -223,7 +226,12 @@ function ThemedNavigation() {
           />
           {/* Larm feed filter — a native sheet like the pickers; reads/writes the
               shared feed-filter store so the feed behind updates live as chips toggle. */}
-          <Stack.Screen name="filter" options={sheetOptions([0.6, 0.9], sv.filter.title)} />
+          {/* Also `fitToContents`: the actions ride at the END of the scrolling
+              content (pinning them collapses on iOS — see filter.tsx), so at a
+              0.6 detent the primary "Visa N" sat below the fold, while dragging
+              to 0.9 left a big empty gap under it. Sizing to the content puts the
+              actions on screen at rest with no dead space. */}
+          <Stack.Screen name="filter" options={sheetOptions('fitToContents', sv.filter.title)} />
           <Stack.Screen
             name="blocked"
             options={{ headerShown: true, title: sv.blockedMembers.title }}

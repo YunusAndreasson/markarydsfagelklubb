@@ -117,7 +117,10 @@ export default function MemberScreen() {
           // still recede on optimistic edits/deletes via `exiting`.
           observations.map((obs, i) => (
             <ListItemEntrance key={obs.id} index={i} exiting={rowMotion.exiting}>
-              <ObservationCard observation={obs} currentUserId={user?.id} />
+              {/* Every card here belongs to the member whose name is already the
+                  nav title, so the observer footer was repetition — and tapping
+                  it pushed a duplicate of this very screen. */}
+              <ObservationCard observation={obs} currentUserId={user?.id} hideObserver />
             </ListItemEntrance>
           ))
         ) : (
@@ -146,7 +149,7 @@ export default function MemberScreen() {
               ),
         }}
       />
-      <Screen inset="sub" refresh={q.refetch}>
+      <Screen inset="sub" bottomInset refresh={q.refetch}>
         {body}
       </Screen>
     </>

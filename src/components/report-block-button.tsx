@@ -18,10 +18,9 @@
  */
 import { MenuView, type MenuAction } from '@expo/ui/community/menu';
 import { router } from 'expo-router';
-import { Linking } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { BLOCKED, FLAG, Icon, MORE, VISIBLE } from '@/components/icon';
-import { PressableScale } from '@/components/pressable-scale';
 import { showToast } from '@/components/toast';
 import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -113,18 +112,31 @@ export function ReportBlockButton({
         else if (nativeEvent.event === BLOCK) void confirmBlock();
       }}
     >
-      {/* The menu anchors to this trigger. Understated in COLOR (muted, not a
-          brand-tinted CTA) but sized like a normal nav-bar glyph so it's
-          comfortably tappable on the iOS glass bar. `haptic={false}` — the
-          platform menu plays its own presentation feedback. */}
-      <PressableScale
-        variant="icon"
-        haptic={false}
+      {/* The menu anchors to this trigger, and the trigger MUST NOT handle the
+          touch itself. This was a `PressableScale`, which always wires its own
+          `onPress` into the inner `Pressable` (even with no handler passed) — so
+          on Android the Pressable won the touch and Compose's `DropdownMenu`
+          never opened. With report+block behind it, that left Android users no
+          way to report content or block a member at all. A plain View lets
+          `MenuView` own the press on both platforms.
+
+          44² so it meets the project's minimum touch target — the bare glyph
+          measured ~21². Understated in COLOR (muted, not a brand-tinted CTA). */}
+      <View
+        style={styles.trigger}
+        // `accessible` is required for a plain View to be exposed as ONE element
+        // carrying the label — without it the trigger reached the a11y tree as an
+        // unnamed ViewGroup (verified on device).
+        accessible
         accessibilityRole="button"
         accessibilityLabel={sv.moderation.actionsLabel}
       >
         <Icon name={MORE} size={IconSize.header} color={theme.mutedForeground} />
-      </PressableScale>
+      </View>
     </MenuView>
   );
 }
+
+const styles = StyleSheet.create({
+  trigger: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+});

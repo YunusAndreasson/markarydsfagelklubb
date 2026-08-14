@@ -40,7 +40,7 @@ export default function BlockedMembersScreen() {
 
   if (ids.length === 0) {
     return (
-      <Screen inset="sub">
+      <Screen inset="sub" bottomInset>
         <StateBlock icon={TRAY} title={sv.blockedMembers.empty} />
       </Screen>
     );
@@ -50,7 +50,7 @@ export default function BlockedMembersScreen() {
   // "Okänd observatör" placeholders that pop to real names.
   if (q.isPending) {
     return (
-      <Screen inset="sub">
+      <Screen inset="sub" bottomInset>
         <SettingsGroup footer={sv.blockedMembers.help}>
           {ids.map((userId) => (
             <View key={userId} style={styles.row}>
@@ -68,7 +68,7 @@ export default function BlockedMembersScreen() {
   const members = q.data ?? ids.map((userId) => ({ userId, displayName: null, avatarUrl: null }));
 
   return (
-    <Screen inset="sub">
+    <Screen inset="sub" bottomInset>
       <SettingsGroup footer={sv.blockedMembers.help}>
         {members.map((m) => {
           const name = m.displayName ?? sv.feed.unknownObserver;

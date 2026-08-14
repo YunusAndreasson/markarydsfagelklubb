@@ -9,7 +9,7 @@ import {
 import { PressableScale, type PressableScaleHaptic } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius } from '@/constants/surface';
-import { Opacity, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
@@ -68,6 +68,10 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
+      // Via the prop, not the style array: `PressableScale`'s animated style
+      // writes `opacity` last, so a static dim here never actually rendered — a
+      // disabled button looked exactly like an enabled one.
+      dimmed={isDisabled}
       style={[
         styles.button,
         size === 'compact' && styles.compact,
@@ -76,15 +80,19 @@ export function Button({
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: theme.border,
         },
-        isDisabled && styles.dimmed,
         style,
       ]}
       {...rest}
     >
+      {/* The label is one line, ellipsized. A title too wide for its button used
+          to be cut off with NO ellipsis — "Visa 51 träffar" rendered as
+          "Visa 51" and read as if that were the whole label. An ellipsis at
+          least shows something was dropped; when it appears, pass a shorter
+          `title` plus a full `accessibilityLabel` (see the filter sheet). */}
       {loading ? (
         <ActivityIndicator color={labelColor} />
       ) : (
-        <ThemedText type="smallBold" style={{ color: labelColor }}>
+        <ThemedText type="smallBold" numberOfLines={1} style={{ color: labelColor }}>
           {title}
         </ThemedText>
       )}
@@ -105,5 +113,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  dimmed: { opacity: Opacity.disabled },
 });

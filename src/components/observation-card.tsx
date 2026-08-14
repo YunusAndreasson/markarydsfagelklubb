@@ -58,6 +58,13 @@ export type ObservationCardProps = {
   currentUserId?: string | null;
   /** Injectable clock for deterministic time-ago / very-recent in tests/demos. */
   now?: Date;
+  /**
+   * Drop the observer footer. Set on a member's own profile, where every card
+   * has the same observer — whose name is already the screen's nav title — so
+   * the row was pure repetition. Worse, its tap target pushed ANOTHER copy of
+   * the profile you were already looking at, stackable without limit.
+   */
+  hideObserver?: boolean;
 };
 
 /** A small primary dot that breathes — flags a fynd reported within the hour. */
@@ -81,7 +88,12 @@ function PulsingDot() {
   return <Animated.View style={[styles.dot, { backgroundColor: theme.primary }, animatedStyle]} />;
 }
 
-export function ObservationCard({ observation, currentUserId, now }: ObservationCardProps) {
+export function ObservationCard({
+  observation,
+  currentUserId,
+  now,
+  hideObserver,
+}: ObservationCardProps) {
   const theme = useTheme();
   const mine = !!currentUserId && observation.userId === currentUserId;
   const clock = now ?? new Date();
@@ -121,7 +133,12 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
     observation.activity ? activityLabel(observation.activity) : null,
     sv.observation.timeFriendly(observation.observedAt, clock),
     locationLabel,
-    observation.observerDisplayName ? sv.feed.reportedBy(observation.observerDisplayName) : null,
+    // Suppressed with the footer: on a member's profile every card would
+    // otherwise speak the same "Rapporterad av …" — the visual redundancy we're
+    // removing, read aloud.
+    !hideObserver && observation.observerDisplayName
+      ? sv.feed.reportedBy(observation.observerDisplayName)
+      : null,
     mine ? sv.feed.mine : null,
   ]
     .filter(Boolean)
@@ -141,7 +158,16 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
           clips to the rounded corners. Transparent so the outer card fill + press
           tint show through the text. */}
       <View style={[SurfaceStyles.clippedCard, styles.clip, { borderColor: theme.border }]}>
-        <View style={styles.content}>
+        {/* Without the footer the content block is the card's last element when
+            there's no photo, so it has to carry its own bottom padding (the
+            footer used to provide it). With a photo, the photo runs full-bleed
+            to the rounded bottom edge, which needs no padding. */}
+        <View
+          style={[
+            styles.content,
+            hideObserver && !observation.imageUrl && styles.contentBottom,
+          ]}
+        >
           {/* Name-first: the species name is the flush-left hero and shares its
               left edge with the location + meta below — one clean anchor, no
               hanging indent. The rarity grade and the time cluster top-right as
@@ -189,7 +215,9 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
         {/* The footer is its own press target → the observer's member profile.
             Nested inside the card's PressableScale: the deepest responder wins, so
             a footer tap opens the member while the rest of the card opens the
-            detail. `link` is the non-animated Pressable path → safe to nest. */}
+            detail. `link` is the non-animated Pressable path → safe to nest.
+            Omitted entirely on that member's own profile (see `hideObserver`). */}
+        {hideObserver ? null : (
         <PressableScale
           variant="link"
           onPress={() =>
@@ -208,6 +236,7 @@ export function ObservationCard({ observation, currentUserId, now }: Observation
               invisible (Norman: signifier). */}
           <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
         </PressableScale>
+        )}
       </View>
     </PressableScale>
   );
@@ -223,6 +252,7 @@ const styles = StyleSheet.create({
   // Padded text column. The full-bleed image and footer are siblings with their
   // own spacing, so this only pads the top block.
   content: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
+  contentBottom: { paddingBottom: Spacing.three },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   metaRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },

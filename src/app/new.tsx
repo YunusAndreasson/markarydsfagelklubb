@@ -115,7 +115,7 @@ export default function NewObservationScreen() {
           ),
         }}
       />
-      <Screen ref={scrollRef} keyboardAware keyboardShouldPersistTaps="handled">
+      <Screen ref={scrollRef} bottomInset keyboardAware keyboardShouldPersistTaps="handled">
         <ObservationForm
           ref={formRef}
           mode="create"

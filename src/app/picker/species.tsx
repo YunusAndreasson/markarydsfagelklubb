@@ -18,6 +18,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
 import { SelectRow } from '@/components/select-row';
+import { SheetSearchField } from '@/components/sheet-search-field';
 import { Skeleton } from '@/components/skeleton';
 import { ErrorBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
@@ -159,6 +160,14 @@ export default function SpeciesPickerSheet() {
         ListHeaderComponent={
           loaded ? (
             <>
+              {/* Android renders no sheet header, so the native search bar above
+                  never appears there and this ~300-row list was scroll-only —
+                  even though the filter below was already written. No-op on iOS. */}
+              <SheetSearchField
+                value={query}
+                onChangeText={setQuery}
+                placeholder={sv.observation.speciesSearch}
+              />
               {unlisted
                 ? renderSpecialRow(
                     unlisted,
@@ -185,7 +194,15 @@ export default function SpeciesPickerSheet() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four },
+  // `paddingTop` matches the horizontal inset so the search field (now the first
+  // thing in the list header) sits inside the sheet rather than jammed against
+  // its rounded top edge — with no header on Android there's nothing else to
+  // separate them.
+  listContent: {
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.four,
+  },
   loading: { paddingTop: Spacing.two },
   // Mirrors a `SelectRow size="tall"` so the skeleton occupies the same space
   // the real rows will.

@@ -129,7 +129,11 @@ export default function ObservationDetailScreen() {
           // Tappable → fullscreen viewer. Cache is keyed by the stable storage
           // path, not the rotating signed URL (see ObservationCard), so the full
           // photo survives refetches + restarts.
-          <PhotoView uri={obs.imageUrl} cacheKey={obs.imagePath ?? undefined} />
+          <PhotoView
+            uri={obs.imageUrl}
+            cacheKey={obs.imagePath ?? undefined}
+            label={obs.speciesSwedishName}
+          />
         ) : null}
 
         {obs.comment ? (
@@ -183,7 +187,7 @@ export default function ObservationDetailScreen() {
       {/* Pull-to-refresh here too: the feed and member lists both have it, and a
           detail you can't refresh reads as broken next to them. NOT added to the
           formSheet routes — a pull there fights the sheet's drag-to-dismiss. */}
-      <Screen inset="sub" refresh={q.refetch}>
+      <Screen inset="sub" bottomInset refresh={q.refetch}>
         {body}
       </Screen>
     </>

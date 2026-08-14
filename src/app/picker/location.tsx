@@ -8,12 +8,12 @@
  * Precise placement is a full-screen opaque `Modal`. The chosen `LocationValue`
  * goes back to the report form via the picker bridge. Location is required.
  */
-import { useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/components/button';
 import { FloatingIconButton } from '@/components/floating-control';
@@ -22,6 +22,7 @@ import { Map } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SelectRow } from '@/components/select-row';
+import { SheetSearchField } from '@/components/sheet-search-field';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -66,7 +67,24 @@ export default function LocationPickerSheet() {
   const tokenRef = useRef(0);
 
   const locationsQuery = useQuery(locationsQueryOptions());
-  const locations = locationsQuery.data ?? [];
+  const locations = useMemo(() => locationsQuery.data ?? [], [locationsQuery.data]);
+
+  // The lokal register runs to ~60 names in one alphabetical scroll. Both other
+  // long lists in the app — the species picker and the Lokaler map — answer that
+  // with the native header search bar, so this sheet gets the same one instead
+  // of asking the reporter to scan (recognition over recall, and consistency).
+  // No `useDeferredValue` (unlike those two): a plain substring scan over ~60
+  // names with no sort costs nothing per keystroke.
+  const [query, setQuery] = useState('');
+  const handleSearch = useCallback(
+    (e: { nativeEvent: { text: string } }) => setQuery(e.nativeEvent.text),
+    [],
+  );
+  const needle = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () => (needle ? locations.filter((l) => l.name.toLowerCase().includes(needle)) : locations),
+    [locations, needle],
+  );
 
   function recenterTo(latitude: number, longitude: number) {
     tokenRef.current += 1;
@@ -142,8 +160,31 @@ export default function LocationPickerSheet() {
 
   return (
     <>
+      {/* Native search bar in the sheet header — same treatment as the species
+          picker (pinned, and it insets the scroller below it). */}
+      <Stack.Screen
+        options={{
+          headerSearchBarOptions: {
+            placeholder: sv.locations.searchPlaceholder,
+            onChangeText: handleSearch,
+            autoCapitalize: 'none',
+            hideWhenScrolling: false,
+          },
+        }}
+      />
       <Screen contentContainerStyle={styles.content}>
-        {/* Pinned map actions — "min position" first, then the manual map pick. */}
+        {/* Android has no sheet header, so the native bar above never renders
+            there — this is the same search, in the content. No-op on iOS. */}
+        <SheetSearchField
+          value={query}
+          onChangeText={setQuery}
+          placeholder={sv.locations.searchPlaceholder}
+        />
+
+        {/* Pinned map actions — "min position" first, then the manual map pick.
+            Deliberately NOT hidden while searching: pin drops are how most
+            reports are actually placed, so a search that matches nothing must
+            never leave the reporter without a way to set a location. */}
         <SheetAction icon={MY_LOCATION} label={sv.observation.locationCurrent} onPress={() => openMap(true)} />
         <SheetAction icon={LOCATION} label={sv.observation.locationMapPick} onPress={() => openMap(false)} />
 
@@ -158,14 +199,20 @@ export default function LocationPickerSheet() {
             <ThemedText type="smallBold" themeColor="mutedForeground" style={styles.listHeader}>
               {sv.observation.locationListHeader}
             </ThemedText>
-            {locations.map((loc) => (
-              <SelectRow
-                key={loc.id}
-                label={loc.name}
-                selected={selectedId === loc.id}
-                onPress={() => pickLocation(loc)}
-              />
-            ))}
+            {filtered.length > 0 ? (
+              filtered.map((loc) => (
+                <SelectRow
+                  key={loc.id}
+                  label={loc.name}
+                  selected={selectedId === loc.id}
+                  onPress={() => pickLocation(loc)}
+                />
+              ))
+            ) : (
+              <ThemedText type="small" themeColor="mutedForeground" style={styles.searchEmpty}>
+                {sv.locations.searchEmpty}
+              </ThemedText>
+            )}
           </>
         ) : null}
       </Screen>
@@ -267,7 +314,11 @@ export default function LocationPickerSheet() {
                   loading={pending}
                   onPress={() => void requestMyPosition()}
                 />
-                <Button title={sv.common.done} onPress={confirmPoint} />
+                {/* Dead until a point exists. It used to look armed and then
+                    just close the map, silently returning nothing — a primary
+                    button that lied about what it would do. Disabled, the hint
+                    above ("tryck på kartan…") is what's left to act on. */}
+                <Button title={sv.common.done} onPress={confirmPoint} disabled={!point} />
               </>
             )}
           </View>
@@ -296,7 +347,10 @@ function SheetAction({ icon, label, onPress }: { icon: IconName; label: string; 
 }
 
 const styles = StyleSheet.create({
-  content: { gap: Spacing.one, paddingTop: Spacing.two },
+  // Matches the horizontal inset: the search field leads the content on Android
+  // (no sheet header there), so it needs the same breathing room off the sheet's
+  // rounded top edge that the species picker's does.
+  content: { gap: Spacing.one, paddingTop: Spacing.three },
   action: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,6 +363,7 @@ const styles = StyleSheet.create({
   },
   loadingRows: { gap: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three },
   listHeader: { paddingHorizontal: Spacing.one, paddingTop: Spacing.two },
+  searchEmpty: { paddingHorizontal: Spacing.one, paddingVertical: Spacing.three },
   full: { flex: 1 },
   fullMap: { flex: 1, height: '100%' },
   close: { right: Spacing.three },

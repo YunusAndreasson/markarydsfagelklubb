@@ -224,7 +224,7 @@ export default function ObservationEditScreen() {
             : undefined,
         }}
       />
-      <Screen ref={scrollRef} inset="sub" keyboardAware keyboardShouldPersistTaps="handled">
+      <Screen ref={scrollRef} inset="sub" bottomInset keyboardAware keyboardShouldPersistTaps="handled">
         {body}
       </Screen>
     </>
