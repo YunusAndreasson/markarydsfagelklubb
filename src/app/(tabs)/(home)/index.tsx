@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { FilterChip } from '@/components/filter-chip';
 import { HeaderButton } from '@/components/header-button';
-import { FILTER, FILTER_ACTIVE, Icon, PLUS, TRAY } from '@/components/icon';
+import { FILTER, FILTER_ACTIVE, PLUS, TRAY } from '@/components/icon';
 import { ListItemEntrance } from '@/components/list-item-entrance';
 import { ObservationCard } from '@/components/observation-card';
 import { PressableScale } from '@/components/pressable-scale';
@@ -15,7 +15,7 @@ import { SectionHeader } from '@/components/section-header';
 import { SkeletonCard } from '@/components/skeleton';
 import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
-import { IconSize, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
@@ -173,20 +173,21 @@ export default function FeedScreen() {
           // empty feed). A SOLID brand-green disc with a filling white "+" (a mini-
           // FAB) so it reads loudest — composed rather than `plus.circle.fill`,
           // whose glyph leaves dead padding inside the circle. Opens the compose
-          // modal (root `new` route).
+          // modal (root `new` route). Shares `HeaderButton` with the filter on the
+          // left so both sides of the bar are the same 32² box; see that file on
+          // why the glyph is oversized relative to the box on iOS.
           headerRight: () => (
-            <PressableScale
-              variant="icon"
+            <HeaderButton
+              icon={PLUS}
+              iconWeight="heavy"
+              iconColor={theme.badgeForeground}
+              disc
               // A light press confirmation on the app's primary action — "haptics
               // on meaningful interactions" (opening the composer is exactly that).
               haptic="press"
+              title={sv.observation.submitNew}
               onPress={() => router.navigate('/new')}
-              accessibilityRole="button"
-              accessibilityLabel={sv.observation.submitNew}
-              style={[styles.createDisc, { backgroundColor: theme.tint }]}
-            >
-              <Icon name={PLUS} size={IconSize.action} weight="heavy" color={theme.badgeForeground} />
-            </PressableScale>
+            />
           ),
         }}
       />
@@ -265,6 +266,4 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.three },
   chipsRow: { gap: Spacing.two, alignItems: 'center', paddingVertical: Spacing.half },
   clearLink: { paddingHorizontal: Spacing.two, paddingVertical: Spacing.one },
-  // Solid brand-green create disc (mini-FAB) — the white "+" fills it, no dead padding.
-  createDisc: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 });
