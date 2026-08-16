@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, usePathname } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { FloatingIconButton } from '@/components/floating-control';
 import { CHEVRON, FIT, Icon, LOCATION } from '@/components/icon';
@@ -28,7 +29,6 @@ import { Map, type MapMarker } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { SearchField } from '@/components/search-field';
 import { StateBlock } from '@/components/state-block';
-import { StatusBarBackdrop } from '@/components/status-bar-backdrop';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
@@ -202,8 +202,28 @@ export default function LocationsScreen() {
   // the sheet is covering, so the honest move is to take them away while it's up
   // and give them back on dismiss. `usePathname` is reactive and needs no state —
   // the peek route is `/location/<id>`.
-  const peekOpen = usePathname().startsWith('/location/');
+  const pathname = usePathname();
+  const peekOpen = pathname.startsWith('/location/');
   const mapChromeVisible = !resultsVisible && !peekOpen;
+
+  // Dark status-bar glyphs while this screen is showing, so the map can keep
+  // running edge-to-edge under them.
+  //
+  // The base map is light in BOTH app themes, but the root layout sets the
+  // glyphs from the app theme — so in dark mode they went white-on-pale-green
+  // (measured 1.15:1). That was first "fixed" with an opaque band the height of
+  // `insets.top`, which bought contrast by covering the map: on a light theme it
+  // read as a white gap above a map that is supposed to be full-bleed. Setting
+  // the STYLE fixes the same contrast at its source (dark glyphs on light tiles
+  // is ~15:1) and costs the map nothing. Same trick as the photo viewer, which
+  // forces light glyphs over its black backdrop.
+  //
+  // Gated on the route because native tabs mount every tab at startup (see
+  // `native-tabs-render-all-tabs-eagerly`): an ungated `StatusBar` here would
+  // sit on expo-status-bar's stack from launch and force dark glyphs across the
+  // whole app. `/location` matches both this screen and the peek sheet, which
+  // leaves the map visible behind it.
+  const mapOnScreen = pathname.startsWith('/location');
 
   return (
     <ThemedView style={styles.container}>
@@ -228,9 +248,7 @@ export default function LocationsScreen() {
         style={styles.map}
       />
 
-      {/* A themed strip behind the status bar — without it the OS glyphs sat
-          directly on the map tiles at 1.15:1 contrast. See the component. */}
-      <StatusBarBackdrop />
+      {mapOnScreen ? <StatusBar style="dark" /> : null}
 
       {/* Legend — makes the colour code discoverable (Norman). Hidden until there
           are pins to explain, and while the results list or the peek sheet covers

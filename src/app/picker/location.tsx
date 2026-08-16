@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { Button } from '@/components/button';
 import { FloatingIconButton } from '@/components/floating-control';
@@ -25,7 +26,6 @@ import { SelectRow } from '@/components/select-row';
 import { SearchField } from '@/components/search-field';
 import { Skeleton } from '@/components/skeleton';
 import { ErrorBlock, StateBlock } from '@/components/state-block';
-import { StatusBarBackdrop } from '@/components/status-bar-backdrop';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { sharedStyles } from '@/constants/shared-styles';
@@ -265,9 +265,12 @@ export default function LocationPickerSheet() {
             />
           ) : null}
 
-          {/* Same as the Lokaler map: the tiles run up behind the status bar, and
-              the OS glyphs are coloured for the app's theme, not for a map. */}
-          <StatusBarBackdrop />
+          {/* Same as the Lokaler map: the tiles run up behind the status bar and
+              the OS glyphs are coloured for the app's theme, not for a map — so
+              force dark glyphs rather than covering the tiles with a band. Only
+              while the Modal is up, so the app's own status-bar style returns on
+              close (the photo viewer does the same in reverse). */}
+          {mapOpen ? <StatusBar style="dark" /> : null}
 
           <FloatingIconButton
             icon={CLOSE}
