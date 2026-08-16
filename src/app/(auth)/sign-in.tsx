@@ -178,9 +178,15 @@ export default function SignInScreen() {
                   />
                 ) : null}
 
+                {/* Quiet only when it sits under Apple's own button, which owns
+                    the primary weight on iOS. On Android there is no Apple
+                    button, so this WAS the only way into the app rendered in the
+                    app's most recessive style — the entry screen's one required
+                    action looked like an afterthought, with the email link below
+                    it competing on equal footing. Emphasis should track rank. */}
                 <Button
                   title={sv.login.continueWithGoogle}
-                  variant="secondary"
+                  variant={appleAvailable ? 'secondary' : 'primary'}
                   loading={pending === 'google'}
                   disabled={busy}
                   onPress={() => void runProvider('google')}

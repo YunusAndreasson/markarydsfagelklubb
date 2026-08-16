@@ -23,6 +23,7 @@ import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SegmentedPicker } from '@/components/segmented-picker';
+import { SheetTitle } from '@/components/sheet-title';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -64,7 +65,12 @@ export default function FilterSheet() {
     () => (feed.data ?? []).filter((o: FeedObservation) => !blocked.has(o.userId)),
     [feed.data, blocked],
   );
-  const options = useMemo(() => deriveFilterOptions(data), [data]);
+  // Facet counts — each chip's number is what tapping it actually leaves on
+  // screen, given everything else already selected (see `deriveFilterOptions`).
+  const options = useMemo(
+    () => deriveFilterOptions(data, filter, user?.id),
+    [data, filter, user?.id],
+  );
   const resultCount = useMemo(
     () => applyFeedFilter(data, filter, user?.id).length,
     [data, filter, user?.id],
@@ -100,6 +106,11 @@ export default function FilterSheet() {
       contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.three }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* Android formSheets render no native header, so the route's `title`
+          ("Filtrera larm") never appeared there — this sheet opened as an
+          unlabelled stack of chips. No-op on iOS, where the header shows it. */}
+      <SheetTitle title={sv.filter.title} />
+
       <View style={styles.section}>
         <SectionHeader title={sv.filter.scopeLabel} />
         <SegmentedPicker<Scope>
@@ -184,17 +195,22 @@ export default function FilterSheet() {
       {/* Actions ride at the end of the content (see the note on the root). The
           count still reads live — the feed behind updates as chips toggle. */}
       <View style={[styles.actions, { borderTopColor: theme.border }]}>
+        {/* The secondary takes only the width its own label needs; the primary
+            takes the rest. Splitting the row 50/50 left the primary too narrow
+            for "Visa 51 träffar", which is why that label had been cut back to a
+            bare "Visa 51" — a verb and a loose number that never said what the
+            51 were. Weighting the row toward the primary is also the truer read
+            of the two actions. */}
         <Button
           title={sv.filter.clear}
           variant="secondary"
           onPress={() => setFeedFilter(EMPTY_FILTER)}
           disabled={count === 0}
-          style={styles.actionButton}
         />
         <Button
           title={sv.filter.apply(resultCount)}
-          // The visible label is trimmed to fit a half-width button; screen
-          // readers still get the whole phrase.
+          // Identical to the visible label now, but kept explicit: if the count
+          // ever grows past the button again, the spoken phrase stays whole.
           accessibilityLabel={sv.filter.applyA11y(resultCount)}
           variant="primary"
           onPress={() => router.back()}

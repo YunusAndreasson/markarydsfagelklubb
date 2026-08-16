@@ -12,7 +12,7 @@ import { EDIT, Icon, MINUS, PLUS } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceStyles } from '@/constants/surface';
-import { FontSize, IconSize, Spacing } from '@/constants/theme';
+import { FontSize, IconSize, Opacity, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticError, hapticPress } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
@@ -24,9 +24,12 @@ const clamp = (n: number) => Math.min(MAX, Math.max(MIN, n));
 export function CountStepper({
   value,
   onChange,
+  disabled,
 }: {
   value: number;
   onChange: (n: number) => void;
+  /** Inert while the hosting form is saving — matches the picker fields. */
+  disabled?: boolean;
 }) {
   const theme = useTheme();
   const [editing, setEditing] = useState(false);
@@ -46,7 +49,13 @@ export function CountStepper({
       <ThemedText type="smallBold" themeColor="mutedForeground">
         {sv.observation.countLabel}
       </ThemedText>
-      <View style={[styles.row, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <View
+        style={[
+          styles.row,
+          { backgroundColor: theme.card, borderColor: theme.border },
+          disabled && styles.dimmed,
+        ]}
+      >
         <PressableScale
           variant="button"
           // Stays pressable at MIN: a refused decrement fires an error haptic
@@ -60,8 +69,10 @@ export function CountStepper({
               onChange(value - 1);
             }
           }}
+          disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={sv.observation.countDecrease}
+          accessibilityState={{ disabled: !!disabled }}
           style={styles.stepBtn}
         >
           <Icon name={MINUS} size={IconSize.close} color={atMin ? theme.mutedForeground : theme.foreground} />
@@ -91,8 +102,10 @@ export function CountStepper({
               setDraft(String(value));
               setEditing(true);
             }}
+            disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={sv.observation.countEditHint}
+            accessibilityState={{ disabled: !!disabled }}
             style={styles.countWrap}
           >
             {/* Bare, the number reads as a static total. A muted pencil is the
@@ -115,8 +128,10 @@ export function CountStepper({
               onChange(value + 1);
             }
           }}
+          disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={sv.observation.countIncrease}
+          accessibilityState={{ disabled: !!disabled }}
           style={styles.stepBtn}
         >
           <Icon name={PLUS} size={IconSize.close} color={atMax ? theme.mutedForeground : theme.foreground} />
@@ -149,6 +164,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.one,
   },
+  // The whole control dims as one surface (it reads as a single field), rather
+  // than each of the three targets dimming on its own.
+  dimmed: { opacity: Opacity.disabled },
   input: {
     flex: 1,
     minHeight: 56,

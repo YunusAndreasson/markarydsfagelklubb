@@ -64,11 +64,14 @@ export default function MemberScreen() {
       />
     );
   } else if (q.isLoading) {
+    // Mirrors the loaded layout exactly. It used to place a wide bar beside the
+    // avatar where a name would go — but the name is the nav title here, never
+    // content, so that bar resolved into empty space on every load: the skeleton
+    // was drawing a row the real screen doesn't have.
     body = (
       <View style={styles.body}>
         <View style={styles.headerRow}>
           <Skeleton width={AvatarSize.lg} height={AvatarSize.lg} radius={AvatarSize.lg / 2} />
-          <Skeleton width="50%" height={22} />
         </View>
         <Skeleton width="35%" height={16} />
         {[0, 1].map((n) => (

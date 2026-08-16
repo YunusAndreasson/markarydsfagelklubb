@@ -32,6 +32,14 @@ export type PickerFieldProps = {
   onPress: () => void;
   /** Optional leading glyph (e.g. a clock on the datetime field). */
   leading?: ReactNode;
+  /**
+   * Make the trigger inert (and dim it). Set while the hosting form is
+   * committing: every picker is a PUSHED route, so a tap here during an in-flight
+   * save opened a sheet that the mutation's own `router.back()` then dismissed —
+   * closing the picker instead of the form, and leaving a committed report on a
+   * still-open composer that invited a second submit.
+   */
+  disabled?: boolean;
 };
 
 export function PickerField({
@@ -42,6 +50,7 @@ export function PickerField({
   error,
   onPress,
   leading,
+  disabled,
 }: PickerFieldProps) {
   const theme = useTheme();
   const { motion } = useMotion();
@@ -64,9 +73,14 @@ export function PickerField({
       <PressableScale
         variant="row"
         onPress={onPress}
+        disabled={disabled}
+        // Via the prop, not `style` — `row` is a scale variant whose animated
+        // style writes `opacity` last (see PressableScale).
+        dimmed={disabled}
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityValue={{ text: value ?? placeholder }}
+        accessibilityState={{ disabled: !!disabled }}
         style={[styles.trigger, { backgroundColor: theme.card, borderColor, borderWidth }]}
       >
         {leading}

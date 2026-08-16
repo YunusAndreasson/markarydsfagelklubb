@@ -238,18 +238,28 @@ export function ObservationForm({
 
   return (
     <View style={styles.form}>
+      {/* Every field goes inert while a save is in flight. The comment/photo
+          already did; the five pickers did not, and they are PUSHED routes — so
+          tapping one mid-save opened a sheet that the route's own
+          `onSuccess: router.back()` then dismissed, leaving a committed report on
+          a still-open composer whose Larma button invited a duplicate. */}
       <View ref={speciesRef}>
         <SpeciesPicker
           value={value.speciesId}
           onChange={(id) => update('speciesId', id)}
           invalid={!!speciesError}
           error={speciesError}
+          disabled={busy}
         />
       </View>
 
-      <CountStepper value={value.count} onChange={(n) => update('count', n)} />
+      <CountStepper value={value.count} onChange={(n) => update('count', n)} disabled={busy} />
 
-      <DateTimePicker value={value.observedAt} onChange={(d) => update('observedAt', d)} />
+      <DateTimePicker
+        value={value.observedAt}
+        onChange={(d) => update('observedAt', d)}
+        disabled={busy}
+      />
 
       <View ref={locationRef}>
         <LocationPicker
@@ -257,6 +267,7 @@ export function ObservationForm({
           onChange={(loc) => update('location', loc)}
           invalid={locationInvalid}
           error={locationInvalid ? sv.observation.errors.locationMissing : null}
+          disabled={busy}
         />
       </View>
 
@@ -266,6 +277,7 @@ export function ObservationForm({
           onChange={(a) => update('activity', a)}
           invalid={!!activityError}
           error={activityError}
+          disabled={busy}
         />
       </View>
 

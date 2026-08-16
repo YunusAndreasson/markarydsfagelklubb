@@ -22,8 +22,10 @@ import { Map } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SelectRow } from '@/components/select-row';
-import { SheetSearchField } from '@/components/sheet-search-field';
+import { SearchField } from '@/components/search-field';
 import { Skeleton } from '@/components/skeleton';
+import { ErrorBlock, StateBlock } from '@/components/state-block';
+import { StatusBarBackdrop } from '@/components/status-bar-backdrop';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { sharedStyles } from '@/constants/shared-styles';
@@ -34,6 +36,7 @@ import { getCurrentPosition } from '@/lib/geo';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { usePickerResult } from '@/lib/picker-bridge';
+import { foldSearch } from '@/lib/search';
 import {
   LOKAL_RADIUS_M,
   locationsQueryOptions,
@@ -80,9 +83,11 @@ export default function LocationPickerSheet() {
     (e: { nativeEvent: { text: string } }) => setQuery(e.nativeEvent.text),
     [],
   );
-  const needle = query.trim().toLowerCase();
+  // Folded, so "angaback" finds Ängabäck (see `lib/search`). Lokal names are
+  // even more diacritic-heavy than the species list — Åmot, Ängabäck, Hyltesjön.
+  const needle = foldSearch(query.trim());
   const filtered = useMemo(
-    () => (needle ? locations.filter((l) => l.name.toLowerCase().includes(needle)) : locations),
+    () => (needle ? locations.filter((l) => foldSearch(l.name).includes(needle)) : locations),
     [locations, needle],
   );
 
@@ -96,6 +101,10 @@ export default function LocationPickerSheet() {
     setPoint({ latitude, longitude });
     // A hand-placed point is intentional — drop any GPS snap suggestion.
     setNearby(null);
+    // …and the failed-GPS message, which was about a fix we no longer need. It
+    // used to survive the recovery and sit under the map contradicting the point
+    // now sitting on it: "Kunde inte hämta din position" over a placed pin.
+    setErrorMsg(null);
   }
 
   // No haptic here: both callers already tick — `SelectRow` fires the select
@@ -175,7 +184,7 @@ export default function LocationPickerSheet() {
       <Screen contentContainerStyle={styles.content}>
         {/* Android has no sheet header, so the native bar above never renders
             there — this is the same search, in the content. No-op on iOS. */}
-        <SheetSearchField
+        <SearchField
           value={query}
           onChangeText={setQuery}
           placeholder={sv.locations.searchPlaceholder}
@@ -194,7 +203,26 @@ export default function LocationPickerSheet() {
               <Skeleton key={n} width="70%" height={16} />
             ))}
           </View>
-        ) : locations.length > 0 ? (
+        ) : locationsQuery.isError ? (
+          /* A failed register fetch used to render NOTHING here — the sheet showed
+             the two map actions and then blank space, which is exactly what an
+             empty club register looks like. The reporter had no way to tell "we
+             couldn't reach the server" from "there are no lokaler", and no retry.
+             Every other list in the app answers this with `ErrorBlock`. */
+          <View style={styles.listState}>
+            <ErrorBlock
+              error={locationsQuery.error}
+              onRetry={() => void locationsQuery.refetch()}
+              retrying={locationsQuery.isFetching}
+            />
+          </View>
+        ) : locations.length === 0 ? (
+          /* Genuinely empty register — say so, rather than trailing off into
+             blank space below the two map actions. */
+          <View style={styles.listState}>
+            <StateBlock icon={LOCATION} title={sv.locations.empty} />
+          </View>
+        ) : (
           <>
             <ThemedText type="smallBold" themeColor="mutedForeground" style={styles.listHeader}>
               {sv.observation.locationListHeader}
@@ -214,7 +242,7 @@ export default function LocationPickerSheet() {
               </ThemedText>
             )}
           </>
-        ) : null}
+        )}
       </Screen>
 
       {/* Full-screen map — the precise placement canvas (opaque Modal). */}
@@ -236,6 +264,10 @@ export default function LocationPickerSheet() {
               style={styles.fullMap}
             />
           ) : null}
+
+          {/* Same as the Lokaler map: the tiles run up behind the status bar, and
+              the OS glyphs are coloured for the app's theme, not for a map. */}
+          <StatusBarBackdrop />
 
           <FloatingIconButton
             icon={CLOSE}
@@ -362,6 +394,9 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   loadingRows: { gap: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three },
+  // Breathing room around the error / empty card so it doesn't butt against the
+  // pinned map actions above it.
+  listState: { paddingTop: Spacing.two },
   listHeader: { paddingHorizontal: Spacing.one, paddingTop: Spacing.two },
   searchEmpty: { paddingHorizontal: Spacing.one, paddingVertical: Spacing.three },
   full: { flex: 1 },

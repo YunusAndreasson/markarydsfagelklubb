@@ -18,11 +18,14 @@ export function SpeciesPicker({
   onChange,
   invalid,
   error,
+  disabled,
 }: {
   value: number | null;
   onChange: (id: number) => void;
   invalid?: boolean;
   error?: string | null;
+  /** Inert while the hosting form is saving — see `PickerField`. */
+  disabled?: boolean;
 }) {
   const speciesQuery = useQuery(speciesQueryOptions());
   const all = speciesQuery.data;
@@ -51,6 +54,7 @@ export function SpeciesPicker({
       placeholder={sv.observation.speciesPlaceholder}
       invalid={invalid}
       error={error}
+      disabled={disabled}
       onPress={() => void open()}
     />
   );

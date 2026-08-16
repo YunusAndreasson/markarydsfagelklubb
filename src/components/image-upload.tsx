@@ -22,7 +22,7 @@ import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-na
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
 
-import { CAMERA, Icon, IMAGE } from '@/components/icon';
+import { CAMERA, Icon, IMAGE, TRASH } from '@/components/icon';
 import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
@@ -329,8 +329,30 @@ export function ImageUpload({
     </ThemedText>
   ) : null;
 
+  /**
+   * Progress for the `headless` host, which renders no preview — so it also
+   * rendered no busy overlay, and picking a profile photo was silent: the header
+   * avatar kept showing the old image while a compress + upload ran, and the only
+   * sign anything had happened was a toast some seconds later. On a phone in the
+   * field that is a multi-second dead screen after a deliberate tap. The inline
+   * render already covers this with the overlay on the frame itself.
+   */
+  const busyBlock =
+    busyLabel != null ? (
+      <View style={styles.busyRow}>
+        <ActivityIndicator color={theme.tint} />
+        <ThemedText type="small" themeColor="mutedForeground">
+          {busyLabel}
+        </ThemedText>
+      </View>
+    ) : null;
+
   const chooser = (
-    <PickerSheet visible={chooserOpen} title={sv.image.chooseSource} onClose={() => setChooserOpen(false)}>
+    <PickerSheet
+      visible={chooserOpen}
+      title={hasImage ? sv.image.replace : sv.image.chooseSource}
+      onClose={() => setChooserOpen(false)}
+    >
       <View style={styles.sheetBody}>
         <SheetActionRow icon={CAMERA} label={sv.image.takePhoto} onPress={() => void runPick('camera')} />
         <SheetActionRow
@@ -338,6 +360,22 @@ export function ImageUpload({
           label={sv.image.chooseFromLibrary}
           onPress={() => void runPick('library')}
         />
+        {/* The `headless` host has no inline "Ta bort bild" link (that lives under
+            the preview it doesn't render), so on Profil an avatar could be
+            replaced forever but never cleared — the chooser offered two ways to
+            set a photo and no way back. Only shown when there IS one to remove,
+            and only in headless: the inline render already carries the link. */}
+        {headless && hasImage ? (
+          <SheetActionRow
+            icon={TRASH}
+            label={sv.image.remove}
+            destructive
+            onPress={() => {
+              setChooserOpen(false);
+              void onRemove();
+            }}
+          />
+        ) : null}
       </View>
     </PickerSheet>
   );
@@ -345,6 +383,7 @@ export function ImageUpload({
   if (headless) {
     return (
       <>
+        {busyBlock}
         {blockedBlock}
         {errorBlock}
         {chooser}
@@ -411,6 +450,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   placeholder: { alignItems: 'center', gap: Spacing.one },
+  busyRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   image: { width: '100%', height: '100%' },
   overlay: {
     position: 'absolute',

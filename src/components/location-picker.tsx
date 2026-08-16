@@ -23,12 +23,15 @@ export function LocationPicker({
   onChange,
   invalid,
   error,
+  disabled,
 }: {
   value: LocationValue;
   onChange: (v: LocationValue) => void;
   invalid?: boolean;
   /** Validation message shown (destructive) under the field when required-but-empty. */
   error?: string | null;
+  /** Inert while the hosting form is saving — see `PickerField`. */
+  disabled?: boolean;
 }) {
   const theme = useTheme();
 
@@ -56,6 +59,7 @@ export function LocationPicker({
       placeholder={sv.observation.locationPlaceholder}
       invalid={invalid}
       error={error}
+      disabled={disabled}
       onPress={() => void open()}
       leading={<Icon name={LOCATION} size={IconSize.control} color={theme.mutedForeground} />}
     />

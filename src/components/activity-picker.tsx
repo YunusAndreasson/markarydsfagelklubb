@@ -15,11 +15,14 @@ export function ActivityPicker({
   onChange,
   invalid,
   error,
+  disabled,
 }: {
   value: Activity | null;
   onChange: (a: Activity) => void;
   invalid?: boolean;
   error?: string | null;
+  /** Inert while the hosting form is saving — see `PickerField`. */
+  disabled?: boolean;
 }) {
   async function open() {
     const picked = await requestPick<Activity>(() =>
@@ -38,6 +41,7 @@ export function ActivityPicker({
       placeholder={sv.observation.activityPlaceholder}
       invalid={invalid}
       error={error}
+      disabled={disabled}
       onPress={() => void open()}
     />
   );
