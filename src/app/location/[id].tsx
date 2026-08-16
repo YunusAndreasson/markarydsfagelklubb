@@ -78,8 +78,12 @@ export default function LocationSheet() {
  * backfilled/legacy rows with nothing to open, and a chevron promising a screen
  * that doesn't exist is the same false affordance in the other direction.
  *
- * Pushes without dismissing the sheet on purpose — coming back lands you on the
- * lokal's list again, ready to open the next larm.
+ * `dismissTo`, NOT `push`. A formSheet on iOS is a real UIKit modal presentation,
+ * so pushing onto the same stack puts the detail INSIDE the sheet — constrained to
+ * the sheet's detent, which reads on device as "the tap did nothing". `dismissTo`
+ * dispatches POP_TO: it pops to the target, or adds it when it isn't in the stack
+ * (which it never is here). The sheet goes away and the detail appears in one
+ * state change — no dismiss-then-push race. Back then lands on the Lokaler map.
  */
 function AlertRow({ alert }: { alert: Alert }) {
   const theme = useTheme();
@@ -105,7 +109,7 @@ function AlertRow({ alert }: { alert: Alert }) {
     <PressableScale
       variant="row"
       onPress={() =>
-        router.push({
+        router.dismissTo({
           pathname: '/observation/[id]',
           params: { id: alert.observationId as string },
         })
