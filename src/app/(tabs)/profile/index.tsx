@@ -219,7 +219,7 @@ export default function ProfileScreen() {
               <Avatar
                 name={name || saved.displayName}
                 uri={profile?.avatarUrl ?? null}
-                cacheKey={profile?.avatarPath}
+                cacheKey={profile?.avatarCacheKey}
                 size="md"
               />
             </PressableScale>

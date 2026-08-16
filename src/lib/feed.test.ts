@@ -24,7 +24,7 @@ function obs(observedAt: Date, idSuffix = ''): FeedObservation {
     imagePath: null,
     imageUrl: null,
     observerAvatarUrl: null,
-    observerAvatarPath: null,
+    observerAvatarCacheKey: null,
     observerPhone: null,
     activity: null,
   }

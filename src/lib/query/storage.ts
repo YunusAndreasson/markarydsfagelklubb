@@ -9,6 +9,36 @@ export const SIGNED_DOWNLOAD_TTL_SECONDS = 3600;
 
 export type UploadTarget = { path: string; signedUrl: string; token: string };
 
+/**
+ * A stable `expo-image` cache key for an avatar.
+ *
+ * Avatars can't be keyed by their storage path the way observation photos are.
+ * A photo gets a fresh random `draftId` path on every replace, so its path *is*
+ * its version — but an avatar is always `${userId}/avatar.${ext}`, uploaded with
+ * `upsert: true`, i.e. overwritten in place. Key on that and expo-image would
+ * serve the old face from disk forever after someone changed theirs.
+ *
+ * Keying on the signed URL instead (the previous behaviour) is correct but never
+ * hits: Supabase re-mints the token on every fetch and every cold start, so the
+ * `memory-disk` cache was pure overhead for avatars.
+ *
+ * So: version the path with the profile's `updated_at`. Stable across refetches,
+ * changes exactly when the row changes. It also busts on a name/phone edit,
+ * which costs one needless re-download and is well worth never showing a stale
+ * face.
+ *
+ * With no `updated_at` there is no version, so this returns **null** rather than
+ * the bare path — no cache key at all, which falls back to expo-image's
+ * URL keying: uncached, but never stale. Freshness wins over the cache hit.
+ */
+export function avatarCacheKey(
+  path: string | null | undefined,
+  updatedAt: string | null | undefined,
+): string | null {
+  if (!path || !updatedAt) return null;
+  return `${path}#${updatedAt}`;
+}
+
 /** A single signed download URL for a stored object path (null-safe). */
 export async function signedUrlFor(path: string | null | undefined): Promise<string | null> {
   if (!path) return null;

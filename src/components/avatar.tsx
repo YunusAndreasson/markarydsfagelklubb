@@ -22,14 +22,16 @@ export type AvatarProps = {
   /** Signed avatar URL. When set, the photo replaces the initial glyph. */
   uri?: string | null;
   /**
-   * The avatar's stable storage path, used as the cache key.
+   * A stable `expo-image` cache key — build it with `avatarCacheKey()`, never
+   * from the storage path alone.
    *
-   * Supabase signs storage URLs with a token that is re-minted on every fetch, so
-   * the `uri` above is a *different string* after each refetch and every cold
-   * start — and `expo-image` keys its cache on the URL. Without this, a
-   * `memory-disk` cache never once hits for an avatar: every feed refresh
-   * re-downloads the same faces. `ObservationCard` already keys its photo this
-   * way; avatars are the higher-volume case, one per card.
+   * Supabase re-mints its signed-URL token on every fetch, so the `uri` above is
+   * a different string after each refetch and every cold start, and expo-image
+   * keys its cache on the URL — meaning `memory-disk` never once hit for a face.
+   * But an avatar's path is `${userId}/avatar.ext` uploaded with `upsert: true`,
+   * i.e. overwritten in place, so keying on the path would pin the OLD face
+   * forever. `avatarCacheKey()` versions the path with the profile's
+   * `updated_at`, which is stable across refetches and changes when the row does.
    */
   cacheKey?: string | null;
 };

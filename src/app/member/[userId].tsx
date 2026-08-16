@@ -105,7 +105,7 @@ export default function MemberScreen() {
     body = (
       <View style={styles.body}>
         <View style={styles.headerRow}>
-          <Avatar size="lg" name={name} uri={profile.avatarUrl} cacheKey={profile.avatarPath} />
+          <Avatar size="lg" name={name} uri={profile.avatarUrl} cacheKey={profile.avatarCacheKey} />
           {/* The member's name is the native header title (set below, edenmind
               parity) — don't repeat it as a content heading. */}
           <View style={sharedStyles.flex} />

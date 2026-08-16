@@ -255,7 +255,7 @@ export function ObservationCard({
             size="sm"
             name={observation.observerDisplayName}
             uri={observation.observerAvatarUrl}
-            cacheKey={observation.observerAvatarPath}
+            cacheKey={observation.observerAvatarCacheKey}
           />
           <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1} style={sharedStyles.flex}>
             {observation.observerDisplayName ?? sv.feed.unknownObserver}

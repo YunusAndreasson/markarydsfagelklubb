@@ -191,7 +191,7 @@ export default function ObservationDetailScreen() {
             size="sm"
             name={obs.observerDisplayName}
             uri={obs.observerAvatarUrl}
-            cacheKey={obs.observerAvatarPath}
+            cacheKey={obs.observerAvatarCacheKey}
           />
           <ThemedText type="small" themeColor="mutedForeground" style={sharedStyles.flex} numberOfLines={1}>
             {obs.observerDisplayName ?? sv.feed.unknownObserver}

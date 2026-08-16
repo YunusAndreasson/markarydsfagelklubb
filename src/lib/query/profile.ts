@@ -2,15 +2,19 @@ import { queryOptions } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query/keys';
 import { requireUserId } from '@/lib/query/session';
-import { signedUrlFor, signedUrlMap } from '@/lib/query/storage';
+import { avatarCacheKey, signedUrlFor, signedUrlMap } from '@/lib/query/storage';
 import { supabase } from '@/lib/supabase';
 import { upsertProfileInput, type UpsertProfileInput } from '@/lib/validation/profile';
 
 export type MyProfile = {
   displayName: string;
   isAdmin: boolean;
+  /** Storage path — used by the upload flow to delete a replaced file. NOT an
+   *  image cache key: it is overwritten in place, so see `avatarCacheKey`. */
   avatarPath: string | null;
   avatarUrl: string | null;
+  /** Stable image cache key for `avatarUrl`. See `avatarCacheKey`. */
+  avatarCacheKey: string | null;
   phone: string | null;
 };
 
@@ -19,6 +23,7 @@ type RawMyProfileRow = {
   is_admin: boolean;
   avatar_path: string | null;
   phone: string | null;
+  updated_at: string | null;
 };
 
 async function toMyProfile(row: RawMyProfileRow): Promise<MyProfile> {
@@ -27,6 +32,7 @@ async function toMyProfile(row: RawMyProfileRow): Promise<MyProfile> {
     isAdmin: row.is_admin,
     avatarPath: row.avatar_path,
     avatarUrl: await signedUrlFor(row.avatar_path),
+    avatarCacheKey: avatarCacheKey(row.avatar_path, row.updated_at),
     phone: row.phone,
   };
 }
@@ -36,7 +42,7 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
   const userId = await requireUserId();
   const { data, error } = await supabase
     .from('profiles')
-    .select('display_name,is_admin,avatar_path,phone')
+    .select('display_name,is_admin,avatar_path,phone,updated_at')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
@@ -52,8 +58,8 @@ export type MemberSummary = {
   userId: string;
   displayName: string | null;
   avatarUrl: string | null;
-  /** Stable image cache key for the signed `avatarUrl`. See `Avatar`. */
-  avatarPath: string | null;
+  /** Stable image cache key for the signed `avatarUrl`. See `avatarCacheKey`. */
+  avatarCacheKey: string | null;
 };
 
 /**
@@ -66,10 +72,15 @@ export async function fetchProfilesByIds(userIds: string[]): Promise<MemberSumma
   if (userIds.length === 0) return [];
   const { data, error } = await supabase
     .from('profiles')
-    .select('user_id,display_name,avatar_path')
+    .select('user_id,display_name,avatar_path,updated_at')
     .in('user_id', userIds);
   if (error) throw error;
-  const rows = (data ?? []) as { user_id: string; display_name: string | null; avatar_path: string | null }[];
+  const rows = (data ?? []) as {
+    user_id: string;
+    display_name: string | null;
+    avatar_path: string | null;
+    updated_at: string | null;
+  }[];
   const byId = new Map(rows.map((r) => [r.user_id, r]));
   const avatarUrls = await signedUrlMap(rows.map((row) => row.avatar_path));
   return userIds.map((userId) => {
@@ -78,7 +89,7 @@ export async function fetchProfilesByIds(userIds: string[]): Promise<MemberSumma
       userId,
       displayName: row?.display_name ?? null,
       avatarUrl: row?.avatar_path ? (avatarUrls.get(row.avatar_path) ?? null) : null,
-      avatarPath: row?.avatar_path ?? null,
+      avatarCacheKey: avatarCacheKey(row?.avatar_path, row?.updated_at),
     };
   });
 }
@@ -103,7 +114,7 @@ export async function upsertMyProfile(input: UpsertProfileInput): Promise<MyProf
       },
       { onConflict: 'user_id' },
     )
-    .select('display_name,is_admin,avatar_path,phone')
+    .select('display_name,is_admin,avatar_path,phone,updated_at')
     .single();
   if (error) throw error;
   return toMyProfile(data as RawMyProfileRow);

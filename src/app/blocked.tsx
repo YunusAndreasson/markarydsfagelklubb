@@ -67,7 +67,8 @@ export default function BlockedMembersScreen() {
   // On a failed profile fetch the rows fall back to id-only entries — unblocking
   // must stay possible even when names can't load.
   const members: MemberSummary[] =
-    q.data ?? ids.map((userId) => ({ userId, displayName: null, avatarUrl: null, avatarPath: null }));
+    q.data ??
+    ids.map((userId) => ({ userId, displayName: null, avatarUrl: null, avatarCacheKey: null }));
 
   return (
     <Screen inset="sub" bottomInset>
@@ -83,7 +84,7 @@ export default function BlockedMembersScreen() {
               accessibilityLabel={`${sv.blockedMembers.unblock} ${name}`}
               style={styles.row}
             >
-              <Avatar size="sm" name={name} uri={m.avatarUrl} cacheKey={m.avatarPath} />
+              <Avatar size="sm" name={name} uri={m.avatarUrl} cacheKey={m.avatarCacheKey} />
               <ThemedText type="default" numberOfLines={1} style={styles.name}>
                 {name}
               </ThemedText>

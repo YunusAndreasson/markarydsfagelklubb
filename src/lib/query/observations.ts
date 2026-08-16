@@ -3,7 +3,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
 import { requireUserId } from '@/lib/query/session';
-import { signedUrlFor, signedUrlMap } from '@/lib/query/storage';
+import { avatarCacheKey, signedUrlFor, signedUrlMap } from '@/lib/query/storage';
 import { supabase } from '@/lib/supabase';
 import {
   createObservationInput,
@@ -45,17 +45,17 @@ export type FeedObservation = {
   imagePath: string | null;
   imageUrl: string | null;
   observerAvatarUrl: string | null;
-  /** The observer's avatar storage path — the stable image cache key, since the
-   *  signed URL above re-mints its token on every fetch. See `Avatar`. */
-  observerAvatarPath: string | null;
+  /** Stable image cache key for the signed URL above, which re-mints its token on
+   *  every fetch. Path + profile `updated_at` — see `avatarCacheKey`. */
+  observerAvatarCacheKey: string | null;
   activity: Activity | null;
 };
 
 export type MemberProfile = {
   displayName: string | null;
   avatarUrl: string | null;
-  /** Stable image cache key for {@link MemberProfile.avatarUrl}. See `Avatar`. */
-  avatarPath: string | null;
+  /** Stable image cache key for {@link MemberProfile.avatarUrl}. See `avatarCacheKey`. */
+  avatarCacheKey: string | null;
   phone: string | null;
 };
 
@@ -90,6 +90,8 @@ type RawProfileRow = {
   display_name: string | null;
   avatar_path: string | null;
   phone: string | null;
+  /** Versions the avatar cache key — see `avatarCacheKey`. */
+  updated_at: string | null;
 };
 
 /** ISO timestamp `days` days ago — the lower bound for the rolling feed/activity
@@ -112,7 +114,7 @@ async function toFeedObservations(rows: RawObservationRow[]): Promise<FeedObserv
   // "Okänd observatör" and persist that to the on-disk cache as if it were real.
   const { data: profileRows, error: profileError } = await supabase
     .from('profiles')
-    .select('user_id,display_name,avatar_path,phone')
+    .select('user_id,display_name,avatar_path,phone,updated_at')
     .in('user_id', userIds);
   if (profileError) throw profileError;
   const profiles = new Map<string, RawProfileRow>(
@@ -148,7 +150,7 @@ async function toFeedObservations(rows: RawObservationRow[]): Promise<FeedObserv
       imagePath: row.image_path,
       imageUrl: row.image_path ? (urls.get(row.image_path) ?? null) : null,
       observerAvatarUrl: profile?.avatar_path ? (urls.get(profile.avatar_path) ?? null) : null,
-      observerAvatarPath: profile?.avatar_path ?? null,
+      observerAvatarCacheKey: avatarCacheKey(profile?.avatar_path, profile?.updated_at),
       activity: (row.activity as Activity | null) ?? null,
     };
   });
@@ -177,7 +179,7 @@ export async function fetchMemberFeed(
   const [profileResult, observationsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name,avatar_path,phone')
+      .select('display_name,avatar_path,phone,updated_at')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase
@@ -197,7 +199,7 @@ export async function fetchMemberFeed(
   const observations = await toFeedObservations((obsRows ?? []) as unknown as RawObservationRow[]);
   const memberRow = profileRow as Pick<
     RawProfileRow,
-    'display_name' | 'avatar_path' | 'phone'
+    'display_name' | 'avatar_path' | 'phone' | 'updated_at'
   > | null;
   // Build the avatar URL on its own statement first. Keeping the `await` inside
   // the object literal of a ternary branch (`memberRow ? { …: await … } : null`)
@@ -210,7 +212,7 @@ export async function fetchMemberFeed(
     profile = {
       displayName: memberRow.display_name,
       avatarUrl,
-      avatarPath: memberRow.avatar_path,
+      avatarCacheKey: avatarCacheKey(memberRow.avatar_path, memberRow.updated_at),
       phone: memberRow.phone,
     };
   }
@@ -236,7 +238,7 @@ export function memberQueryOptions(userId: string) {
         profile: {
           displayName: first.observerDisplayName,
           avatarUrl: first.observerAvatarUrl,
-          avatarPath: first.observerAvatarPath,
+          avatarCacheKey: first.observerAvatarCacheKey,
           phone: first.observerPhone,
         },
         observations: rows,
