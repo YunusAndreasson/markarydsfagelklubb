@@ -21,25 +21,24 @@ export const sv = {
     // Bara valfria fält märks — övriga är underförstått obligatoriska (Jakobs lag).
     optional: '(valfritt)',
   },
+  // Appens navigation ÄR `bottomNav` nedan. Kvar här ligger bara den etikett som
+  // auth-callbackens felläge behöver; webbappens toppnavigering (Hem / Översikt)
+  // har aldrig funnits på en flik-yta.
   nav: {
-    home: 'Hem',
-    dashboard: 'Översikt',
     logIn: 'Logga in',
-    logOut: 'Logga ut',
   },
   bottomNav: {
     feed: 'Larm',
     locations: 'Lokaler',
     profile: 'Profil',
   },
+  // Rubriken över inloggningsskärmen (`(auth)/sign-in`).
   home: {
     title: 'Markaryds Fågelklubb',
     subtitle: 'Rapportera och följ fågelobservationer i Markaryd.',
-    cta: 'Logga in för att rapportera',
   },
   login: {
     title: 'Logga in',
-    description: 'Vi mejlar en inloggningslänk.',
     // Social sign-in (M5) — Apple/Google are primary, e-post är reservväg.
     continueWithApple: 'Fortsätt med Apple',
     continueWithGoogle: 'Fortsätt med Google',
@@ -51,9 +50,10 @@ export const sv = {
     sendLink: 'Skicka inloggningslänk',
     sending: 'Skickar…',
     sentTitle: 'Kolla din e-post',
-    sentDescription: 'Vi har skickat en inloggningslänk.',
     sentTo: (email: string) => `Vi har skickat en inloggningslänk till ${email}.`,
-    sentHelp: 'Öppna länken på den här enheten. Du kan stänga sidan.',
+    // "Du kan stänga sidan" var webbtext — här finns ingen sida att stänga, och
+    // länken öppnar appen igen via djuplänken `mafk:///auth/callback`.
+    sentHelp: 'Öppna länken på den här enheten så loggas du in i appen.',
     sentSpamHint: 'Hittar du inget mejl? Kolla skräpposten — det kan ta någon minut.',
     openMail: 'Öppna e-post',
     useDifferentEmail: 'Använd en annan e-post',
@@ -76,11 +76,6 @@ export const sv = {
       appleFailed: 'Kunde inte logga in med Apple. Försök igen.',
       googleFailed: 'Kunde inte logga in med Google. Försök igen.',
     },
-  },
-  dashboard: {
-    welcome: (email: string) => `Välkommen, ${email}.`,
-    placeholder:
-      'Här kommer du snart kunna rapportera fågelobservationer och se klubbens senaste fynd.',
   },
   onboarding: {
     title: 'Välkommen!',
@@ -153,10 +148,11 @@ export const sv = {
     scopeLabel: 'Visning',
     clear: 'Rensa filter',
     clearShort: 'Rensa',
-    // Kort nog att få plats på en halvbred knapp — "Visa 51 träffar" klipptes
-    // tyst till "Visa 51" i knappen medan skärmläsaren läste hela frasen.
-    // Den fullständiga frasen finns kvar som `applyA11y`.
-    apply: (n: number) => `Visa ${n}`,
+    // Hela frasen, inte "Visa 51" — ett verb och ett löst tal säger inte vad de
+    // 51 är. Den klipptes tidigare för att båda knapparna delade bredden lika;
+    // nu tar "Rensa filter" bara sin egen bredd och den här får resten (se
+    // `filter.tsx`), så frasen får plats. `applyA11y` böjer singularen.
+    apply: (n: number) => (n === 1 ? 'Visa 1 träff' : `Visa ${n} träffar`),
     applyA11y: (n: number) => (n === 1 ? 'Visa 1 träff' : `Visa ${n} träffar`),
     emptyTitle: 'Inga obsar matchar filtret.',
     emptyAction: 'Rensa filter',
@@ -285,11 +281,8 @@ export const sv = {
     photoExpand: 'Förstora bilden',
     photoClose: 'Stäng bild',
     locationGpsError: 'Kunde inte hämta din position.',
-    locationBlockedHelp:
-      'Platsdelning är blockerad för den här sidan. Tillåt Plats i webbläsarens sidoinställningar (lås-/AA-ikonen i adressfältet) och ladda om — eller markera fyndplatsen direkt på kartan.',
-    // Native (app) ordalydelse — OS:et frågar inte igen efter ett blockat
-    // medgivande, så vi hänvisar till enhetens inställningar i stället för en
-    // sidomladdning.
+    // OS:et frågar inte igen efter ett blockat medgivande, så vi hänvisar till
+    // enhetens inställningar.
     locationBlockedHelpNative:
       'Platsdelning är avstängd. Slå på den i enhetens inställningar — eller markera fyndplatsen direkt på kartan.',
     commentLabel: 'Kommentar',
@@ -445,71 +438,36 @@ export const sv = {
       working: 'Raderar konto…',
       failed: 'Kunde inte radera kontot. Försök igen.',
     },
-    // "Om appen" — länkar som öppnas i webbläsaren.
+    // "Om appen" — raderna öppnar policy/villkor i systemets webbläsare.
     aboutSection: 'Om appen',
     blockedMembers: 'Dolda medlemmar',
     privacyPolicy: 'Integritetspolicy',
     termsOfService: 'Användarvillkor',
     appVersion: 'Version',
-    installSection: 'Lägg till på hemskärm',
-    installPrompt: 'Öppna appen direkt från hemskärmen.',
-    installButton: 'Lägg till',
-    installIosHint: 'På iPhone: tryck på dela-knappen i Safari och välj "Lägg till på hemskärmen".',
+    // Behörighetsraderna i "Aviseringar och plats" är `SettingsRow`:ar: etiketten
+    // här plus ett statusord ur `status` ovan. Själva hjälptexterna är borta —
+    // de var skrivna för webben ("tillåt i webbläsarens sidoinställningar",
+    // "ladda om sidan"), och i appen skickar raden användaren till enhetens
+    // inställningar via `Linking.openSettings()` i stället för att förklara.
     notifications: {
       title: 'Fågelnotiser',
-      description: 'Få en pushnotis när någon rapporterar ett fynd.',
-      enableButton: 'Aktivera notiser',
-      enabling: 'Aktiverar…',
-      disableButton: 'Stäng av notiser',
-      disabling: 'Stänger av…',
-      enabledLabel: 'Notiser är på',
       enabled: 'Notiser aktiverade.',
       disabled: 'Notiser avstängda.',
-      enableFailed: 'Kunde inte aktivera notiser.',
-      disableFailed: 'Kunde inte stänga av notiser.',
-      unsupported: 'Din webbläsare stöder inte pushnotiser.',
-      denied:
-        'Notiser är blockerade. Tillåt dem i webbläsarens inställningar för den här sidan och försök igen.',
-      iosNeedsPwa:
-        'På iPhone måste du först lägga till mafk på hemskärmen (se ovan) — öppna sedan appen därifrån för att kunna aktivera notiser.',
-      // Native (app) additions (M14) — the OS won't re-prompt after a block, so we
-      // point at the device settings. The web-only keys above stay for parity.
-      blockedLabel: 'Notiser är blockerade',
-      blockedHelpNative:
-        'Notiser är avstängda för appen. Slå på dem i enhetens inställningar och försök igen.',
-      openSettings: 'Öppna inställningar',
     },
     location: {
       title: 'Platsdelning',
-      description: 'Används för att fylla i fyndplatsen automatiskt när du rapporterar.',
-      grantedLabel: 'Platsdelning är tillåten',
-      promptLabel: 'Inte aktiverad än',
-      enableButton: 'Aktivera platsdelning',
-      enabling: 'Aktiverar…',
       enabled: 'Platsdelning aktiverad.',
-      blockedLabel: 'Platsdelning är blockerad',
-      blockedHelp:
-        'Webbläsaren har blockerat platsdelning för den här sidan och appen kan inte fråga igen. Öppna sidans inställningar (lås-/AA-ikonen i adressfältet), tillåt Plats och ladda om sidan.',
-      // Native (app) equivalents — the OS won't re-prompt after a block, so we
-      // point the user at the device settings instead of a page reload.
-      blockedHelpNative:
-        'Platsdelning är avstängd. Slå på den i enhetens inställningar för att fylla i fyndplatsen automatiskt när du rapporterar.',
       openSettings: 'Öppna inställningar',
-      reload: 'Ladda om sidan',
-      unsupported: 'Platsdelning stöds inte i den här webbläsaren.',
     },
   },
-  pwa: {
-    installed: 'mafk är installerad.',
-  },
   errors: {
-    pageNotFound: 'Sidan kunde inte hittas',
-    goHome: 'Tillbaka till start',
     tryAgain: 'Försök igen',
     goBack: 'Gå tillbaka',
     somethingWrong: 'Något gick fel',
-    somethingWrongHelp:
-      'Vi kunde inte visa sidan just nu. Försök igen — funkar det inte, gå tillbaka till start.',
+    // Ingen "sida" och ingen "start" i en app — det här är webbappens 404-text som
+    // följde med. `ErrorBlock` visar den under en rubrik med en "Försök igen"-knapp
+    // bredvid, så texten ska bara säga vad som gäller för just den vyn.
+    somethingWrongHelp: 'Vi kunde inte hämta det här just nu. Försök igen om en stund.',
     // Visas när felet ser ut att bero på nätverket (vanligast vid dålig täckning).
     offline: 'Ingen anslutning',
     offlineHelp:
