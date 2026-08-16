@@ -23,6 +23,7 @@
  * therefore differs per platform rather than being one number.
  */
 import { type SymbolWeight } from 'expo-symbols';
+import { type ReactElement } from 'react';
 import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
@@ -108,6 +109,46 @@ export function HeaderButton({
       )}
     </PressableScale>
   );
+}
+
+/**
+ * Screen options that put a custom action in the native bar WITHOUT iOS 26's
+ * shared "liquid glass" background.
+ *
+ * From iOS 26 UIKit gives every bar button item a glass capsule, and
+ * react-native-screens wraps each custom header view in a `UIBarButtonItem`
+ * whose `hidesSharedBackground` defaults to NO — so the capsule is applied to
+ * anything rendered through `headerLeft`/`headerRight`. For a bare system glyph
+ * that is the correct iOS 26 look: the capsule hugs the glyph and reads as the
+ * button. It is wrong for the actions here, which draw their own shape — the
+ * create action is a filled brand-green disc, so it rendered as a green circle
+ * nested inside a white one, and the fixed {@link ICON_BOX} square forced a
+ * capsule wider than the funnel glyph needed, reading as a stray white ring.
+ *
+ * `unstable_headerLeftItems`/`unstable_headerRightItems` are the only route to
+ * that flag for a custom view; the plain `headerLeft`/`headerRight` path never
+ * passes it. They are iOS-only AND they override their plain counterpart, so
+ * both must be supplied — Android reads the plain one and would otherwise render
+ * an empty bar. `render` is called once per side for each.
+ */
+function headerItems(render: () => ReactElement) {
+  return () => [{ type: 'custom' as const, element: render(), hidesSharedBackground: true }];
+}
+
+/** Left-side header action, opted out of the iOS 26 glass capsule. */
+export function headerLeftAction(render: (() => ReactElement) | undefined) {
+  return {
+    headerLeft: render,
+    unstable_headerLeftItems: render ? headerItems(render) : undefined,
+  };
+}
+
+/** Right-side header action, opted out of the iOS 26 glass capsule. */
+export function headerRightAction(render: (() => ReactElement) | undefined) {
+  return {
+    headerRight: render,
+    unstable_headerRightItems: render ? headerItems(render) : undefined,
+  };
 }
 
 const styles = StyleSheet.create({

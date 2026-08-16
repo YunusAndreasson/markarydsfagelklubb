@@ -5,6 +5,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { headerRightAction } from '@/components/header-button';
 import { ALERT, BLOCKED, TRAY } from '@/components/icon';
 import { ListItemEntrance } from '@/components/list-item-entrance';
 import { ObservationCard } from '@/components/observation-card';
@@ -140,16 +141,18 @@ export default function MemberScreen() {
           title: q.data?.profile?.displayName ?? sv.member.title,
           // Report/block another member (Apple 1.2). Stay on the screen after a
           // block so the blocked state + undo render in place.
-          headerRight: isMe
-            ? undefined
-            : () => (
-                <ReportBlockButton
-                  userId={userId}
-                  displayName={profile?.displayName ?? null}
-                  reportRef={sv.moderation.reportMemberRef(name)}
-                  onBlocked={() => {}}
-                />
-              ),
+          ...headerRightAction(
+            isMe
+              ? undefined
+              : () => (
+                  <ReportBlockButton
+                    userId={userId}
+                    displayName={profile?.displayName ?? null}
+                    reportRef={sv.moderation.reportMemberRef(name)}
+                    onBlocked={() => {}}
+                  />
+                ),
+          ),
         }}
       />
       <Screen inset="sub" bottomInset refresh={q.refetch}>

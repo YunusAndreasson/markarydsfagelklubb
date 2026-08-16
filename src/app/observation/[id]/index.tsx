@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Badge } from '@/components/badge';
-import { HeaderButton } from '@/components/header-button';
+import { HeaderButton, headerRightAction } from '@/components/header-button';
 import { ALERT, CHEVRON, CLOCK, Icon, LOCATION } from '@/components/icon';
 import { ObservationMap } from '@/components/observation-map';
 import { PhotoView } from '@/components/photo-view';
@@ -188,7 +188,7 @@ export default function ObservationDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerRight }} />
+      <Stack.Screen options={headerRightAction(headerRight)} />
       {/* Pull-to-refresh here too: the feed and member lists both have it, and a
           detail you can't refresh reads as broken next to them. NOT added to the
           formSheet routes — a pull there fights the sheet's drag-to-dismiss. */}

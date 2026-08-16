@@ -5,6 +5,7 @@ import { Linking, StyleSheet } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { SIGN_OUT, TRASH, type IconName } from '@/components/icon';
+import { headerRightAction } from '@/components/header-button';
 import { ImageUpload, type ImageUploadHandle } from '@/components/image-upload';
 import { LocationPermissionSection } from '@/components/location-permission-section';
 import { NotificationPermissionSection } from '@/components/notification-permission-section';
@@ -205,7 +206,10 @@ export default function ProfileScreen() {
     <Screen keyboardAware keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Stack.Screen
         options={{
-          headerRight: () => (
+          // The avatar is its own circular graphic, so iOS 26's glass capsule
+          // would ring it with a second circle — same reason as the feed's
+          // actions. See `headerRightAction`.
+          ...headerRightAction(() => (
             <PressableScale
               variant="icon"
               onPress={() => uploadRef.current?.open()}
@@ -214,7 +218,7 @@ export default function ProfileScreen() {
             >
               <Avatar name={name || saved.displayName} uri={profile?.avatarUrl ?? null} size="md" />
             </PressableScale>
-          ),
+          )),
         }}
       />
 

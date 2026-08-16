@@ -3,7 +3,7 @@ import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ScrollView } from 'react-native';
 
-import { HeaderButton } from '@/components/header-button';
+import { HeaderButton, headerLeftAction, headerRightAction } from '@/components/header-button';
 import { HeaderDismissButton } from '@/components/header-dismiss-button';
 import { Screen } from '@/components/screen';
 import {
@@ -105,14 +105,16 @@ export default function NewObservationScreen() {
           // Compose-modal chrome: dismiss (text "Avbryt" on iOS, ✕ on Android)
           // cancels, Larma submits (via the form's imperative handle). Both live
           // in the native bar, not the body.
-          headerLeft: () => <HeaderDismissButton onPress={dismiss} disabled={busy} />,
-          headerRight: () => (
+          // Opted out of iOS 26's glass capsule, like every other header action
+          // in the app — see `headerLeftAction`.
+          ...headerLeftAction(() => <HeaderDismissButton onPress={dismiss} disabled={busy} />),
+          ...headerRightAction(() => (
             <HeaderButton
               title={sv.observation.submitNew}
               onPress={() => formRef.current?.submit()}
               loading={createMutation.isPending}
             />
-          ),
+          )),
         }}
       />
       <Screen ref={scrollRef} bottomInset keyboardAware keyboardShouldPersistTaps="handled">

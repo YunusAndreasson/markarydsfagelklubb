@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { FilterChip } from '@/components/filter-chip';
-import { HeaderButton } from '@/components/header-button';
+import { HeaderButton, headerLeftAction, headerRightAction } from '@/components/header-button';
 import { FILTER, FILTER_ACTIVE, PLUS, TRAY } from '@/components/icon';
 import { ListItemEntrance } from '@/components/list-item-entrance';
 import { ObservationCard } from '@/components/observation-card';
@@ -168,7 +168,7 @@ export default function FeedScreen() {
           // funnel OUTLINE — not the inverted/filled treatment the "+" gets; it
           // fills (still green) once any filter is on, and the active chips row
           // below carries the specifics, so the "(n)" count drops from the bar.
-          headerLeft:
+          ...headerLeftAction(
             total > 0
               ? () => (
                   <HeaderButton
@@ -179,6 +179,7 @@ export default function FeedScreen() {
                   />
                 )
               : undefined,
+          ),
           // "Larma" — the primary create action, always available (even on an
           // empty feed). A SOLID brand-green disc with a filling white "+" (a mini-
           // FAB) so it reads loudest — composed rather than `plus.circle.fill`,
@@ -186,7 +187,7 @@ export default function FeedScreen() {
           // modal (root `new` route). Shares `HeaderButton` with the filter on the
           // left so both sides of the bar are the same 32² box; see that file on
           // why the glyph is oversized relative to the box on iOS.
-          headerRight: () => (
+          ...headerRightAction(() => (
             <HeaderButton
               icon={PLUS}
               iconWeight="heavy"
@@ -198,7 +199,7 @@ export default function FeedScreen() {
               title={sv.observation.submitNew}
               onPress={() => router.navigate('/new')}
             />
-          ),
+          )),
         }}
       />
       <Screen refresh={feed.refetch}>

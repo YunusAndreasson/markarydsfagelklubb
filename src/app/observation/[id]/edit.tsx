@@ -3,7 +3,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { HeaderButton } from '@/components/header-button';
+import { HeaderButton, headerLeftAction, headerRightAction } from '@/components/header-button';
 import { HeaderDismissButton } from '@/components/header-dismiss-button';
 import { ALERT } from '@/components/icon';
 import {
@@ -211,17 +211,21 @@ export default function ObservationEditScreen() {
           // Block the native swipe-to-dismiss while there are unsaved edits so the
           // guarded Avbryt below is the only way out.
           gestureEnabled,
-          headerLeft: () => <HeaderDismissButton onPress={dismiss} disabled={busy} />,
-          headerRight: canEdit
-            ? () => (
-                <HeaderButton
-                  title={sv.observation.submitEdit}
-                  onPress={() => formRef.current?.submit()}
-                  loading={updateMutation.isPending}
-                  disabled={deleteMutation.isPending}
-                />
-              )
-            : undefined,
+          // Opted out of iOS 26's glass capsule, like every other header action
+          // in the app — see `headerLeftAction`.
+          ...headerLeftAction(() => <HeaderDismissButton onPress={dismiss} disabled={busy} />),
+          ...headerRightAction(
+            canEdit
+              ? () => (
+                  <HeaderButton
+                    title={sv.observation.submitEdit}
+                    onPress={() => formRef.current?.submit()}
+                    loading={updateMutation.isPending}
+                    disabled={deleteMutation.isPending}
+                  />
+                )
+              : undefined,
+          ),
         }}
       />
       <Screen ref={scrollRef} inset="sub" bottomInset keyboardAware keyboardShouldPersistTaps="handled">
