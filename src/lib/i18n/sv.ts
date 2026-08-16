@@ -345,6 +345,7 @@ export const sv = {
       sträckande: 'Sträckande',
       drogIväg: 'Drog iväg/ej kvar',
       svårsedd: 'Svårsedd',
+      korrigering: 'Korrigering',
       // Äldre nycklar — visas inte i pickern men renderas på gamla observationer
       spelande: 'Spel/sång',
     } as const,
@@ -411,7 +412,11 @@ export const sv = {
     namePlaceholder: 'Ditt namn',
     phoneLabel: 'Telefonnummer',
     phoneOptional: 'Valfritt',
-    phonePlaceholder: '070-123 45 67',
+    // INTE ett exempelnummer. Ett nummerformat som platshållare ("070-123 45 67")
+    // läses som ett redan sparat värde — man ser inte att fältet är tomt, och
+    // numret tillhör dessutom en riktig abonnent. En uppmaning istället, som
+    // `namePlaceholder`. Bär även "(valfritt)" eftersom etiketten saknar markör.
+    phonePlaceholder: 'Ditt mobilnummer (valfritt)',
     phoneHelp: 'Andra medlemmar kan ringa dig direkt från en observation.',
     phoneInvalid: 'Telefonnumret ser inte rätt ut.',
     save: 'Spara',

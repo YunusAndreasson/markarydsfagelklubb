@@ -20,6 +20,7 @@ import { sharedStyles } from '@/constants/shared-styles';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useNearbyLokalName } from '@/hooks/use-nearby-lokal';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { activityLabel, sv } from '@/lib/i18n/sv';
@@ -43,10 +44,14 @@ export default function ObservationDetailScreen() {
   const data = q.data;
   const geoLat = data ? (data.latitude ?? data.locationLatitude) : null;
   const geoLng = data ? (data.longitude ?? data.locationLongitude) : null;
-  const geocoded = useReverseGeocode(
+  // Same precedence as the feed card: named lokal → a lokal within 300 m → street
+  // address → "På karta". The two screens must agree about the same observation.
+  const nearbyLokal = useNearbyLokalName(
     data?.locationName ? null : geoLat,
     data?.locationName ? null : geoLng,
   );
+  const placeName = data?.locationName ?? nearbyLokal;
+  const geocoded = useReverseGeocode(placeName ? null : geoLat, placeName ? null : geoLng);
 
   let body: ReactNode;
   if (q.isLoading) {
@@ -79,7 +84,7 @@ export default function ObservationDetailScreen() {
     const level = rarityFor(obs);
     const activity = obs.activity ? activityLabel(obs.activity) : null;
     const locationLabel =
-      obs.locationName ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
+      placeName ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
     body = (
       <View style={styles.body}>

@@ -43,7 +43,9 @@ import { Curve, Duration } from '@/constants/motion';
 import { sharedStyles } from '@/constants/shared-styles';
 import { elevationStyle, SurfaceRadius, SurfaceStyles } from '@/constants/surface';
 import { Elevation, IconSize, Spacing } from '@/constants/theme';
+import { useImageAspect } from '@/hooks/use-image-aspect';
 import { useMotion } from '@/hooks/use-motion';
+import { useNearbyLokalName } from '@/hooks/use-nearby-lokal';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { activityLabel, sv } from '@/lib/i18n/sv';
@@ -101,15 +103,24 @@ export function ObservationCard({
 
   const level = rarityFor(observation);
 
+  // Photos are stored uncropped, so the slot takes the photo's own shape rather
+  // than forcing every frame into 4:3.
+  const { aspect: aspectRatio, onLoad: onImageLoad } = useImageAspect();
+
   // Location matters — show a real name. Named locations use their name; pin-drop
   // observations (no name, raw coords) are reverse-geocoded to a place name, with
   // "På karta" as the fallback while that resolves or if the geocoder is unavailable.
   const named = observation.locationName;
   const lat = observation.latitude ?? observation.locationLatitude;
   const lng = observation.longitude ?? observation.locationLongitude;
-  const geocoded = useReverseGeocode(named ? null : lat, named ? null : lng);
+  // Before falling back to a street address, try the club's own register: a pin
+  // within 300 m of a lokal is already counted as that lokal by the map, so name
+  // it that here too. Also spares the OS geocoder a call.
+  const nearbyLokal = useNearbyLokalName(named ? null : lat, named ? null : lng);
+  const placeName = named ?? nearbyLokal;
+  const geocoded = useReverseGeocode(placeName ? null : lat, placeName ? null : lng);
   const locationLabel =
-    named ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
+    placeName ?? geocoded ?? (lat != null && lng != null ? sv.feed.locationOnMap : null);
 
   // Count is always present; activity is optional. Join them into one muted,
   // dot-separated meta line instead of pills — plain text shares the same flush-
@@ -204,7 +215,11 @@ export function ObservationCard({
             // changes when the photo is actually replaced (fresh draftId). Big win
             // on bad networks: once seen, a photo loads from disk instantly.
             source={{ uri: observation.imageUrl, cacheKey: observation.imagePath ?? undefined }}
-            style={[styles.image, { backgroundColor: theme.muted }]}
+            // Höjden följer bildens eget format (klampat) i stället för en fast
+            // 4:3-ruta — se `useImageAspect`. `cover` finns kvar för de fall där
+            // klampningen faktiskt beskär (panorama / mycket hög stående).
+            style={[styles.image, { aspectRatio, backgroundColor: theme.muted }]}
+            onLoad={onImageLoad}
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={Duration.quick}
@@ -257,8 +272,9 @@ const styles = StyleSheet.create({
   metaRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3 },
   // Full-bleed photo: no horizontal margin (touches the clipped edges); a gap
-  // above separates it from the text block.
-  image: { width: '100%', aspectRatio: 4 / 3, marginTop: Spacing.three },
+  // above separates it from the text block. `aspectRatio` is applied inline from
+  // `useImageAspect` — the photo keeps the shape it was shot in.
+  image: { width: '100%', marginTop: Spacing.three },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',

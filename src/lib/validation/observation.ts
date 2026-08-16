@@ -21,6 +21,7 @@ export const ACTIVITIES = [
   'sträckande',
   'drogIväg',
   'svårsedd',
+  'korrigering',
 ] as const
 export type Activity = (typeof ACTIVITIES)[number]
 

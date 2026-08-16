@@ -5,12 +5,14 @@
  * sheet with the theme background (no black gap when the sheet expands). Shows the
  * recent-activity line + the durable larm sent from this lokal (newest first).
  */
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
 
+import { CHEVRON, Icon } from '@/components/icon';
 import { LocationActivity } from '@/components/location-activity';
+import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SheetTitle } from '@/components/sheet-title';
@@ -18,13 +20,12 @@ import { Skeleton } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius } from '@/constants/surface';
-import { Spacing } from '@/constants/theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
-import { locationAlertsQueryOptions } from '@/lib/query/alerts';
+import { type Alert, locationAlertsQueryOptions } from '@/lib/query/alerts';
 
 export default function LocationSheet() {
-  const theme = useTheme();
   const { id, name, activityCount } = useLocalSearchParams<{
     id: string;
     name?: string;
@@ -62,18 +63,60 @@ export default function LocationSheet() {
       ) : alerts.length === 0 ? (
         <StateBlock title={sv.locations.larmsEmpty} />
       ) : (
-        alerts.map((a) => (
-          <View key={a.id} style={[styles.row, { borderColor: theme.border }]}>
-            <ThemedText type="smallBold" numberOfLines={1} style={styles.rowName}>
-              {a.speciesName ?? '—'}
-            </ThemedText>
-            <ThemedText type="small" themeColor="mutedForeground">
-              {sv.feed.timeAgo(a.sentAt)}
-            </ThemedText>
-          </View>
-        ))
+        alerts.map((a) => <AlertRow key={a.id} alert={a} />)
       )}
     </Screen>
+  );
+}
+
+/**
+ * One larm in the lokal's list. Opens the observation behind it — the row already
+ * looked like the app's tappable-row idiom (48 dp, bordered, name + time) but was a
+ * plain `View` that did nothing, so the lokal was a dead end.
+ *
+ * A larm whose `observationId` is null stays inert and gets no chevron: those are
+ * backfilled/legacy rows with nothing to open, and a chevron promising a screen
+ * that doesn't exist is the same false affordance in the other direction.
+ *
+ * Pushes without dismissing the sheet on purpose — coming back lands you on the
+ * lokal's list again, ready to open the next larm.
+ */
+function AlertRow({ alert }: { alert: Alert }) {
+  const theme = useTheme();
+  const name = alert.speciesName ?? '—';
+  const when = sv.feed.timeAgo(alert.sentAt);
+
+  const body = (
+    <>
+      <ThemedText type="smallBold" numberOfLines={1} style={styles.rowName}>
+        {name}
+      </ThemedText>
+      <ThemedText type="small" themeColor="mutedForeground">
+        {when}
+      </ThemedText>
+    </>
+  );
+
+  if (!alert.observationId) {
+    return <View style={[styles.row, { borderColor: theme.border }]}>{body}</View>;
+  }
+
+  return (
+    <PressableScale
+      variant="row"
+      onPress={() =>
+        router.push({
+          pathname: '/observation/[id]',
+          params: { id: alert.observationId as string },
+        })
+      }
+      accessibilityRole="button"
+      accessibilityLabel={`${name}, ${when}`}
+      style={[styles.row, { borderColor: theme.border }]}
+    >
+      {body}
+      <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
+    </PressableScale>
   );
 }
 

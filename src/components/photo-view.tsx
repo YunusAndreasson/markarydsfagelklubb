@@ -32,6 +32,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Duration } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
+import { useImageAspect } from '@/hooks/use-image-aspect';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 
@@ -240,6 +241,7 @@ export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
   const zoomRef = useRef<ZoomableImageHandle>(null);
+  const { aspect: aspectRatio, onLoad: onImageLoad } = useImageAspect();
 
   const source = { uri, cacheKey };
 
@@ -261,7 +263,10 @@ export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
       >
         <Image
           source={source}
-          style={[styles.image, { backgroundColor: theme.muted }]}
+          // Samma som i flödeskortet: rutan tar bildens eget format i stället för
+          // en fast 4:3 som mittbeskär allt annat. Se `useImageAspect`.
+          style={[styles.image, { aspectRatio, backgroundColor: theme.muted }]}
+          onLoad={onImageLoad}
           contentFit="cover"
           cachePolicy="memory-disk"
           transition={Duration.quick}
@@ -304,7 +309,8 @@ export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
 
 const styles = StyleSheet.create({
   preview: SurfaceStyles.clippedCard,
-  image: { width: '100%', aspectRatio: 4 / 3 },
+  // `aspectRatio` sätts inline från `useImageAspect`.
+  image: { width: '100%' },
   full: { flex: 1, backgroundColor: BACKDROP },
   close: { right: Spacing.three },
 });

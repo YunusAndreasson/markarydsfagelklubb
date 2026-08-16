@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ACTIVITIES, LEGACY_ACTIVITIES } from '../validation/observation'
 import { activityLabel, sv } from './sv'
 
 describe('activityLabel', () => {
@@ -27,5 +28,17 @@ describe('activityLabel', () => {
       .map((value) => ({ value, label: activityLabel(value) }))
       .sort((a, b) => a.label.localeCompare(b.label, 'sv'))
     expect(sorted.map((o) => o.value)).toHaveLength(3)
+  })
+
+  // The other direction from the regression above: `activityLabel` protects us
+  // from values the build PREDATES, but the picker still does a direct
+  // `sv.observation.activity[value]` lookup over ACTIVITIES (picker/activity.tsx)
+  // and sorts on the result. An enum value shipped without a label would be
+  // `undefined` there and throw on `.localeCompare` in THIS build — so the enum
+  // and the label map have to move together.
+  it('has a Swedish label for every activity the picker can show', () => {
+    const labels: Record<string, string | undefined> = sv.observation.activity
+    const missing = [...ACTIVITIES, ...LEGACY_ACTIVITIES].filter((a) => !labels[a])
+    expect(missing).toEqual([])
   })
 })
