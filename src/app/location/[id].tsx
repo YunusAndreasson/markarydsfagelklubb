@@ -21,6 +21,7 @@ import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
+import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 import { type Alert, locationAlertsQueryOptions } from '@/lib/query/alerts';
@@ -36,6 +37,9 @@ export default function LocationSheet() {
 
   const alertsQuery = useQuery(locationAlertsQueryOptions(locationId));
   const alerts = alertsQuery.data ?? [];
+  // One subscription for the whole sheet rather than one per row — the ages tick
+  // together, and the sheet is often left open while deciding whether to drive out.
+  const now = useNow();
 
   return (
     <Screen contentContainerStyle={styles.content}>
@@ -63,7 +67,7 @@ export default function LocationSheet() {
       ) : alerts.length === 0 ? (
         <StateBlock title={sv.locations.larmsEmpty} />
       ) : (
-        alerts.map((a) => <AlertRow key={a.id} alert={a} />)
+        alerts.map((a) => <AlertRow key={a.id} alert={a} now={now} />)
       )}
     </Screen>
   );
@@ -85,10 +89,15 @@ export default function LocationSheet() {
  * (which it never is here). The sheet goes away and the detail appears in one
  * state change — no dismiss-then-push race. Back then lands on the Lokaler map.
  */
-function AlertRow({ alert }: { alert: Alert }) {
+function AlertRow({ alert, now }: { alert: Alert; now: Date }) {
   const theme = useTheme();
   const name = alert.speciesName ?? '—';
-  const when = sv.feed.timeAgo(alert.sentAt);
+  // When the bird was SEEN, not when the push went out — the same instant the
+  // feed card ages from. The two drifted apart by however long the reporter took
+  // to file, so one Havsörn read "2h sedan" in the feed and "35m sedan" in the
+  // lokal peek, and there was no way to tell which one to trust. `sentAt` is the
+  // fallback only for the handful of legacy rows with no snapshotted `observedAt`.
+  const when = sv.feed.timeAgo(alert.observedAt ?? alert.sentAt, now);
 
   const body = (
     <>

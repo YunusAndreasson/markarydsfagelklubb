@@ -3,7 +3,7 @@
  *
  * Sheet routes set their name via `<Stack.Screen options={{ title }} />`, which
  * renders in the native sheet header — **on iOS only**. Android formSheets have
- * no header at all (see `sheet-search-field.tsx` for the same trap), so on
+ * no header at all (see `search-field.tsx` for the same trap), so on
  * Android that title simply never appears.
  *
  * That is survivable on a picker, where the field you just tapped tells you what

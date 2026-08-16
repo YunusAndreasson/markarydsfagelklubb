@@ -46,6 +46,7 @@ import { Elevation, IconSize, Spacing } from '@/constants/theme';
 import { useImageAspect } from '@/hooks/use-image-aspect';
 import { useMotion } from '@/hooks/use-motion';
 import { useNearbyLokalName } from '@/hooks/use-nearby-lokal';
+import { useNow } from '@/hooks/use-now';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
 import { activityLabel, sv } from '@/lib/i18n/sv';
@@ -98,7 +99,15 @@ export function ObservationCard({
 }: ObservationCardProps) {
   const theme = useTheme();
   const mine = !!currentUserId && observation.userId === currentUserId;
-  const clock = now ?? new Date();
+  // Subscribed, not read at render time. `new Date()` here was only ever right
+  // on the render that happened to compute it, and nothing re-renders a settled
+  // feed — stable query data, Compiler-memoized cards, tabs that stay mounted —
+  // so "X sedan" froze at whatever it said when the card first painted (measured
+  // on device: "46m sedan" on a 71-minute-old fynd). `useNow` ticks every minute
+  // and on every foreground, which is what makes the label true. The `now` prop
+  // still wins, so tests and demos stay deterministic.
+  const tick = useNow();
+  const clock = now ?? tick;
   const veryRecent = clock.getTime() - observation.observedAt.getTime() < VERY_RECENT_MS;
 
   const level = rarityFor(observation);

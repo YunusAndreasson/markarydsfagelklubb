@@ -38,14 +38,25 @@ function toLocation(row: RawLocationRow): Location {
   };
 }
 
-/** All saved locations, ordered by name (`listLocationsFn`). */
+/**
+ * All saved locations, A–Ö.
+ *
+ * Sorted client-side with the Swedish collator, NOT by the database. The shared
+ * Postgres runs `en_US.UTF-8`, which treats å/ä/ö as accented a/a/o and files
+ * them among the A- and O-words — so the register opened with "Åmot" and
+ * "Ängabäck" wedged between Alandsköp and Boalt, while the real end of the
+ * Swedish alphabet sat empty. Every other list in the app already collates with
+ * `localeCompare(…, 'sv')`; this one just never did, so the picker and the
+ * Lokaler map disagreed about the order of the same names.
+ */
 export async function listLocations(): Promise<Location[]> {
   const { data, error } = await supabase
     .from('locations')
-    .select('id,name,description,latitude,longitude')
-    .order('name', { ascending: true });
+    .select('id,name,description,latitude,longitude');
   if (error) throw error;
-  return ((data ?? []) as RawLocationRow[]).map(toLocation);
+  return ((data ?? []) as RawLocationRow[])
+    .map(toLocation)
+    .sort((a, b) => a.name.localeCompare(b.name, 'sv'));
 }
 
 export function locationsQueryOptions() {

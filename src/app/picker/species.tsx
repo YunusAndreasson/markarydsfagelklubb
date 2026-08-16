@@ -18,7 +18,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
 import { SelectRow } from '@/components/select-row';
-import { SheetSearchField } from '@/components/sheet-search-field';
+import { SearchField } from '@/components/search-field';
 import { Skeleton } from '@/components/skeleton';
 import { ErrorBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
@@ -28,6 +28,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 import { usePickerResult } from '@/lib/picker-bridge';
+import { foldSearch } from '@/lib/search';
 import { speciesQueryOptions, type Species } from '@/lib/query/species';
 import { type RarityLevel } from '@/lib/rarity';
 
@@ -63,13 +64,17 @@ export default function SpeciesPickerSheet() {
 
   const deferred = useDeferredValue(query);
   const filtered = useMemo(() => {
-    const q = deferred.trim().toLowerCase();
+    // Folded on both sides, so "havsorn" finds Havsörn. Nearly every Swedish bird
+    // name carries å/ä/ö, all of which are a long-press away on a phone keyboard —
+    // and a plain `includes` failed them silently, emptying the list as if the
+    // club's register simply didn't have the bird.
+    const q = foldSearch(deferred.trim());
     if (!q) return regular;
     return regular.filter(
       (s) =>
-        s.swedishName.toLowerCase().includes(q) ||
-        s.scientificName.toLowerCase().includes(q) ||
-        (s.family?.toLowerCase().includes(q) ?? false),
+        foldSearch(s.swedishName).includes(q) ||
+        foldSearch(s.scientificName).includes(q) ||
+        (s.family != null && foldSearch(s.family).includes(q)),
     );
   }, [regular, deferred]);
 
@@ -163,7 +168,7 @@ export default function SpeciesPickerSheet() {
               {/* Android renders no sheet header, so the native search bar above
                   never appears there and this ~300-row list was scroll-only —
                   even though the filter below was already written. No-op on iOS. */}
-              <SheetSearchField
+              <SearchField
                 value={query}
                 onChangeText={setQuery}
                 placeholder={sv.observation.speciesSearch}

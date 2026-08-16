@@ -70,35 +70,94 @@ export type FilterOptions = {
   locations: LocationOption[]
 }
 
-/**
- * The distinct values actually present in the feed, each with how many
- * observations carry it — so every offered option yields ≥1 result and birders
- * see how common each is. Rarities sort rarest-first (0 → 5, the most notable
- * levels on top); locations by name (sv locale); activities keep their raw value
- * (the sheet sorts them by Swedish label).
- */
-export function deriveFilterOptions(observations: FeedObservation[]): FilterOptions {
-  const rarities = new Map<RarityLevel, RarityOption>()
-  const activities = new Map<Activity, ActivityOption>()
-  const locations = new Map<number, LocationOption>()
-
-  for (const o of observations) {
+/** Rarities present in `list`, rarest-first (0 → 5, the most notable on top). */
+function rarityOptions(list: FeedObservation[]): Map<RarityLevel, RarityOption> {
+  const out = new Map<RarityLevel, RarityOption>()
+  for (const o of list) {
     const level = rarityLevel(o)
-    const r = rarities.get(level)
-    if (r) r.count += 1
-    else rarities.set(level, { level, count: 1 })
+    const hit = out.get(level)
+    if (hit) hit.count += 1
+    else out.set(level, { level, count: 1 })
+  }
+  return out
+}
 
-    if (o.activity != null) {
-      const ac = activities.get(o.activity)
-      if (ac) ac.count += 1
-      else activities.set(o.activity, { value: o.activity, count: 1 })
-    }
+/** Activities present in `list`. Raw values — the sheet sorts by Swedish label. */
+function activityOptions(list: FeedObservation[]): Map<Activity, ActivityOption> {
+  const out = new Map<Activity, ActivityOption>()
+  for (const o of list) {
+    if (o.activity == null) continue
+    const hit = out.get(o.activity)
+    if (hit) hit.count += 1
+    else out.set(o.activity, { value: o.activity, count: 1 })
+  }
+  return out
+}
 
-    if (o.locationId != null) {
-      const loc = locations.get(o.locationId)
-      if (loc) loc.count += 1
-      else locations.set(o.locationId, { id: o.locationId, name: o.locationName ?? '', count: 1 })
-    }
+/** Named lokaler present in `list`. */
+function locationOptions(list: FeedObservation[]): Map<number, LocationOption> {
+  const out = new Map<number, LocationOption>()
+  for (const o of list) {
+    if (o.locationId == null) continue
+    const hit = out.get(o.locationId)
+    if (hit) hit.count += 1
+    else out.set(o.locationId, { id: o.locationId, name: o.locationName ?? '', count: 1 })
+  }
+  return out
+}
+
+/**
+ * The options to offer for each dimension, with the number of observations each
+ * would actually yield.
+ *
+ * These are FACET counts, not raw totals: every dimension is counted against the
+ * filter with its own dimension cleared but the others still applied. That is
+ * what makes the number on a chip a promise — tapping "Födosökande · 4" leaves 4
+ * observations on screen.
+ *
+ * Counting the whole feed instead (what this did before) produced numbers that
+ * were true of the data and false of the button: with rarity 3 selected, the
+ * activity chips still advertised "Födosökande · 27" from the unfiltered set, and
+ * tapping it landed on "Visa 0 träffar" and an empty list. The sheet was
+ * confidently quoting a figure no combination of its own controls could produce.
+ *
+ * A value the filter currently selects is always offered, even at count 0 —
+ * otherwise the chip holding an over-narrow constraint would disappear from the
+ * only screen that can release it, and the 0 is precisely the explanation for
+ * the empty feed behind the sheet.
+ *
+ * Called with no `filter` (the feed screen, which only needs the lokal names) it
+ * behaves exactly as before: plain totals over everything passed in.
+ */
+export function deriveFilterOptions(
+  observations: FeedObservation[],
+  filter: FeedFilter = EMPTY_FILTER,
+  currentUserId?: string | null,
+): FilterOptions {
+  // Scope (`onlyMine`) stays applied throughout — it's the frame the rest of the
+  // sheet is read inside, not one of the facets.
+  const rarities = rarityOptions(
+    applyFeedFilter(observations, { ...filter, rarities: [] }, currentUserId),
+  )
+  const activities = activityOptions(
+    applyFeedFilter(observations, { ...filter, activities: [] }, currentUserId),
+  )
+  const locations = locationOptions(
+    applyFeedFilter(observations, { ...filter, locationIds: [] }, currentUserId),
+  )
+
+  // Keep every selected value reachable. A lokal narrowed out of its own facet
+  // still needs its name, which only the unfiltered feed has.
+  for (const level of filter.rarities) {
+    if (!rarities.has(level)) rarities.set(level, { level, count: 0 })
+  }
+  for (const value of filter.activities) {
+    if (!activities.has(value)) activities.set(value, { value, count: 0 })
+  }
+  for (const id of filter.locationIds) {
+    if (locations.has(id)) continue
+    const name = observations.find((o) => o.locationId === id)?.locationName ?? ''
+    locations.set(id, { id, name, count: 0 })
   }
 
   return {

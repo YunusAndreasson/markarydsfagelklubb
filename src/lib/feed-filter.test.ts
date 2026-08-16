@@ -136,6 +136,79 @@ describe('deriveFilterOptions', () => {
   })
 })
 
+describe('deriveFilterOptions facet counts', () => {
+  // Two rarities × two activities, so constraining one dimension provably moves
+  // the other's counts.
+  const data = [
+    obs({ speciesRarity: 0, activity: 'rastande' }),
+    obs({ speciesRarity: 0, activity: 'födosökande' }),
+    obs({ speciesRarity: 5, activity: 'födosökande' }),
+    obs({ speciesRarity: 5, activity: 'födosökande' }),
+  ]
+
+  it('counts a dimension against the OTHER dimensions constraints', () => {
+    const opts = deriveFilterOptions(data, { ...EMPTY_FILTER, rarities: [0] })
+    // Only the two rarity-0 obs are in scope for the activity facet.
+    expect(opts.activities.find((a) => a.value === 'födosökande')?.count).toBe(1)
+    expect(opts.activities.find((a) => a.value === 'rastande')?.count).toBe(1)
+  })
+
+  it('does not let a dimension constrain its own counts', () => {
+    const opts = deriveFilterOptions(data, { ...EMPTY_FILTER, rarities: [0] })
+    // Rarity 5 is still offered at its full count even though rarity 0 is the
+    // active selection — swapping to it is what the chip promises, and 2 is what
+    // that yields. Were the dimension allowed to constrain itself it would read 0.
+    expect(opts.rarities.find((r) => r.level === 5)?.count).toBe(2)
+    expect(applyFeedFilter(data, { ...EMPTY_FILTER, rarities: [5] })).toHaveLength(2)
+  })
+
+  it("every chip's count is exactly what selecting it yields", () => {
+    const filter = { ...EMPTY_FILTER, rarities: [0] as RarityLevel[] }
+    const opts = deriveFilterOptions(data, filter)
+    for (const a of opts.activities) {
+      const next = applyFeedFilter(data, { ...filter, activities: [a.value] })
+      expect(next).toHaveLength(a.count)
+    }
+  })
+
+  it('keeps a selected value offered at count 0 so it can be released', () => {
+    const opts = deriveFilterOptions(data, {
+      ...EMPTY_FILTER,
+      rarities: [0],
+      activities: ['sträckande'],
+    })
+    const stranded = opts.activities.find((a) => a.value === 'sträckande')
+    expect(stranded).toBeDefined()
+    expect(stranded?.count).toBe(0)
+  })
+
+  it('keeps a selected lokal offered with its name when narrowed out', () => {
+    const withLokal = [
+      obs({ speciesRarity: 0, locationId: 5, locationName: 'Hammarsjön' }),
+      obs({ speciesRarity: 5, locationId: 7, locationName: 'Åmot' }),
+    ]
+    const opts = deriveFilterOptions(withLokal, {
+      ...EMPTY_FILTER,
+      rarities: [0],
+      locationIds: [7],
+    })
+    expect(opts.locations.find((l) => l.id === 7)).toEqual({ id: 7, name: 'Åmot', count: 0 })
+  })
+
+  it('applies scope (onlyMine) to every facet', () => {
+    const mixed = [
+      obs({ userId: 'me', activity: 'rastande' }),
+      obs({ userId: 'other', activity: 'rastande' }),
+    ]
+    const opts = deriveFilterOptions(mixed, { ...EMPTY_FILTER, onlyMine: true }, 'me')
+    expect(opts.activities.find((a) => a.value === 'rastande')?.count).toBe(1)
+  })
+
+  it('is unchanged from plain totals when no filter is passed', () => {
+    expect(deriveFilterOptions(data)).toEqual(deriveFilterOptions(data, EMPTY_FILTER))
+  })
+})
+
 describe('activeFilterCount', () => {
   it('counts each selected value plus onlyMine', () => {
     const f = {

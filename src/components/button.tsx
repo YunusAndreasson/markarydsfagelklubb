@@ -45,6 +45,14 @@ export function Button({
   const theme = useTheme();
   const isDisabled = disabled || loading;
 
+  // `secondary` is FILLED (quiet), not a transparent ghost. Transparent worked
+  // only as long as every secondary button sat on the app background: over the
+  // map, "Använd min position" was a hairline outline and a label floating on
+  // satellite tiles — unreadable, and invisible altogether over pale water. A
+  // real surface carries its own contrast wherever it lands, which is what a
+  // button that can sit on arbitrary content needs. On the app background the
+  // token is a near-invisible step (#F5F5F5 / #232724), so it reads the same as
+  // before everywhere it already worked.
   const background =
     variant === 'primary'
       ? theme.primary
@@ -52,10 +60,12 @@ export function Button({
         ? theme.destructive
         : variant === 'tint'
           ? theme.tint
-          : 'transparent';
+          : theme.secondary;
   const labelColor =
     variant === 'secondary'
-      ? theme.foreground
+      ? // Paired with the `secondary` fill above, so the two move together if the
+        // palette ever changes.
+        theme.secondaryForeground
       : variant === 'tint'
         ? theme.badgeForeground
         : theme.primaryForeground;

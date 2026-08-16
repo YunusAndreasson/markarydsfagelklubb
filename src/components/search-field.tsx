@@ -1,24 +1,27 @@
 /**
- * The in-sheet search input for the picker sheets.
+ * The app's own search input — the Android half of every search in the app.
  *
- * The pickers ask for a NATIVE search bar via `headerSearchBarOptions`, which is
- * the right control on iOS. But a `formSheet` route renders **no header at all
- * on Android** — react-native-screens shows the sheet header on iOS only — so on
- * Android that bar simply never appears. Verified on device: both the ~300-row
- * species picker and the ~60-row lokal picker were scroll-only, with the filter
- * logic already written and nothing to drive it.
+ * Every searchable screen here asks for a NATIVE search bar via
+ * `headerSearchBarOptions`, which is the right control on iOS. On Android it
+ * repeatedly isn't there:
+ *   • a `formSheet` route renders **no header at all** (react-native-screens
+ *     shows the sheet header on iOS only), so the ~300-row species picker and the
+ *     ~60-row lokal picker were scroll-only with the filter logic already written;
+ *   • a `headerTransparent` header — the Lokaler map, which is full-bleed by
+ *     design — gives the bar no surface, so the field was invisible until typed
+ *     text appeared out of nowhere. Nothing on that screen said it was searchable.
  *
- * So this renders the field in the sheet CONTENT on Android and nothing on iOS,
- * where the native bar already owns the job. Callers pair the two:
+ * So this renders a real, visible field on Android and nothing on iOS, where the
+ * native bar already owns the job. Callers pair the two:
  *
  *     <Stack.Screen options={{ headerSearchBarOptions: {...} }} />   // iOS
- *     <SheetSearchField value={q} onChangeText={setQ} ... />         // Android
+ *     <SearchField value={q} onChangeText={setQ} ... />              // Android
  *
- * It rides at the top of the scrolling content rather than pinned above it: a
- * `formSheet`'s content wrapper is laid out with no bottom on iOS, so a column of
- * "pinned field + scroller" collapses the scroller to nothing (see the note in
- * `filter.tsx`). Scrolling with the list is the safe shape, and typing shrinks
- * the list back to where the field is visible anyway.
+ * In a sheet it rides at the top of the scrolling content rather than pinned
+ * above it: a `formSheet`'s content wrapper is laid out with no bottom on iOS, so
+ * a column of "pinned field + scroller" collapses the scroller to nothing (see
+ * the note in `filter.tsx`). Scrolling with the list is the safe shape, and
+ * typing shrinks the list back to where the field is visible anyway.
  */
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 
@@ -30,21 +33,31 @@ import { FontSize, IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 
-export type SheetSearchFieldProps = {
+export type SearchFieldProps = {
   value: string;
   onChangeText: (next: string) => void;
   /** Doubles as the field's accessibility label — the row has no visible label. */
   placeholder: string;
+  /** Raise the field over content it floats above (the map). Sheets omit it. */
+  elevated?: boolean;
 };
 
-export function SheetSearchField({ value, onChangeText, placeholder }: SheetSearchFieldProps) {
+export function SearchField({ value, onChangeText, placeholder, elevated }: SearchFieldProps) {
   const theme = useTheme();
 
-  // iOS gets the real native search bar in the sheet header.
+  // iOS gets the real native search bar in the header.
   if (Platform.OS === 'ios') return null;
 
   return (
-    <View style={[styles.row, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <View
+      style={[
+        styles.row,
+        // Over the map the field needs a shadow to separate from the tiles; in a
+        // sheet it sits on the theme background and a shadow would be noise.
+        elevated && SurfaceStyles.raisedCard,
+        { backgroundColor: theme.card, borderColor: theme.border },
+      ]}
+    >
       <Icon name={SEARCH} size={IconSize.control} color={theme.mutedForeground} />
       <TextInput
         value={value}

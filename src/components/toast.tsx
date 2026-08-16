@@ -13,7 +13,7 @@
  * toast is purely visual.
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -98,6 +98,17 @@ function clearToast(): void {
 /** How long the toast dwells before auto-dismissing. */
 const VISIBLE_MS = 2600;
 
+/**
+ * Nav-bar height, cleared below the safe-area inset so the toast lands UNDER the
+ * header rather than on it. At `insets.top` alone it covered the whole bar —
+ * title, back chevron and the Larm tab's filter/Larma actions — for the 2.6s it
+ * was up: the app appeared to lose its navigation exactly when a user who just
+ * saved something reaches for "back". These are the standard bar heights; the
+ * toast floats, so being a couple of points off a large-title header is
+ * invisible, while being 44pt too high was not.
+ */
+const NAV_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : 56;
+
 export function ToastHost() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -151,7 +162,10 @@ export function ToastHost() {
     toast.tone === 'success' ? CHECK : toast.tone === 'error' ? ALERT : null;
 
   return (
-    <View pointerEvents="box-none" style={[styles.host, { top: insets.top + Spacing.two }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.host, { top: insets.top + NAV_BAR_HEIGHT + Spacing.two }]}
+    >
       <Animated.View style={[styles.wrap, animatedStyle]}>
         <PressableScale
           variant="card"

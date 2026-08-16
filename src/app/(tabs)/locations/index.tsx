@@ -19,14 +19,16 @@ import { FlatList, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { router, Stack, usePathname } from 'expo-router';
 
 import { FloatingIconButton } from '@/components/floating-control';
 import { CHEVRON, FIT, Icon, LOCATION } from '@/components/icon';
 import { ActivityDot } from '@/components/location-activity';
 import { Map, type MapMarker } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
+import { SearchField } from '@/components/search-field';
 import { StateBlock } from '@/components/state-block';
+import { StatusBarBackdrop } from '@/components/status-bar-backdrop';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
@@ -34,6 +36,7 @@ import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
+import { foldSearch } from '@/lib/search';
 import {
   locationActivityQueryOptions,
   locationsQueryOptions,
@@ -43,11 +46,15 @@ import {
 /** A lokal that can be a pin — coordinates are guaranteed non-null. */
 type PinnedLocation = Location & { latitude: number; longitude: number };
 
-// Approx height of the native search bar below the status bar. Since the header is
-// transparent, floating overlays + the results list would otherwise slide under it,
-// so we clear this much below `insets.top`. iOS insets the results list itself via
-// `contentInsetAdjustmentBehavior="automatic"`; Android needs the manual padding.
-const SEARCH_BAR_CLEARANCE = 56;
+/** Height of the app's own search field (`SearchField`, Android). */
+const SEARCH_FIELD_HEIGHT = 48;
+
+// How far below `insets.top` the search control ends. The header is transparent,
+// so floating overlays and the results list would otherwise slide under it. On
+// Android this is the exact geometry of the field below (gap + field + gap); on
+// iOS it approximates the native bar, which insets the results list itself via
+// `contentInsetAdjustmentBehavior="automatic"`.
+const SEARCH_BAR_CLEARANCE = Spacing.two + SEARCH_FIELD_HEIGHT + Spacing.two;
 
 export default function LocationsScreen() {
   const theme = useTheme();
@@ -85,7 +92,8 @@ export default function LocationsScreen() {
   // --- Search -------------------------------------------------------------
   const [query, setQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
-  const q = query.trim().toLowerCase();
+  // Folded, so "angaback" finds Ängabäck — see `lib/search`.
+  const q = foldSearch(query.trim());
   const resultsVisible = showResults && q.length > 0;
 
   // Only the *filter* input is deferred, not `q` itself: the panel's visibility
@@ -99,7 +107,7 @@ export default function LocationsScreen() {
   const results = useMemo(() => {
     if (!deferredQ) return [];
     return withCoords
-      .filter((l) => l.name.toLowerCase().includes(deferredQ))
+      .filter((l) => foldSearch(l.name).includes(deferredQ))
       // Active lokaler first (the ones worth heading to), then A–Ö.
       .sort((a, b) => {
         const aRank = (activity[a.id] ?? 0) > 0 ? 0 : 1;
@@ -186,6 +194,17 @@ export default function LocationsScreen() {
   const showEmpty =
     !locationsQuery.isPending && !locationsQuery.isError && withCoords.length === 0;
 
+  // The lokal peek is a formSheet presented OVER this screen, and it rises from
+  // the bottom — straight over the legend (bottom-left) and "visa alla"
+  // (bottom-right), which sit at `insets.bottom`. Both ended up half-swallowed by
+  // the sheet: a legend sliced through its own text, and a floating button you
+  // could see the top of but not press. They explain the map, and the map is what
+  // the sheet is covering, so the honest move is to take them away while it's up
+  // and give them back on dismiss. `usePathname` is reactive and needs no state —
+  // the peek route is `/location/<id>`.
+  const peekOpen = usePathname().startsWith('/location/');
+  const mapChromeVisible = !resultsVisible && !peekOpen;
+
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen
@@ -209,9 +228,14 @@ export default function LocationsScreen() {
         style={styles.map}
       />
 
+      {/* A themed strip behind the status bar — without it the OS glyphs sat
+          directly on the map tiles at 1.15:1 contrast. See the component. */}
+      <StatusBarBackdrop />
+
       {/* Legend — makes the colour code discoverable (Norman). Hidden until there
-          are pins to explain, and while the search results cover the map. */}
-      {markers.length > 0 && !resultsVisible ? (
+          are pins to explain, and while the results list or the peek sheet covers
+          the map. */}
+      {markers.length > 0 && mapChromeVisible ? (
         <View
           style={[
             styles.legend,
@@ -240,8 +264,9 @@ export default function LocationsScreen() {
       ) : null}
 
       {/* "Visa alla" — reframe every pin after a fly-to zoom (bottom-right, opposite
-          the legend). Needs 2+ pins to fit; hidden while results cover the map. */}
-      {markers.length >= 2 && !resultsVisible ? (
+          the legend). Needs 2+ pins to fit; hidden while the results list or the
+          peek sheet covers the map. */}
+      {markers.length >= 2 && mapChromeVisible ? (
         <FloatingIconButton
           icon={FIT}
           size={IconSize.control}
@@ -276,6 +301,27 @@ export default function LocationsScreen() {
           ]}
         />
       ) : null}
+
+      {/* The Android search field, floating over the map — LAST, so it stays on
+          top of the results list it drives. Android's transparent header renders
+          no visible native search bar (see `SearchField`), which left the map's
+          only control invisible: nothing said this screen was searchable, and
+          typed text appeared from nowhere over the tiles. No-op on iOS, where the
+          native bar in the header is the real control. */}
+      <View
+        style={[styles.searchOverlay, { top: insets.top + Spacing.two }]}
+        pointerEvents="box-none"
+      >
+        <SearchField
+          value={query}
+          onChangeText={(next) => {
+            setQuery(next);
+            setShowResults(true);
+          }}
+          placeholder={sv.locations.searchPlaceholder}
+          elevated
+        />
+      </View>
 
       {/* Error / empty state, floated over the (Markaryd-wide) map. */}
       {!resultsVisible && locationsQuery.isError ? (
@@ -314,6 +360,7 @@ const styles = StyleSheet.create({
   // Separates the two legend pairs so "aktiv" and "tyst" don't read as one run.
   legendGap: { width: Spacing.two },
   fab: { right: Spacing.three },
+  searchOverlay: { position: 'absolute', left: Spacing.three, right: Spacing.three },
   resultsContent: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,
