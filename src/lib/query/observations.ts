@@ -45,12 +45,17 @@ export type FeedObservation = {
   imagePath: string | null;
   imageUrl: string | null;
   observerAvatarUrl: string | null;
+  /** The observer's avatar storage path — the stable image cache key, since the
+   *  signed URL above re-mints its token on every fetch. See `Avatar`. */
+  observerAvatarPath: string | null;
   activity: Activity | null;
 };
 
 export type MemberProfile = {
   displayName: string | null;
   avatarUrl: string | null;
+  /** Stable image cache key for {@link MemberProfile.avatarUrl}. See `Avatar`. */
+  avatarPath: string | null;
   phone: string | null;
 };
 
@@ -143,6 +148,7 @@ async function toFeedObservations(rows: RawObservationRow[]): Promise<FeedObserv
       imagePath: row.image_path,
       imageUrl: row.image_path ? (urls.get(row.image_path) ?? null) : null,
       observerAvatarUrl: profile?.avatar_path ? (urls.get(profile.avatar_path) ?? null) : null,
+      observerAvatarPath: profile?.avatar_path ?? null,
       activity: (row.activity as Activity | null) ?? null,
     };
   });
@@ -204,6 +210,7 @@ export async function fetchMemberFeed(
     profile = {
       displayName: memberRow.display_name,
       avatarUrl,
+      avatarPath: memberRow.avatar_path,
       phone: memberRow.phone,
     };
   }
@@ -229,6 +236,7 @@ export function memberQueryOptions(userId: string) {
         profile: {
           displayName: first.observerDisplayName,
           avatarUrl: first.observerAvatarUrl,
+          avatarPath: first.observerAvatarPath,
           phone: first.observerPhone,
         },
         observations: rows,

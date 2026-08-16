@@ -24,13 +24,14 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SelectRow } from '@/components/select-row';
 import { SearchField } from '@/components/search-field';
-import { Skeleton } from '@/components/skeleton';
+import { SkeletonSelectRow } from '@/components/skeleton';
 import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { sharedStyles } from '@/constants/shared-styles';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useTheme } from '@/hooks/use-theme';
 import { getCurrentPosition } from '@/lib/geo';
 import { hapticSelect } from '@/lib/haptics';
@@ -70,6 +71,8 @@ export default function LocationPickerSheet() {
   const tokenRef = useRef(0);
 
   const locationsQuery = useQuery(locationsQueryOptions());
+  // ~60 lokaler, fetched once per session — a first-open-only placeholder.
+  const showSkeleton = useDelayedFlag(locationsQuery.isPending);
   const locations = useMemo(() => locationsQuery.data ?? [], [locationsQuery.data]);
 
   // The lokal register runs to ~60 names in one alphabetical scroll. Both other
@@ -197,13 +200,13 @@ export default function LocationPickerSheet() {
         <SheetAction icon={MY_LOCATION} label={sv.observation.locationCurrent} onPress={() => openMap(true)} />
         <SheetAction icon={LOCATION} label={sv.observation.locationMapPick} onPress={() => openMap(false)} />
 
-        {locationsQuery.isPending ? (
+        {showSkeleton ? (
           <View style={styles.loadingRows}>
             {[0, 1, 2, 3].map((n) => (
-              <Skeleton key={n} width="70%" height={16} />
+              <SkeletonSelectRow key={n} index={n} />
             ))}
           </View>
-        ) : locationsQuery.isError ? (
+        ) : locationsQuery.isPending ? null : locationsQuery.isError ? (
           /* A failed register fetch used to render NOTHING here — the sheet showed
              the two map actions and then blank space, which is exactly what an
              empty club register looks like. The reporter had no way to tell "we

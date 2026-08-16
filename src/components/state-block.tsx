@@ -96,6 +96,21 @@ export function ErrorBlock({
   );
 }
 
+/**
+ * "You're offline and there's nothing cached for this screen."
+ *
+ * Distinct from {@link ErrorBlock}: nothing failed, so there is no error to
+ * report and no point offering "Försök igen" — `onlineManager` refetches by
+ * itself the moment the connection returns. Muted rather than destructive for the
+ * same reason; being out of coverage is a situation, not a fault. See
+ * `isOfflinePending`, which decides when to show it.
+ */
+export function OfflineBlock() {
+  return (
+    <StateBlock icon={ALERT} title={sv.errors.offline} message={sv.errors.offlineHelp} />
+  );
+}
+
 const styles = StyleSheet.create({
   text: { gap: Spacing.half },
 });

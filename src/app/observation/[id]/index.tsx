@@ -13,13 +13,14 @@ import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, SkeletonLine } from '@/components/skeleton';
 import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { sharedStyles } from '@/constants/shared-styles';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useNearbyLokalName } from '@/hooks/use-nearby-lokal';
 import { useReverseGeocode } from '@/hooks/use-reverse-geocode';
 import { useTheme } from '@/hooks/use-theme';
@@ -53,17 +54,47 @@ export default function ObservationDetailScreen() {
   const placeName = data?.locationName ?? nearbyLokal;
   const geocoded = useReverseGeocode(placeName ? null : geoLat, placeName ? null : geoLng);
 
+  // Cold entry only (deep link, push notification, an observation outside the
+  // feed's 14-day window). `isLoading`, not `isPending`, so a background
+  // revalidation never replaces a painted record with bones.
+  const showSkeleton = useDelayedFlag(q.isLoading);
+
   let body: ReactNode;
-  if (q.isLoading) {
+  if (showSkeleton) {
+    // Traced against the loaded layout below: title + scientific name, the badge
+    // row, then the two icon+text meta lines. No image box — the photo is
+    // optional on an observation, and reserving a 4:3 slot for one that never
+    // arrives collapses the page under the reader.
     body = (
       <View style={styles.body}>
-        <Skeleton width="70%" height={28} />
-        <Skeleton width="40%" height={16} />
-        <Skeleton aspectRatio={4 / 3} radius={SurfaceRadius.md} />
-        <Skeleton width="90%" height={16} />
-        <Skeleton width="55%" height={16} />
+        <View style={styles.titleRow}>
+          <View style={styles.titleText}>
+            <SkeletonLine type="card" width="75%" />
+            <SkeletonLine type="default" width="50%" />
+          </View>
+          <View style={styles.badgeColumn}>
+            <Skeleton width={34} height={34} radius={SurfaceRadius.xs} />
+          </View>
+        </View>
+        <View style={styles.badges}>
+          <Skeleton width={92} height={26} radius={SurfaceRadius.pill} />
+          <Skeleton width={110} height={26} radius={SurfaceRadius.pill} />
+        </View>
+        <View style={styles.metaRow}>
+          <Skeleton width={IconSize.meta} height={IconSize.meta} radius={SurfaceRadius.xs} />
+          <SkeletonLine type="small" width={150} />
+        </View>
+        <View style={styles.metaRow}>
+          <Skeleton width={IconSize.meta} height={IconSize.meta} radius={SurfaceRadius.xs} />
+          <SkeletonLine type="small" width={190} />
+        </View>
       </View>
     );
+  } else if (q.isLoading) {
+    // In flight, but too briefly to justify a placeholder. Arriving from a feed
+    // card this branch is dead anyway — `placeholderData` seeds the row from the
+    // feed cache, so the screen is already populated on its first render.
+    body = null;
   } else if (q.isError) {
     body = <ErrorBlock error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />;
   } else if (!q.data) {
@@ -156,7 +187,12 @@ export default function ObservationDetailScreen() {
           accessibilityLabel={obs.observerDisplayName ?? sv.feed.unknownObserver}
           style={[styles.footer, { borderTopColor: theme.border }]}
         >
-          <Avatar size="sm" name={obs.observerDisplayName} uri={obs.observerAvatarUrl} />
+          <Avatar
+            size="sm"
+            name={obs.observerDisplayName}
+            uri={obs.observerAvatarUrl}
+            cacheKey={obs.observerAvatarPath}
+          />
           <ThemedText type="small" themeColor="mutedForeground" style={sharedStyles.flex} numberOfLines={1}>
             {obs.observerDisplayName ?? sv.feed.unknownObserver}
           </ThemedText>

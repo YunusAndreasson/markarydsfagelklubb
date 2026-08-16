@@ -48,7 +48,13 @@ export function myProfileQueryOptions(userId: string) {
   return queryOptions({ queryKey: queryKeys.profile(userId), queryFn: fetchMyProfile });
 }
 
-export type MemberSummary = { userId: string; displayName: string | null; avatarUrl: string | null };
+export type MemberSummary = {
+  userId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  /** Stable image cache key for the signed `avatarUrl`. See `Avatar`. */
+  avatarPath: string | null;
+};
 
 /**
  * Resolve display names (+ avatars) for a set of user ids — used by the blocked-
@@ -72,6 +78,7 @@ export async function fetchProfilesByIds(userIds: string[]): Promise<MemberSumma
       userId,
       displayName: row?.display_name ?? null,
       avatarUrl: row?.avatar_path ? (avatarUrls.get(row.avatar_path) ?? null) : null,
+      avatarPath: row?.avatar_path ?? null,
     };
   });
 }

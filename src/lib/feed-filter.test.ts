@@ -29,6 +29,7 @@ function obs(partial: Partial<FeedObservation> = {}): FeedObservation {
     imagePath: null,
     imageUrl: null,
     observerAvatarUrl: null,
+    observerAvatarPath: null,
     activity: null,
     ...partial,
   }

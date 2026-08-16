@@ -22,14 +22,14 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExpandBadge, FloatingIconButton } from '@/components/floating-control';
 import { CLOSE, EXPAND } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { Duration } from '@/constants/motion';
+import { Duration, Spring } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useImageAspect } from '@/hooks/use-image-aspect';
@@ -150,9 +150,13 @@ function ZoomableImage({
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
       if (scale.value <= 1) {
-        scale.value = withTiming(1);
-        translateX.value = withTiming(0);
-        translateY.value = withTiming(0);
+        // Springs, not bare `withTiming()` (whose 300ms default sat outside the
+        // app's motion vocabulary entirely): a pinch release is a physical
+        // rubber-band, and a spring also absorbs a second gesture starting
+        // mid-flight instead of restarting a fixed duration.
+        scale.value = withSpring(1, Spring.responsive);
+        translateX.value = withSpring(0, Spring.responsive);
+        translateY.value = withSpring(0, Spring.responsive);
         savedScale.value = 1;
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
@@ -183,9 +187,9 @@ function ZoomableImage({
     .onEnd(() => {
       const zoomingIn = savedScale.value <= 1;
       const next = zoomingIn ? DOUBLE_TAP_SCALE : 1;
-      scale.value = withTiming(next);
-      translateX.value = withTiming(0);
-      translateY.value = withTiming(0);
+      scale.value = withSpring(next, Spring.responsive);
+      translateX.value = withSpring(0, Spring.responsive);
+      translateY.value = withSpring(0, Spring.responsive);
       savedScale.value = next;
       savedTranslateX.value = 0;
       savedTranslateY.value = 0;

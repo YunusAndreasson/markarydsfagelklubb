@@ -16,15 +16,17 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { SheetTitle } from '@/components/sheet-title';
-import { Skeleton } from '@/components/skeleton';
-import { StateBlock } from '@/components/state-block';
+import { SkeletonLine } from '@/components/skeleton';
+import { ErrorBlock, OfflineBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 import { type Alert, locationAlertsQueryOptions } from '@/lib/query/alerts';
+import { isOfflinePending } from '@/lib/query/status';
 
 export default function LocationSheet() {
   const { id, name, activityCount } = useLocalSearchParams<{
@@ -37,6 +39,12 @@ export default function LocationSheet() {
 
   const alertsQuery = useQuery(locationAlertsQueryOptions(locationId));
   const alerts = alertsQuery.data ?? [];
+  // The one detail query with no sibling cache to seed from, so `isPending` is
+  // the honest flag here — but it's warmed by `prefetchOnIntent` at the tap, and
+  // re-opening a lokal hits the 24h cache, so this is usually a first-visit-only
+  // placeholder.
+  const offline = isOfflinePending(alertsQuery);
+  const showSkeleton = useDelayedFlag(alertsQuery.isPending && !offline);
   // One subscription for the whole sheet rather than one per row — the ages tick
   // together, and the sheet is often left open while deciding whether to drive out.
   const now = useNow();
@@ -56,14 +64,28 @@ export default function LocationSheet() {
 
       <SectionHeader title={sv.locations.larmsHeader} />
 
-      {alertsQuery.isPending ? (
+      {offline ? (
+        // Nothing cached and no way to fetch — say so, rather than showing bones
+        // that will never resolve or claiming this lokal has never had a larm.
+        <OfflineBlock />
+      ) : showSkeleton ? (
+        // Row-shaped, not floating bars: same 48dp bordered rows the larm list
+        // renders, so the list lands exactly where its placeholder stood.
         <View style={styles.loading}>
           {[0, 1, 2].map((n) => (
-            <Skeleton key={n} width="80%" height={16} />
+            <AlertRowSkeleton key={n} />
           ))}
         </View>
-      ) : alertsQuery.isError ? (
-        <StateBlock tone="error" title={sv.locations.larmsError} />
+      ) : alertsQuery.isPending ? null : alertsQuery.isError ? (
+        // Was a bare `StateBlock tone="error"`, which is the drift `ErrorBlock`
+        // exists to prevent: it lost the network-aware copy AND the retry, so a
+        // failed larm load was a dead end on the one screen you'd most want to
+        // reload.
+        <ErrorBlock
+          error={alertsQuery.error}
+          onRetry={() => void alertsQuery.refetch()}
+          retrying={alertsQuery.isFetching}
+        />
       ) : alerts.length === 0 ? (
         <StateBlock title={sv.locations.larmsEmpty} />
       ) : (
@@ -89,6 +111,22 @@ export default function LocationSheet() {
  * (which it never is here). The sheet goes away and the detail appears in one
  * state change — no dismiss-then-push race. Back then lands on the Lokaler map.
  */
+/** {@link AlertRow}'s bones — the same bordered 48dp row with the name and the
+ *  time-ago in their real positions. */
+function AlertRowSkeleton() {
+  const theme = useTheme();
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[styles.row, { borderColor: theme.border }]}
+    >
+      <SkeletonLine type="smallBold" width="55%" style={styles.rowName} />
+      <SkeletonLine type="small" width={56} />
+    </View>
+  );
+}
+
 function AlertRow({ alert, now }: { alert: Alert; now: Date }) {
   const theme = useTheme();
   const name = alert.speciesName ?? '—';

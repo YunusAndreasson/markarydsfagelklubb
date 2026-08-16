@@ -123,7 +123,10 @@ export function SettingsRow({
     return (
       <PressableScale
         variant="row"
-        haptic={accessory === 'check' ? 'select' : 'press'}
+        // A check row *chooses* something and earns its tick; every other
+        // pressable settings row just navigates, so it inherits the `row`
+        // variant's silence.
+        haptic={accessory === 'check' ? 'select' : undefined}
         pressedBackgroundColor={theme.backgroundSelected}
         onPress={onPress}
         disabled={disabled}

@@ -19,20 +19,18 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
 import { SelectRow } from '@/components/select-row';
 import { SearchField } from '@/components/search-field';
-import { Skeleton } from '@/components/skeleton';
+import { SkeletonSelectRow } from '@/components/skeleton';
 import { ErrorBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { sharedStyles } from '@/constants/shared-styles';
-import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useTheme } from '@/hooks/use-theme';
 import { sv } from '@/lib/i18n/sv';
 import { usePickerResult } from '@/lib/picker-bridge';
 import { foldSearch } from '@/lib/search';
 import { speciesQueryOptions, type Species } from '@/lib/query/species';
 import { type RarityLevel } from '@/lib/rarity';
-
-const ROW_HEIGHT = 64;
 
 export default function SpeciesPickerSheet() {
   const theme = useTheme();
@@ -47,6 +45,9 @@ export default function SpeciesPickerSheet() {
   );
 
   const speciesQuery = useQuery(speciesQueryOptions());
+  // The register is ~300 rows fetched once and cached for the session, so this
+  // placeholder is a first-open-only affair.
+  const showSkeleton = useDelayedFlag(speciesQuery.isPending);
   const all = useMemo(() => speciesQuery.data ?? [], [speciesQuery.data]);
 
   const unlisted = useMemo(
@@ -113,19 +114,13 @@ export default function SpeciesPickerSheet() {
   }
 
   const loaded = !speciesQuery.isPending && !speciesQuery.isError;
-  const listEmpty = speciesQuery.isPending ? (
+  const listEmpty = showSkeleton ? (
     <View style={styles.loading}>
       {[0, 1, 2, 3, 4, 5].map((n) => (
-        <View key={n} style={styles.skeletonRow}>
-          <Skeleton width={20} height={20} radius={SurfaceRadius.xs} />
-          <View style={styles.skeletonText}>
-            <Skeleton width="55%" height={14} />
-            <Skeleton width="40%" height={12} />
-          </View>
-        </View>
+        <SkeletonSelectRow key={n} index={n} leading="checkbox" secondary size="tall" />
       ))}
     </View>
-  ) : speciesQuery.isError ? (
+  ) : speciesQuery.isPending ? null : speciesQuery.isError ? (
     <ErrorBlock
       error={speciesQuery.error}
       onRetry={() => void speciesQuery.refetch()}
@@ -209,15 +204,5 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.four,
   },
   loading: { paddingTop: Spacing.two },
-  // Mirrors a `SelectRow size="tall"` so the skeleton occupies the same space
-  // the real rows will.
-  skeletonRow: {
-    height: ROW_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-  },
-  skeletonText: { flex: 1, gap: Spacing.half },
   empty: { paddingVertical: Spacing.four, textAlign: 'center' },
 });

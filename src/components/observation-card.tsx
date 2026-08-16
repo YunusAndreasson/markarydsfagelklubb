@@ -251,7 +251,12 @@ export function ObservationCard({
           accessibilityLabel={observation.observerDisplayName ?? sv.feed.unknownObserver}
           style={[styles.footer, { borderTopColor: theme.border }]}
         >
-          <Avatar size="sm" name={observation.observerDisplayName} uri={observation.observerAvatarUrl} />
+          <Avatar
+            size="sm"
+            name={observation.observerDisplayName}
+            uri={observation.observerAvatarUrl}
+            cacheKey={observation.observerAvatarPath}
+          />
           <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1} style={sharedStyles.flex}>
             {observation.observerDisplayName ?? sv.feed.unknownObserver}
           </ThemedText>

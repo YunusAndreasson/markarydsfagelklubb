@@ -383,6 +383,9 @@ export const sv = {
     // Lokaler-skärmen (kart-vy). Grön pin = aktiv (obs senaste 14 dagarna),
     // grå = inga nya. Tryck på en pin → panel med lokalens larm.
     loadError: 'Kunde inte hämta lokaler.',
+    // Visas som en liten pill över kartan medan registret hämtas — kartan är
+    // redan uppe, så en tom karta utan pins såg ut som "här finns inga lokaler".
+    loading: 'Hämtar lokaler…',
     noCoords: 'Inga lokaler med koordinater ännu.',
     // Sök-fältet (native) i kart-headern + "visa alla"-knappen.
     searchPlaceholder: 'Sök lokal',

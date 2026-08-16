@@ -13,7 +13,9 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
+import { Duration } from '@/constants/motion';
 import { FontSize, Spacing } from '@/constants/theme';
+import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 
 export type SettingsFormInputProps = TextInputProps & {
@@ -24,6 +26,9 @@ export type SettingsFormInputProps = TextInputProps & {
 
 export function SettingsFormInput({ ref, label, error, style, ...rest }: SettingsFormInputProps) {
   const theme = useTheme();
+  // Gated like every other inline-error entrance in the app (`picker-field`,
+  // `text-field`) — this one had drifted off both the token and the gate.
+  const { motion } = useMotion();
 
   return (
     <View style={styles.row}>
@@ -43,7 +48,7 @@ export function SettingsFormInput({ ref, label, error, style, ...rest }: Setting
         {...rest}
       />
       {error ? (
-        <Animated.View entering={FadeInDown.duration(160)}>
+        <Animated.View entering={motion(FadeInDown.duration(Duration.quick))}>
           <ThemedText type="small" style={{ color: theme.destructive }}>
             {error}
           </ThemedText>

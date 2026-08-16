@@ -7,6 +7,15 @@
  *
  * Pick by intent, not by raw primitive.
  *
+ * THE RULE ABOVE THE TABLE: a haptic confirms a state change the *system* made —
+ * a value was selected, a switch flipped, a write committed, something failed. It
+ * never confirms a touch the finger already felt. So plain navigation is silent:
+ * tapping a card, a list row, a settings chevron, a header action or a tab plays
+ * nothing, because the screen arriving is the feedback. `PressableScale` encodes
+ * this by variant (only `button` buzzes by default). The one navigation that
+ * keeps a tick is a map pin, which has no press state to watch — there the haptic
+ * is the only signal that the tap landed on a pin rather than on empty map.
+ *
  * PLATFORM SPLIT (this is the modern-SDK part). Each intent maps to the
  * *platform-native* engine, not one API faked across both:
  *
@@ -26,8 +35,9 @@
  *   hapticTick      Continuous-motion ratchet — a gesture    selection           Clock_Tick
  *                   crosses a threshold mid-drag, or
  *                   pull-to-refresh fires.
- *   hapticPress     Default tap confirmation on a button     Impact.Light        Virtual_Key
- *                   or navigation row.
+ *   hapticPress     A control that acts in place — a        Impact.Light        Virtual_Key
+ *                   button, a stepper ±. NOT a tap that
+ *                   merely navigates (see the rule above).
  *   hapticSelect    A value is chosen among discrete         selection           Segment_Tick
  *                   options — radio row, segmented control,
  *                   filter chip, picker row, card reveal.

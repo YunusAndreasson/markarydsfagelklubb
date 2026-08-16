@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CLOSE, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
+import { Spring } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing, SurfaceOverlay } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
@@ -71,7 +72,12 @@ export function PickerSheet({ visible, title, onClose, children }: PickerSheetPr
           accessibilityLabel={sv.common.close}
         />
         <Animated.View
-          entering={motion(FadeInUp.springify().damping(22).mass(0.9).stiffness(220))}
+          entering={motion(
+            FadeInUp.springify()
+              .damping(Spring.snappy.damping)
+              .stiffness(Spring.snappy.stiffness)
+              .mass(Spring.snappy.mass),
+          )}
           style={[
             styles.card,
             {

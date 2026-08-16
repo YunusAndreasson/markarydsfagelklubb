@@ -12,11 +12,12 @@ import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
-import { SkeletonCard } from '@/components/skeleton';
-import { ErrorBlock, StateBlock } from '@/components/state-block';
+import { ObservationCardSkeleton } from '@/components/skeleton';
+import { ErrorBlock, OfflineBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { useBlockedUsers } from '@/lib/blocks';
@@ -31,6 +32,7 @@ import { setFeedFilter, useFeedFilter } from '@/lib/feed-filter-store';
 import { activityLabel, sv } from '@/lib/i18n/sv';
 import { deletableListItemMotion } from '@/lib/motion';
 import { feedQueryOptions } from '@/lib/query/observations';
+import { isOfflinePending } from '@/lib/query/status';
 
 // Larm — the app's landing tab and first data-driven screen: the club's
 // last-14-days observations, grouped by Stockholm calendar day, newest first.
@@ -80,8 +82,19 @@ export default function FeedScreen() {
   const clearFilter = () => setFeedFilter(EMPTY_FILTER);
   const locationName = (id: number) => options.locations.find((l) => l.id === id)?.name;
 
+  // `isLoading`, not `isPending`: a pull-to-refresh or a background revalidation
+  // must never drop a populated feed back to bones. The cache is persisted to
+  // disk, so a warm start skips this entirely.
+  const showFeedSkeleton = useDelayedFlag(feed.isLoading);
+  // Cold start with no signal. Without this the query pauses, `isLoading` reads
+  // false, and the screen lands on "Inga fynd ännu" — telling the club it has
+  // reported nothing when really we just couldn't ask.
+  const offline = isOfflinePending(feed);
+
   let body: ReactNode;
-  if (total > 0) {
+  if (offline && total === 0) {
+    body = <OfflineBlock />;
+  } else if (total > 0) {
     if (filtered.length > 0) {
       // One continuous stagger index across all buckets so the cascade reads as a
       // single column rather than restarting under each header.
@@ -130,14 +143,20 @@ export default function FeedScreen() {
         />
       );
     }
-  } else if (feed.isLoading) {
+  } else if (showFeedSkeleton) {
+    // Card-shaped, not grey slabs: three traced feed cards under a placeholder
+    // day header, so the real list lands on the same rhythm it replaces.
     body = (
       <View style={styles.section}>
         {[0, 1, 2].map((n) => (
-          <SkeletonCard key={n} height={150} />
+          <ObservationCardSkeleton key={n} />
         ))}
       </View>
     );
+  } else if (feed.isLoading) {
+    // Loading, but not long enough to have earned a placeholder yet — hold the
+    // screen still rather than flashing bones for a frame.
+    body = null;
   } else if (feed.isError) {
     body = (
       <ErrorBlock
@@ -193,9 +212,9 @@ export default function FeedScreen() {
               iconWeight="heavy"
               iconColor={theme.badgeForeground}
               disc
-              // A light press confirmation on the app's primary action — "haptics
-              // on meaningful interactions" (opening the composer is exactly that).
-              haptic="press"
+              // Silent, like every other bar action: opening the composer is
+              // navigation, and the haptic belongs on the *submit* at the other
+              // end of the flow (`observation-form` fires `commit`).
               title={sv.observation.submitNew}
               onPress={() => router.navigate('/new')}
             />

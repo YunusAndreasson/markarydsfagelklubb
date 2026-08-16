@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useIsRestoring, useQuery } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import {
   DarkTheme,
@@ -14,10 +14,11 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ErrorBlock } from '@/components/state-block';
+import { ErrorBlock, OfflineBlock } from '@/components/state-block';
 import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
+import { Duration } from '@/constants/motion';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -28,10 +29,22 @@ import { sv } from '@/lib/i18n/sv';
 import { configureNotificationHandler } from '@/lib/notifications';
 import { persister, PERSIST_BUSTER, PERSIST_MAX_AGE, queryClient } from '@/lib/query-client';
 import { myProfileQueryOptions } from '@/lib/query/profile';
+import { isOfflinePending } from '@/lib/query/status';
 
-// Hold the splash until auth + profile resolve, so a warm start with a persisted
-// session goes straight to the app (or onboarding) instead of flashing sign-in.
+// Hold the splash until auth + profile + the on-disk query cache resolve, so a
+// warm start goes straight to a *populated* app (or onboarding) rather than
+// flashing sign-in, or landing on a skeleton feed that pops full a moment later.
+//
+// What the splash waits for is deliberately all-local — the session from secure
+// storage, the SQLite-backed query cache, the profile (from that cache on a warm
+// start). It never waits on a network round-trip: on a cold install the feed
+// genuinely has to be fetched, and holding a launch screen on someone's signal is
+// how an app comes to feel broken. That case is what the skeletons are for.
 void SplashScreen.preventAutoHideAsync();
+// Cross-fade the splash into the app instead of cutting. `setOptions` is the
+// SDK 52+ runtime API — the static config in `app.json` covers the image and
+// background only.
+SplashScreen.setOptions({ duration: Duration.standard, fade: true });
 
 // Show club alerts as a banner even when the app is foregrounded (set once,
 // before React mounts).
@@ -93,8 +106,20 @@ function ThemedNavigation() {
   // only a thrown error means we genuinely couldn't resolve it.
   const userId = session?.user.id ?? '';
   const profileQuery = useQuery({ ...myProfileQueryOptions(userId), enabled: !!session });
-  const profileSettled = !session || profileQuery.isSuccess || profileQuery.isError;
-  const ready = initialized && profileSettled;
+  // Offline with nothing cached, the profile query PAUSES rather than failing —
+  // so it is never success and never error, and the gate below would have held
+  // the splash up forever on a signed-in cold start with no signal. Count that
+  // as settled and answer it with a real screen instead.
+  const profileOffline = !!session && isOfflinePending(profileQuery);
+  const profileSettled =
+    !session || profileQuery.isSuccess || profileQuery.isError || profileOffline;
+  // The persisted cache is read off SQLite asynchronously, and every query is
+  // held (`fetchStatus: 'idle'`) until it lands. Waiting for it here means the
+  // first screen is painted from disk — a warm start shows the real feed rather
+  // than skeletons that fill in a beat later. Signed out this is the only thing
+  // the gate has to wait for at all.
+  const restoring = useIsRestoring();
+  const ready = initialized && profileSettled && !restoring;
   const hasProfile = !!profileQuery.data;
 
   // Keep this device's push token registered + route notification taps (M14).
@@ -117,6 +142,17 @@ function ThemedNavigation() {
     return (
       <ThemedView style={styles.errorScreen}>
         <ActivityIndicator color={theme.primary} />
+      </ThemedView>
+    );
+  }
+
+  // Signed in, no connection, nothing cached. `hasProfile` is unknowable here, so
+  // routing on it would send an established member into onboarding — say what's
+  // actually wrong and let `onlineManager` resume the query when signal returns.
+  if (profileOffline) {
+    return (
+      <ThemedView style={styles.errorScreen}>
+        <OfflineBlock />
       </ThemedView>
     );
   }

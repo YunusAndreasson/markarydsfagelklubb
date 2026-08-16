@@ -12,13 +12,14 @@ import { ObservationCard } from '@/components/observation-card';
 import { ReportBlockButton } from '@/components/report-block-button';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
-import { Skeleton, SkeletonCard } from '@/components/skeleton';
+import { ObservationCardSkeleton, Skeleton, SkeletonLine } from '@/components/skeleton';
 import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { showToast } from '@/components/toast';
 import { sharedStyles } from '@/constants/shared-styles';
 import { AvatarSize } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useMotion } from '@/hooks/use-motion';
 import { unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { hapticSuccess } from '@/lib/haptics';
@@ -40,6 +41,8 @@ export default function MemberScreen() {
   const { motion } = useMotion();
   const q = useQuery(memberQueryOptions(userId));
   const blocked = useBlockedUsers();
+  // Cold entry only: from a feed card the placeholder data has already painted.
+  const showSkeleton = useDelayedFlag(q.isLoading);
 
   const profile = q.data?.profile ?? null;
   const observations = q.data?.observations ?? [];
@@ -64,7 +67,7 @@ export default function MemberScreen() {
         action={{ label: sv.blockedMembers.unblock, onPress: handleUnblock }}
       />
     );
-  } else if (q.isLoading) {
+  } else if (showSkeleton) {
     // Mirrors the loaded layout exactly. It used to place a wide bar beside the
     // avatar where a name would go — but the name is the nav title here, never
     // content, so that bar resolved into empty space on every load: the skeleton
@@ -74,12 +77,16 @@ export default function MemberScreen() {
         <View style={styles.headerRow}>
           <Skeleton width={AvatarSize.lg} height={AvatarSize.lg} radius={AvatarSize.lg / 2} />
         </View>
-        <Skeleton width="35%" height={16} />
+        <SkeletonLine type="small" width="35%" />
         {[0, 1].map((n) => (
-          <SkeletonCard key={n} height={150} />
+          <ObservationCardSkeleton key={n} />
         ))}
       </View>
     );
+  } else if (q.isLoading) {
+    // Too brief to place bones. Arriving from a feed card this never runs at all
+    // — `memberQueryOptions` seeds itself from the feed cache.
+    body = null;
   } else if (q.isError) {
     body = <ErrorBlock error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />;
   } else if (!profile) {
@@ -98,7 +105,7 @@ export default function MemberScreen() {
     body = (
       <View style={styles.body}>
         <View style={styles.headerRow}>
-          <Avatar size="lg" name={name} uri={profile.avatarUrl} />
+          <Avatar size="lg" name={name} uri={profile.avatarUrl} cacheKey={profile.avatarPath} />
           {/* The member's name is the native header title (set below, edenmind
               parity) — don't repeat it as a content heading. */}
           <View style={sharedStyles.flex} />

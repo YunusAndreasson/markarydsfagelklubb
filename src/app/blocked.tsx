@@ -1,22 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { TRAY } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SettingsGroup } from '@/components/settings/settings-group';
-import { Skeleton } from '@/components/skeleton';
+import { SkeletonSelectRow } from '@/components/skeleton';
 import { StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
-import { AvatarSize } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { unblockUser, useBlockedUsers } from '@/lib/blocks';
 import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
-import { fetchProfilesByIds } from '@/lib/query/profile';
+import { fetchProfilesByIds, type MemberSummary } from '@/lib/query/profile';
 
 // Blockerade medlemmar — manage (and undo) the local block list. The only place a
 // block can be lifted, since blocked members are hidden everywhere else. The
@@ -31,6 +31,7 @@ export default function BlockedMembersScreen() {
     queryFn: () => fetchProfilesByIds(ids),
     enabled: ids.length > 0,
   });
+  const showSkeleton = useDelayedFlag(q.isPending);
 
   function onUnblock(userId: string) {
     unblockUser(userId);
@@ -47,25 +48,26 @@ export default function BlockedMembersScreen() {
   }
 
   // While profiles resolve, hold the rows as skeletons instead of flashing
-  // "Okänd observatör" placeholders that pop to real names.
+  // "Okänd observatör" placeholders that pop to real names — but only once the
+  // fetch has run long enough to be worth admitting to (`useDelayedFlag`).
   if (q.isPending) {
     return (
       <Screen inset="sub" bottomInset>
-        <SettingsGroup footer={sv.blockedMembers.help}>
-          {ids.map((userId) => (
-            <View key={userId} style={styles.row}>
-              <Skeleton width={AvatarSize.sm} height={AvatarSize.sm} radius={AvatarSize.sm / 2} />
-              <Skeleton width="45%" height={16} />
-            </View>
-          ))}
-        </SettingsGroup>
+        {showSkeleton ? (
+          <SettingsGroup footer={sv.blockedMembers.help}>
+            {ids.map((userId, i) => (
+              <SkeletonSelectRow key={userId} index={i} leading="avatar" />
+            ))}
+          </SettingsGroup>
+        ) : null}
       </Screen>
     );
   }
 
   // On a failed profile fetch the rows fall back to id-only entries — unblocking
   // must stay possible even when names can't load.
-  const members = q.data ?? ids.map((userId) => ({ userId, displayName: null, avatarUrl: null }));
+  const members: MemberSummary[] =
+    q.data ?? ids.map((userId) => ({ userId, displayName: null, avatarUrl: null, avatarPath: null }));
 
   return (
     <Screen inset="sub" bottomInset>
@@ -81,7 +83,7 @@ export default function BlockedMembersScreen() {
               accessibilityLabel={`${sv.blockedMembers.unblock} ${name}`}
               style={styles.row}
             >
-              <Avatar size="sm" name={name} uri={m.avatarUrl} />
+              <Avatar size="sm" name={name} uri={m.avatarUrl} cacheKey={m.avatarPath} />
               <ThemedText type="default" numberOfLines={1} style={styles.name}>
                 {name}
               </ThemedText>

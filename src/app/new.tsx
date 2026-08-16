@@ -171,6 +171,7 @@ function buildOptimisticRow(value: ObservationFormValue, userId: string): FeedOb
     imagePath: value.imagePath,
     imageUrl: null,
     observerAvatarUrl: me?.avatarUrl ?? null,
+    observerAvatarPath: me?.avatarPath ?? null,
     activity: value.activity,
   };
 }

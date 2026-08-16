@@ -21,9 +21,20 @@ export type AvatarProps = {
   size?: keyof typeof AvatarSize;
   /** Signed avatar URL. When set, the photo replaces the initial glyph. */
   uri?: string | null;
+  /**
+   * The avatar's stable storage path, used as the cache key.
+   *
+   * Supabase signs storage URLs with a token that is re-minted on every fetch, so
+   * the `uri` above is a *different string* after each refetch and every cold
+   * start — and `expo-image` keys its cache on the URL. Without this, a
+   * `memory-disk` cache never once hits for an avatar: every feed refresh
+   * re-downloads the same faces. `ObservationCard` already keys its photo this
+   * way; avatars are the higher-volume case, one per card.
+   */
+  cacheKey?: string | null;
 };
 
-export function Avatar({ name, size = 'md', uri }: AvatarProps) {
+export function Avatar({ name, size = 'md', uri, cacheKey }: AvatarProps) {
   const theme = useTheme();
   const diameter = AvatarSize[size];
   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
@@ -33,7 +44,7 @@ export function Avatar({ name, size = 'md', uri }: AvatarProps) {
     return (
       <Image
         accessibilityLabel={name ?? undefined}
-        source={{ uri }}
+        source={{ uri, cacheKey: cacheKey ?? undefined }}
         style={{
           width: diameter,
           height: diameter,
@@ -42,6 +53,9 @@ export function Avatar({ name, size = 'md', uri }: AvatarProps) {
         }}
         contentFit="cover"
         cachePolicy="memory-disk"
+        // Keyed so a recycled row never shows the previous member's face for a
+        // frame before its own resolves.
+        recyclingKey={cacheKey ?? uri}
         transition={Duration.quick}
       />
     );

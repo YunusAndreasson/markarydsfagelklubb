@@ -5,7 +5,6 @@ import { DynamicColorIOS, Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { hapticPress } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 
 // Native bottom tabs: UITabBarController on iOS (Liquid Glass on iOS 26),
@@ -50,14 +49,13 @@ export default function TabsLayout() {
           tintColor: DynamicColorIOS({ light: Colors.light.tint, dark: Colors.dark.tint }),
         };
 
-  // Material's bottom navigation fires a ripple but no haptic by default; iOS's
-  // UITabBar already plays its own subtle tick, so gate to Android to avoid a
-  // double-tap feel.
-  const screenListeners =
-    Platform.OS === 'android' ? { tabPress: () => hapticPress() } : undefined;
-
+  // No haptic on tab press. Neither UITabBar nor Material's bottom navigation
+  // ticks — Material answers a tab press with its ripple, and switching tab is
+  // navigation, which the finger already felt. An Android-only buzz here made
+  // tab switching the loudest movement in the app. See the haptic policy in
+  // `PressableScale`.
   return (
-    <NativeTabs {...barProps} screenListeners={screenListeners}>
+    <NativeTabs {...barProps}>
       <Trigger name="(home)">
         <Trigger.Label>{sv.bottomNav.feed}</Trigger.Label>
         {/* "Larm" = the club's alerts stream (the feed). A megaphone reads as

@@ -28,20 +28,24 @@ import { ActivityDot } from '@/components/location-activity';
 import { Map, type MapMarker } from '@/components/map';
 import { PressableScale } from '@/components/pressable-scale';
 import { SearchField } from '@/components/search-field';
-import { StateBlock } from '@/components/state-block';
+import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticSelect } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { foldSearch } from '@/lib/search';
+import { locationAlertsQueryOptions } from '@/lib/query/alerts';
 import {
   locationActivityQueryOptions,
   locationsQueryOptions,
   type Location,
 } from '@/lib/query/locations';
+import { prefetchOnIntent } from '@/lib/query/prefetch';
+import { isOfflinePending } from '@/lib/query/status';
 
 /** A lokal that can be a pin — coordinates are guaranteed non-null. */
 type PinnedLocation = Location & { latitude: number; longitude: number };
@@ -139,7 +143,10 @@ export default function LocationsScreen() {
   }
 
   function openLokal(loc: PinnedLocation) {
-    hapticSelect();
+    // The peek's larm list is the one detail query with no cache to seed from, so
+    // start it here rather than letting it begin when the route mounts — that buys
+    // it the navigation commit plus the sheet's presentation animation.
+    prefetchOnIntent(locationAlertsQueryOptions(loc.id));
     // Present the lokal's larm peek as a native sheet (see the root layout's
     // `location/[id]` formSheet). Name + activity count ride along as params so it
     // paints instantly.
@@ -151,7 +158,13 @@ export default function LocationsScreen() {
 
   function handleMarkerPress(id: MapMarker['id']) {
     const loc = withCoords.find((l) => l.id === id);
-    if (loc) openLokal(loc);
+    if (!loc) return;
+    // The one navigation that keeps its tick: a map pin has no press state to
+    // watch, so the haptic is the only confirmation that the tap landed on a pin
+    // and not on empty map. The search row below navigates the ordinary way and
+    // stays silent.
+    hapticSelect();
+    openLokal(loc);
   }
 
   function openFromSearch(loc: PinnedLocation) {
@@ -170,8 +183,9 @@ export default function LocationsScreen() {
     return (
       <PressableScale
         variant="row"
-        haptic={false}
         onPress={() => openFromSearch(item)}
+        // Fetch on intent: the larm query starts while the finger is still down.
+        onPressIn={() => prefetchOnIntent(locationAlertsQueryOptions(item.id))}
         accessibilityRole="button"
         accessibilityLabel={item.name}
         pressedBackgroundColor={theme.backgroundSelected}
@@ -193,6 +207,11 @@ export default function LocationsScreen() {
 
   const showEmpty =
     !locationsQuery.isPending && !locationsQuery.isError && withCoords.length === 0;
+  const locationsOffline = isOfflinePending(locationsQuery);
+  // Offline says its piece immediately (nothing is coming); an ordinary fetch
+  // gets the usual grace period before the app admits to loading.
+  const delayedLoading = useDelayedFlag(locationsQuery.isPending && !locationsOffline);
+  const showLoadingPill = locationsOffline || delayedLoading;
 
   // The lokal peek is a formSheet presented OVER this screen, and it rises from
   // the bottom — straight over the legend (bottom-left) and "visa alla"
@@ -341,13 +360,37 @@ export default function LocationsScreen() {
         />
       </View>
 
-      {/* Error / empty state, floated over the (Markaryd-wide) map. */}
-      {!resultsVisible && locationsQuery.isError ? (
+      {/* Loading / error / empty state, floated over the (Markaryd-wide) map. */}
+      {!resultsVisible && showLoadingPill ? (
+        // Deliberately a quiet pill, not a skeleton: the map IS the content and
+        // it is already drawn, so the only thing missing is the pins. A pinless
+        // Markaryd otherwise reads as "this kommun has no lokaler", which is the
+        // same false-empty the feed had.
+        <View
+          style={[styles.overlay, { top: insets.top + SEARCH_BAR_CLEARANCE }]}
+          pointerEvents="none"
+        >
+          <ThemedView
+            style={[styles.loadingPill, { backgroundColor: theme.card, borderColor: theme.border }]}
+          >
+            <ThemedText type="small" themeColor="mutedForeground">
+              {locationsOffline ? sv.errors.offline : sv.locations.loading}
+            </ThemedText>
+          </ThemedView>
+        </View>
+      ) : !resultsVisible && locationsQuery.isError ? (
         <View
           style={[styles.overlay, { top: insets.top + SEARCH_BAR_CLEARANCE }]}
           pointerEvents="box-none"
         >
-          <StateBlock tone="error" title={sv.locations.loadError} />
+          {/* Was a bare `StateBlock tone="error"` with no way out — same drift as
+              the lokal peek. `ErrorBlock` brings the network-aware copy and a
+              retry. */}
+          <ErrorBlock
+            error={locationsQuery.error}
+            onRetry={() => void locationsQuery.refetch()}
+            retrying={locationsQuery.isFetching}
+          />
         </View>
       ) : !resultsVisible && showEmpty ? (
         <View
@@ -395,5 +438,12 @@ const styles = StyleSheet.create({
   },
   resultText: { flex: 1, gap: Spacing.half },
   resultsEmpty: { paddingVertical: Spacing.four, alignItems: 'center' },
+  loadingPill: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: SurfaceRadius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   overlay: { position: 'absolute', left: Spacing.three, right: Spacing.three },
 });

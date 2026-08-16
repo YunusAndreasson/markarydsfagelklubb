@@ -216,7 +216,12 @@ export default function ProfileScreen() {
               accessibilityRole="button"
               accessibilityLabel={sv.profile.avatarLabel}
             >
-              <Avatar name={name || saved.displayName} uri={profile?.avatarUrl ?? null} size="md" />
+              <Avatar
+                name={name || saved.displayName}
+                uri={profile?.avatarUrl ?? null}
+                cacheKey={profile?.avatarPath}
+                size="md"
+              />
             </PressableScale>
           )),
         }}
