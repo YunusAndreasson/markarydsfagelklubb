@@ -7,7 +7,7 @@
  * expectation every other app sets; Norman — the corner badge is the *signifier*
  * that the tap exists.
  *
- * Inline the image is cropped (`cover`) to a tidy 4:3 card; fullscreen it's shown
+ * Inline the image keeps its measured, clamped aspect; fullscreen it's shown
  * whole (`contain`) so nothing important is clipped, and pinch/double-tap zooms
  * further in — the same vocabulary as Photos/Instagram. Cache is keyed by the
  * stable storage path, not the rotating signed URL (see `observation-card.tsx`).
@@ -265,7 +265,7 @@ export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
   const zoomRef = useRef<ZoomableImageHandle>(null);
-  const { aspect: aspectRatio, onLoad: onImageLoad } = useImageAspect();
+  const { aspect: aspectRatio, ready: imageReady, onLoad: onImageLoad } = useImageAspect(uri, cacheKey);
 
   const source = { uri, cacheKey };
 
@@ -285,16 +285,19 @@ export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
         accessibilityLabel={sv.observation.photoExpand}
         style={[styles.preview, { borderColor: theme.border }]}
       >
-        <Image
-          source={source}
-          // Samma som i flödeskortet: rutan tar bildens eget format i stället för
-          // en fast 4:3 som mittbeskär allt annat. Se `useImageAspect`.
-          style={[styles.image, { aspectRatio, backgroundColor: theme.muted }]}
-          onLoad={onImageLoad}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={ImageFade}
-        />
+        <View style={[styles.image, { aspectRatio, backgroundColor: theme.muted }]}>
+          <Image
+            key={cacheKey ?? uri}
+            source={source}
+            // Samma som i flödeskortet: rutan tar bildens eget format i stället för
+            // en fast 4:3 som mittbeskär allt annat. Se `useImageAspect`.
+            style={[StyleSheet.absoluteFill, { opacity: imageReady ? 1 : 0 }]}
+            onLoad={onImageLoad}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={ImageFade}
+          />
+        </View>
         <ExpandBadge icon={EXPAND} />
       </PressableScale>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ASPECT_TALLEST, ASPECT_WIDEST, clampAspect } from './use-image-aspect'
+import { ASPECT_TALLEST, ASPECT_WIDEST, clampAspect } from '../lib/image-aspect'
 
 describe('clampAspect', () => {
   it('shows a landscape photo in its own shape', () => {

@@ -114,7 +114,10 @@ export function ObservationCard({
 
   // Photos are stored uncropped, so the slot takes the photo's own shape rather
   // than forcing every frame into 4:3.
-  const { aspect: aspectRatio, onLoad: onImageLoad } = useImageAspect();
+  const { aspect: aspectRatio, ready: imageReady, onLoad: onImageLoad } = useImageAspect(
+    observation.imageUrl,
+    observation.imagePath,
+  );
 
   // Location matters — show a real name. Named locations use their name; pin-drop
   // observations (no name, raw coords) are reverse-geocoded to a place name, with
@@ -217,23 +220,26 @@ export function ObservationCard({
         </View>
 
         {observation.imageUrl ? (
-          <Image
-            // Key the disk/memory cache by the stable storage PATH, not the signed
-            // URL — the URL's token rotates on every refetch/cold start, which would
-            // otherwise force a re-download of an identical photo. The path only
-            // changes when the photo is actually replaced (fresh draftId). Big win
-            // on bad networks: once seen, a photo loads from disk instantly.
-            source={{ uri: observation.imageUrl, cacheKey: observation.imagePath ?? undefined }}
-            // Höjden följer bildens eget format (klampat) i stället för en fast
-            // 4:3-ruta — se `useImageAspect`. `cover` finns kvar för de fall där
-            // klampningen faktiskt beskär (panorama / mycket hög stående).
-            style={[styles.image, { aspectRatio, backgroundColor: theme.muted }]}
-            onLoad={onImageLoad}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={ImageFade}
-            recyclingKey={observation.imagePath ?? observation.id}
-          />
+          <View style={[styles.image, { aspectRatio, backgroundColor: theme.muted }]}>
+            <Image
+              key={observation.imagePath ?? observation.imageUrl}
+              // Key the disk/memory cache by the stable storage PATH, not the signed
+              // URL — the URL's token rotates on every refetch/cold start, which would
+              // otherwise force a re-download of an identical photo. The path only
+              // changes when the photo is actually replaced (fresh draftId). Big win
+              // on bad networks: once seen, a photo loads from disk instantly.
+              source={{ uri: observation.imageUrl, cacheKey: observation.imagePath ?? undefined }}
+              // Höjden följer bildens eget format (klampat) i stället för en fast
+              // 4:3-ruta — se `useImageAspect`. `cover` finns kvar för de fall där
+              // klampningen faktiskt beskär (panorama / mycket hög stående).
+              style={[StyleSheet.absoluteFill, { opacity: imageReady ? 1 : 0 }]}
+              onLoad={onImageLoad}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={ImageFade}
+              recyclingKey={observation.imagePath ?? observation.id}
+            />
+          </View>
         ) : null}
 
         {/* The footer is its own press target → the observer's member profile.

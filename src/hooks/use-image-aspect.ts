@@ -1,47 +1,37 @@
-/**
- * Visningsförhållande för ett observationsfoto — Instagram-modellen: visa bilden
- * SÅ SOM DEN TOGS, men klampad till ett intervall så att en extrem bild varken
- * blir en tunn remsa (panorama) eller trycker ut allt annat ur flödet (hög stående).
- *
- * Bakgrund: observationsfoton lagras OBESKURNA — `normalizeImage` skalar bara ner
- * längsta sidan (`src/lib/image.ts`), och `allowsEditing` är av för rektangulära
- * bilder. Kortet renderade ändå varje foto i en fast 4:3-ruta med
- * `contentFit="cover"`, vilket mittbeskär allt som inte råkar vara 4:3. Ett stående
- * mobilfoto (3:4) tappade ~44 % av sin höjd, och en fågel nära kanten kunde
- * beskäras bort helt — i en app där bilden ÄR fyndbeviset.
- *
- * Gränserna är Instagrams egna: 1.91:1 liggande och 4:5 stående. 4:5 är det
- * högsta formatet som tillåts i flödet just för att det tar mest skärmyta.
- */
-import { useState } from 'react'
+import 'expo-sqlite/localStorage/install';
 
-import type { ImageLoadEventData } from 'expo-image'
+import { useState } from 'react';
+import type { ImageLoadEventData } from 'expo-image';
 
-/** Bredast tillåtna (liggande). Bredare än så beskärs i sidled. */
-export const ASPECT_WIDEST = 1.91
-/** Högst tillåtna (stående 4:5). Högre än så beskärs i höjdled. */
-export const ASPECT_TALLEST = 4 / 5
-/** Reserverad yta innan bildens verkliga mått är kända — appens tidigare format. */
-export const ASPECT_DEFAULT = 4 / 3
+import { ASPECT_DEFAULT, createImageAspectCache } from '@/lib/image-aspect';
 
-export function clampAspect(width: number, height: number): number {
-  return Math.min(ASPECT_WIDEST, Math.max(ASPECT_TALLEST, width / height))
-}
+type Storage = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+};
+const storage = (globalThis as unknown as { localStorage?: Storage }).localStorage;
+const cache = createImageAspectCache(storage);
 
 /**
- * Ger `aspectRatio` för bildrutan plus den `onLoad` som mäter upp den. Tills
- * bilden laddats reserveras {@link ASPECT_DEFAULT}, så layouten har en höjd att
- * utgå från. Cachen är memory-disk, så hoppet syns bara första gången ett foto
- * hämtas — därefter är måtten kända direkt.
+ * Reserve a known photo's final frame synchronously, even on a cold start.
+ * For an unseen photo, hide its pixels until onLoad commits its dimensions in
+ * the same render. The placeholder may settle once; the visible photo never
+ * stretches from a guessed 4:3 shape to its actual shape.
  */
-export function useImageAspect(initial: number = ASPECT_DEFAULT) {
-  const [aspect, setAspect] = useState(initial)
+export function useImageAspect(uri: string | null, cacheKey?: string | null) {
+  const identity = cacheKey ?? uri;
+  const [loaded, setLoaded] = useState<{ identity: string | null; aspect: number } | null>(null);
+  // Only immutable storage paths are persisted. A URL-only caller can still
+  // size its current image, without storing expiring tokens on disk.
+  const known = cache.get(cacheKey);
+  const aspect = loaded?.identity === identity ? loaded.aspect : known;
 
   function onLoad(event: ImageLoadEventData) {
-    const { width, height } = event.source
-    if (!width || !height) return
-    setAspect(clampAspect(width, height))
+    const { width, height } = event.source;
+    const measured = cache.remember(cacheKey, width, height);
+    if (measured === undefined) return;
+    setLoaded({ identity, aspect: aspect ?? measured });
   }
 
-  return { aspect, onLoad }
+  return { aspect: aspect ?? ASPECT_DEFAULT, ready: aspect !== undefined, onLoad };
 }
