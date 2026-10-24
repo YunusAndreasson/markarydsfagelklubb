@@ -120,7 +120,7 @@ export default function SpeciesPickerSheet() {
         <SkeletonSelectRow key={n} index={n} leading="checkbox" secondary size="tall" />
       ))}
     </View>
-  ) : speciesQuery.isPending ? null : speciesQuery.isError ? (
+  ) : speciesQuery.isPending ? undefined : speciesQuery.isError ? (
     <ErrorBlock
       error={speciesQuery.error}
       onRetry={() => void speciesQuery.refetch()}
@@ -184,7 +184,7 @@ export default function SpeciesPickerSheet() {
                   })
                 : null}
             </>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={listEmpty}
         contentContainerStyle={styles.listContent}

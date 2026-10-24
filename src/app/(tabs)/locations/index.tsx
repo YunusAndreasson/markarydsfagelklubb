@@ -248,15 +248,22 @@ export default function LocationsScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen
         options={{
-          headerSearchBarOptions: {
-            placeholder: sv.locations.searchPlaceholder,
-            onChangeText: onChangeSearch,
-            onFocus: onFocusSearch,
-            onCancelButtonPress: onCancelSearch,
-            autoCapitalize: 'none',
-            // The map doesn't scroll, so pin the bar instead of hiding it.
-            hideWhenScrolling: false,
-          },
+          // iOS only — Android searches with the app's own `SearchField` below.
+          // Its transparent header used to draw no native bar at all; since
+          // SDK 58 (react-native-screens 4.30) it draws the native search icon on
+          // top of that field, which expands into a second, overlapping bar.
+          headerSearchBarOptions:
+            Platform.OS === 'ios'
+              ? {
+                  placeholder: sv.locations.searchPlaceholder,
+                  onChangeText: onChangeSearch,
+                  onFocus: onFocusSearch,
+                  onCancelButtonPress: onCancelSearch,
+                  autoCapitalize: 'none',
+                  // The map doesn't scroll, so pin the bar instead of hiding it.
+                  hideWhenScrolling: false,
+                }
+              : undefined,
         }}
       />
       <Map

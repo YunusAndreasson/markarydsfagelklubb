@@ -29,6 +29,12 @@ module.exports = defineConfig([
         'error',
         { checksVoidReturn: false },
       ],
+      // `tsc` already proves every `Namespace.member` exists. The import plugin
+      // re-derives it from a dependency's compiled JS and decides "is this an ES
+      // module?" with a line-start regex — SDK 58's Expo packages emit
+      // `* */ export var …`, so it skips the file and reports real exports
+      // (`Notifications.AndroidImportance`) as missing.
+      'import/namespace': 'off',
     },
   },
 ]);

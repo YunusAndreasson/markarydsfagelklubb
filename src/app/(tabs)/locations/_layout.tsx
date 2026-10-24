@@ -7,7 +7,7 @@ import { Stack } from 'expo-router';
 // large "Lokaler" text that sat directly on the map. The native search bar itself
 // (`headerSearchBarOptions`) is configured on the index screen, where its
 // callbacks can read component state.
-export const unstable_settings = { initialRouteName: 'index' };
+export const unstable_settings = { anchor: 'index' };
 
 export default function LocationsTabLayout() {
   return (

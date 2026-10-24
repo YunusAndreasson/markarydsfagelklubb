@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Duration } from '@/constants/motion';
+import { ImageFade } from '@/constants/motion';
 import { AvatarSize } from '@/constants/surface';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -58,7 +58,7 @@ export function Avatar({ name, size = 'md', uri, cacheKey }: AvatarProps) {
         // Keyed so a recycled row never shows the previous member's face for a
         // frame before its own resolves.
         recyclingKey={cacheKey ?? uri}
-        transition={Duration.quick}
+        transition={ImageFade}
       />
     );
   }

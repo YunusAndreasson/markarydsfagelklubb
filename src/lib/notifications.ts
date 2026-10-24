@@ -6,11 +6,13 @@
  * `expo_push_tokens` via `@/lib/query/push-tokens`); the `send-bird-alert` edge
  * function POSTs to Expo's push service, which routes to FCM (Android) / APNs.
  *
- * API notes (current as of SDK 57): `getExpoPushTokenAsync` needs an EAS
+ * API notes (current as of SDK 58): `getExpoPushTokenAsync` needs an EAS
  * `projectId` (run `eas init` to populate `extra.eas.projectId`); remote push
  * requires a dev/standalone build (unavailable in Expo Go on Android since SDK 53)
  * and a real device. The foreground handler uses `shouldShowBanner`/`shouldShowList`
- * — the old `shouldShowAlert` was removed in SDK 53.
+ * — the old `shouldShowAlert` was removed in SDK 53. Since SDK 58 a foreground
+ * notification shows even without a handler; ours keeps the choice explicit
+ * (banner, list, sound, badge untouched).
  */
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';

@@ -14,7 +14,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ErrorBlock, OfflineBlock } from '@/components/state-block';
+import { ALERT } from '@/components/icon';
+import { Screen } from '@/components/screen';
+import { ErrorBlock, OfflineBlock, StateBlock } from '@/components/state-block';
 import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
 import { SurfaceRadius } from '@/constants/surface';
@@ -121,6 +123,12 @@ function ThemedNavigation() {
   const restoring = useIsRestoring();
   const ready = initialized && profileSettled && !restoring;
   const hasProfile = !!profileQuery.data;
+  // Where this user belongs right now; every guarded route below redirects
+  // here. Since SDK 58 a failed guard keeps its route registered and renders a
+  // redirect from it, and without `redirectTo` the router falls back to the
+  // root stack's first unguarded route — signed out that is not a screen at
+  // all, so a cold start at "/" landed on "Unmatched Route" instead of sign-in.
+  const home = !session ? '/sign-in' : hasProfile ? '/' : '/onboarding';
 
   // Keep this device's push token registered + route notification taps (M14).
   // The flag says when the signed-in routes are mounted (the gate below renders
@@ -200,12 +208,12 @@ function ThemedNavigation() {
         }}
       >
         {/* Signed out: only the sign-in flow + the magic-link callback. */}
-        <Stack.Protected guard={!session}>
+        <Stack.Protected guard={!session} redirectTo={home}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="auth/callback" />
         </Stack.Protected>
         {/* Signed in, no profile row yet: first-run onboarding. */}
-        <Stack.Protected guard={!!session && !hasProfile}>
+        <Stack.Protected guard={!!session && !hasProfile} redirectTo={home}>
           <Stack.Screen name="onboarding" />
         </Stack.Protected>
         {/* Signed in + onboarded: the app. `(tabs)` is the bottom-tab shell
@@ -213,7 +221,7 @@ function ThemedNavigation() {
             the observation/member routes push over it; `kitchensink` is the M2
             primitives showcase, gated to `__DEV__` in the screen itself so it
             can't be reached in production. */}
-        <Stack.Protected guard={!!session && hasProfile}>
+        <Stack.Protected guard={!!session && hasProfile} redirectTo={home}>
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
           {/* "Larma" — raise a new bird alarm. A compose modal opened from the
               Larm tab header (was the center tab before the IA merge). */}
@@ -284,10 +292,41 @@ function ThemedNavigation() {
 }
 
 /**
+ * Per-screen render-error net.
+ *
+ * Without it a throw in any one screen climbs to the root `ErrorBoundary` below,
+ * which replaces the WHOLE app — tab bar, headers and all — so one bad render
+ * (the August feed crash: an activity value with no label, `localeCompare` on
+ * every render) left nothing to do but "Försök igen". Set here, every screen in
+ * the root stack and in the nested tab layouts gets its own boundary: the broken
+ * screen shows this block while its header (back button included) and the tab
+ * bar stay mounted, so the rest of the app keeps working.
+ *
+ * It renders in place of the screen, under every provider, so unlike the root
+ * boundary it can use the themed `Screen` + `StateBlock` like any failure state.
+ */
+function ScreenErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <Screen>
+      <StateBlock
+        tone="error"
+        icon={ALERT}
+        title={sv.errors.somethingWrong}
+        message={__DEV__ ? error.message : sv.errors.somethingWrongHelp}
+        action={{ label: sv.errors.tryAgain, onPress: () => void retry() }}
+      />
+    </Screen>
+  );
+}
+
+export const unstable_settings = { screenErrorBoundary: ScreenErrorBoundary };
+
+/**
  * App-wide render-error net.
  *
  * Expo Router wraps a route in a React error boundary whenever its file exports
- * `ErrorBoundary` — this being the root layout, that covers everything below it.
+ * `ErrorBoundary` — this being the root layout, that covers everything below it
+ * that a screen's own boundary (above) doesn't: the providers and the auth gate.
  * Without one, a single throw during render is an uncaught JS error, which in a
  * release build kills the process (Play Vitals reports it as
  * `com.facebook.react.common.JavascriptException`). With one, the user gets a

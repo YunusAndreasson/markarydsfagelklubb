@@ -20,7 +20,7 @@
  * immediately rather than at the next tick.
  */
 import { useSyncExternalStore } from 'react';
-import { AppState, type NativeEventSubscription } from 'react-native';
+import { AppState, type EventSubscription } from 'react-native';
 
 /** A minute — the finest granularity `sv.feed.timeAgo` renders. */
 const TICK_MS = 60 * 1000;
@@ -28,7 +28,7 @@ const TICK_MS = 60 * 1000;
 let current = new Date();
 const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setInterval> | null = null;
-let appState: NativeEventSubscription | null = null;
+let appState: EventSubscription | null = null;
 
 function emit(): void {
   current = new Date();

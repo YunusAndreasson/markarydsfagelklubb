@@ -39,7 +39,7 @@ import { CHEVRON, Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Curve, Duration } from '@/constants/motion';
+import { Curve, Duration, ImageFade } from '@/constants/motion';
 import { sharedStyles } from '@/constants/shared-styles';
 import { elevationStyle, SurfaceRadius, SurfaceStyles } from '@/constants/surface';
 import { Elevation, IconSize, Spacing } from '@/constants/theme';
@@ -231,7 +231,7 @@ export function ObservationCard({
             onLoad={onImageLoad}
             contentFit="cover"
             cachePolicy="memory-disk"
-            transition={Duration.quick}
+            transition={ImageFade}
             recyclingKey={observation.imagePath ?? observation.id}
           />
         ) : null}

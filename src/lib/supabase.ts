@@ -1,9 +1,12 @@
-import 'react-native-url-polyfill/auto';
 import 'expo-sqlite/localStorage/install';
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 
 import type { Database } from '@/lib/database.types';
+
+// No `react-native-url-polyfill`: Expo installs a WHATWG `URL`/`URLSearchParams`
+// global (IDNA-aware as of SDK 58). The polyfill Supabase's quickstart imports
+// would only replace it with an older implementation.
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;

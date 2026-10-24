@@ -9,7 +9,13 @@
  * validation feedback.
  */
 import { type Ref } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,7 +25,7 @@ import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
 
 export type SettingsFormInputProps = TextInputProps & {
-  ref?: Ref<TextInput>;
+  ref?: Ref<TextInputInstance>;
   label: string;
   error?: string | null;
 };

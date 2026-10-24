@@ -12,7 +12,7 @@
  * app's own Profile form (M7), not the web's scroll-to-error.
  */
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ScrollViewInstance, type ViewInstance } from 'react-native';
 
 import { ActivityPicker } from '@/components/activity-picker';
 import { Button } from '@/components/button';
@@ -93,7 +93,7 @@ export type ObservationFormProps = {
   /** The enclosing `Screen`'s ScrollView — lets an invalid submit scroll the
    *  first errored field into view (it may be off-screen on this tall form).
    *  Structurally typed so any ref object (Mutable/RefObject) is accepted. */
-  scrollRef?: { current: ScrollView | null };
+  scrollRef?: { current: ScrollViewInstance | null };
   /** When the route hosts the primary submit in the nav header, hide the inline
    *  submit button (the destructive delete stays inline). */
   submitInHeader?: boolean;
@@ -164,9 +164,9 @@ export function ObservationForm({
 
   // Wrappers around the three fields that can fail validation, so an invalid
   // submit can scroll the first one into view.
-  const speciesRef = useRef<View>(null);
-  const locationRef = useRef<View>(null);
-  const activityRef = useRef<View>(null);
+  const speciesRef = useRef<ViewInstance>(null);
+  const locationRef = useRef<ViewInstance>(null);
+  const activityRef = useRef<ViewInstance>(null);
 
   function update<K extends keyof ObservationFormValue>(key: K, next: ObservationFormValue[K]) {
     setValue((v) => ({ ...v, [key]: next }));

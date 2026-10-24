@@ -3,6 +3,7 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
+  type ScrollViewInstance,
   type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
@@ -29,7 +30,7 @@ import { useTheme } from '@/hooks/use-theme';
  * wrap this component in another container at the route root.
  */
 export type ScreenProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
-  ref?: Ref<ScrollView>;
+  ref?: Ref<ScrollViewInstance>;
   inset?: 'tab' | 'sub';
   /**
    * Turn on pull-to-refresh. Pass the screen's refetch (`query.refetch`, or a

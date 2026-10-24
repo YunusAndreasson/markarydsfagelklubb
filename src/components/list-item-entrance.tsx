@@ -13,6 +13,11 @@
  * pattern `PulsingDot` uses). A `withTiming` isn't cancelled by re-renders — only
  * by a new animation on the same value — so it always runs to opacity 1 no matter
  * how often the tree re-renders around it. `exiting` is forwarded for delete/reflow.
+ *
+ * The two live on separate views: the `exiting` keyframe animates opacity and
+ * transform too, and a layout animation sharing a view with an animated style
+ * may overwrite it (Reanimated 4.7 warns once per row). The wrapper owns the exit;
+ * the inner view, at rest by the time a row leaves, owns the entrance.
  */
 import { type ComponentProps, type ReactNode, useEffect } from 'react';
 import Animated, {
@@ -61,8 +66,8 @@ export function ListItemEntrance({
   }));
 
   return (
-    <Animated.View style={style} exiting={exiting}>
-      {children}
+    <Animated.View exiting={exiting}>
+      <Animated.View style={style}>{children}</Animated.View>
     </Animated.View>
   );
 }

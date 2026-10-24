@@ -26,7 +26,7 @@ import { CAMERA, Icon, IMAGE, TRASH } from '@/components/icon';
 import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
-import { Duration } from '@/constants/motion';
+import { ImageFade } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing, SurfaceOverlay } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
@@ -251,7 +251,7 @@ export function ImageUpload({
           style={styles.image}
           contentFit="cover"
           cachePolicy="memory-disk"
-          transition={reduced ? 0 : Duration.quick}
+          transition={reduced ? 0 : ImageFade}
         />
       ) : (
         <View style={styles.placeholder}>

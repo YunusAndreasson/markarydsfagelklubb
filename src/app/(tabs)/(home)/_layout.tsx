@@ -8,7 +8,7 @@ import { sv } from '@/lib/i18n/sv';
 //
 // `headerLargeTitleEnabled` is opt-in on the tab root only (iOS HIG): leaving it in
 // `screenOptions` gives any pushed screen a ~100pt phantom large-title block.
-export const unstable_settings = { initialRouteName: 'index' };
+export const unstable_settings = { anchor: 'index' };
 
 export default function FeedTabLayout() {
   return (

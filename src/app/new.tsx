@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ScrollView } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 
 import { HeaderButton, headerLeftAction, headerRightAction } from '@/components/header-button';
 import { HeaderDismissButton } from '@/components/header-dismiss-button';
@@ -36,7 +36,7 @@ import { type Species } from '@/lib/query/species';
 export default function NewObservationScreen() {
   const { user } = useAuth();
   const formRef = useRef<ObservationFormHandle>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   // Tracks whether the form has unsaved input, so a swipe/Avbryt on a half-filled
   // report asks before throwing it away (Norman: forgiveness; the iOS "Discard
   // changes?" convention). While dirty, swipe-to-dismiss is disabled too, so the

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { FieldLabel } from '@/components/field-label';
@@ -12,7 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { hapticError } from '@/lib/haptics';
 
 export type TextFieldProps = TextInputProps & {
-  ref?: Ref<TextInput>;
+  ref?: Ref<TextInputInstance>;
   label: string;
   /** Mark the field optional — appends a muted "(valfritt)" to the label. */
   optional?: boolean;

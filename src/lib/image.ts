@@ -94,13 +94,13 @@ export async function pickFromLibrary(shape: ImageShape): Promise<RawAsset | nul
  */
 export async function processImage(asset: RawAsset, shape: ImageShape): Promise<PickedImage> {
   const cap = MAX_DIMENSION[shape];
-  const context = ImageManipulator.manipulate(asset.uri);
-  const longest = Math.max(asset.width, asset.height);
-  if (longest > cap) {
-    // A single dimension preserves the aspect ratio; cap whichever side is longer.
-    if (asset.width >= asset.height) context.resize({ width: cap });
-    else context.resize({ height: cap });
-  }
+  // The cap is applied while DECODING: the native decoder downsamples as it
+  // reads, so a 48 MP camera photo never sits in memory at full size. Decoding it
+  // whole and then resizing peaked at ~190 MB of pixels for a single photo — an
+  // out-of-memory crash on a low-end Android phone. Bounding both sides caps the
+  // longer one, keeps the aspect ratio, never upscales, and applies to the photo
+  // as displayed (EXIF orientation is baked in first).
+  const context = ImageManipulator.manipulate(asset.uri, { maxWidth: cap, maxHeight: cap });
   const ref = await context.renderAsync();
   const result = await ref.saveAsync({ compress: JPEG_QUALITY, format: SaveFormat.JPEG });
 

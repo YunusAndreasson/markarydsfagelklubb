@@ -24,6 +24,15 @@ export const Duration = {
   pulse: 850,
 } as const;
 
+/**
+ * The fade a photo or avatar (`expo-image`) arrives with. It plays only when the
+ * bytes come off the network — the wait it exists to soften. An image already in
+ * the memory or disk cache appears at once (`skipOnCacheHit`): the same photo
+ * moving from feed card to detail screen to fullscreen viewer, or a card
+ * remounting on a filter change, otherwise re-faded on every mount.
+ */
+export const ImageFade = { duration: Duration.quick, skipOnCacheHit: 'all' } as const;
+
 /** Spring configs — three shapes, picked by feel. Add a fourth only when needed. */
 export const Spring = {
   /** Default — natural settle for entrances and gestures. */

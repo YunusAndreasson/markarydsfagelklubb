@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ScrollViewInstance } from 'react-native';
 
 import { HeaderButton, headerLeftAction, headerRightAction } from '@/components/header-button';
 import { HeaderDismissButton } from '@/components/header-dismiss-button';
@@ -44,7 +44,7 @@ export default function ObservationEditScreen() {
   const q = useQuery(observationQueryOptions(id));
   const obs = q.data;
   const formRef = useRef<ObservationFormHandle>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   // Guard an accidental dismiss of unsaved edits (swipe/Avbryt) — the iOS
   // "Discard changes?" convention (Norman: forgiveness). Swipe is disabled while
   // dirty so the guarded Avbryt is the only exit.

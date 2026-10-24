@@ -16,7 +16,15 @@ import { Image, type ImageSource } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { Modal, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useImperativeHandle, useRef, useState } from 'react';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  GestureDetector,
+  GestureHandlerRootView,
+  useExclusiveGestures,
+  usePanGesture,
+  usePinchGesture,
+  useSimultaneousGestures,
+  useTapGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
   clamp,
   useAnimatedStyle,
@@ -29,7 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExpandBadge, FloatingIconButton } from '@/components/floating-control';
 import { CLOSE, EXPAND } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { Duration, Spring } from '@/constants/motion';
+import { ImageFade, Spring } from '@/constants/motion';
 import { SurfaceStyles } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useImageAspect } from '@/hooks/use-image-aspect';
@@ -80,10 +88,13 @@ const AnimatedImage = Animated.createAnimatedComponent(Image);
  *
  * `"use no memo"` opts this component out of the Compiler: unlike a JSX
  * `onPress={...}` prop (which the Compiler special-cases as an event handler),
- * `Gesture.Pinch().onUpdate(cb)`-style builder callbacks aren't recognized as
- * one, so every `.value` write here trips `react-hooks/immutability`. Per
- * Reanimated's own React Compiler guidance, worklet-heavy gesture components
- * opt out rather than restructure around the false positive.
+ * the callbacks in a `usePinchGesture({ onUpdate })`-style config aren't
+ * recognized as one, so every `.value` write here trips
+ * `react-hooks/immutability`. Per Reanimated's own React Compiler guidance,
+ * worklet-heavy gesture components opt out rather than restructure around the
+ * false positive. Staying uncompiled also keeps each config an inline object
+ * literal, which is what the worklets Babel plugin looks for when it
+ * auto-workletizes those callbacks onto the UI thread.
  */
 function ZoomableImage({
   source,
@@ -124,14 +135,14 @@ function ZoomableImage({
     return clamp(value, -max, max);
   };
 
-  // Gesture builder callbacks (`.onUpdate`/`.onEnd`) aren't JSX event-handler
-  // props, so the Compiler's lint doesn't recognize them as a mutation-safe
-  // context the way it does `onPress={...}` in pressable-scale.tsx — hence the
-  // blanket disable below rather than restructuring away from Reanimated's
-  // documented gesture-handler shape.
+  // Gesture config callbacks (`onUpdate`/`onDeactivate`) aren't JSX
+  // event-handler props, so the Compiler's lint doesn't recognize them as a
+  // mutation-safe context the way it does `onPress={...}` in pressable-scale.tsx —
+  // hence the blanket disable below rather than restructuring away from
+  // Reanimated's documented gesture-handler shape.
   /* eslint-disable react-hooks/immutability -- worklet writes, see comment above */
-  const pinch = Gesture.Pinch()
-    .onUpdate((e) => {
+  const pinch = usePinchGesture({
+    onUpdate: (e) => {
       const next = clamp(savedScale.value * e.scale, 1, MAX_SCALE);
       scale.value = next;
       translateX.value = clampTranslation(
@@ -144,8 +155,8 @@ function ZoomableImage({
         height,
         next,
       );
-    })
-    .onEnd(() => {
+    },
+    onDeactivate: () => {
       savedScale.value = scale.value;
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
@@ -161,10 +172,11 @@ function ZoomableImage({
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
       }
-    });
+    },
+  });
 
-  const pan = Gesture.Pan()
-    .onUpdate((e) => {
+  const pan = usePanGesture({
+    onUpdate: (e) => {
       if (savedScale.value <= 1) return;
       translateX.value = clampTranslation(
         savedTranslateX.value + e.translationX,
@@ -176,15 +188,16 @@ function ZoomableImage({
         height,
         savedScale.value,
       );
-    })
-    .onEnd(() => {
+    },
+    onDeactivate: () => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
-    });
+    },
+  });
 
-  const doubleTap = Gesture.Tap()
-    .numberOfTaps(2)
-    .onEnd(() => {
+  const doubleTap = useTapGesture({
+    numberOfTaps: 2,
+    onDeactivate: () => {
       const zoomingIn = savedScale.value <= 1;
       const next = zoomingIn ? DOUBLE_TAP_SCALE : 1;
       scale.value = withSpring(next, Spring.responsive);
@@ -193,24 +206,31 @@ function ZoomableImage({
       savedScale.value = next;
       savedTranslateX.value = 0;
       savedTranslateY.value = 0;
-    });
+    },
+  });
 
-  // NO `.requireExternalGestureToFail(doubleTap)` here: `Gesture.Exclusive`
-  // below already gives the double tap priority and only lets this one run once
-  // that has failed. Declaring the relationship BOTH ways over-constrained it and
-  // the single tap never activated — tap-to-dismiss silently did nothing, leaving
+  // NO `requireToFail: doubleTap` here: `useExclusiveGestures` below already
+  // gives the double tap priority and only lets this one run once that has
+  // failed. Declaring the relationship BOTH ways over-constrained it and the
+  // single tap never activated — tap-to-dismiss silently did nothing, leaving
   // the ✕ as the only way out.
-  const singleTap = Gesture.Tap()
-    .numberOfTaps(1)
-    .onEnd(() => {
+  //
+  // It DOES wait for the pinch to fail. A tap only fails on its 500ms clock or
+  // on movement of the fingers' average point, which a symmetric pinch barely
+  // moves — so a quick pinch also counted as a tap, and one ending back at fit
+  // (scale 1) dismissed the viewer. One finger never starts a pinch, so a plain
+  // tap (or a quick swipe) still dismisses as soon as the finger lifts.
+  const singleTap = useTapGesture({
+    numberOfTaps: 1,
+    requireToFail: pinch,
+    onDeactivate: () => {
       if (savedScale.value <= 1) scheduleOnRN(onDismiss);
-    });
+    },
+  });
   /* eslint-enable react-hooks/immutability */
 
-  const gesture = Gesture.Simultaneous(
-    Gesture.Simultaneous(pinch, pan),
-    Gesture.Exclusive(doubleTap, singleTap),
-  );
+  const taps = useExclusiveGestures(doubleTap, singleTap);
+  const gesture = useSimultaneousGestures(pinch, pan, taps);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -233,7 +253,7 @@ function ZoomableImage({
           style={[StyleSheet.absoluteFill, animatedStyle]}
           contentFit="contain"
           cachePolicy="memory-disk"
-          transition={Duration.quick}
+          transition={ImageFade}
         />
       </Animated.View>
     </GestureDetector>
@@ -273,7 +293,7 @@ export function PhotoView({ uri, cacheKey, label }: PhotoViewProps) {
           onLoad={onImageLoad}
           contentFit="cover"
           cachePolicy="memory-disk"
-          transition={Duration.quick}
+          transition={ImageFade}
         />
         <ExpandBadge icon={EXPAND} />
       </PressableScale>
