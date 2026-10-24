@@ -28,7 +28,7 @@ export const createUploadUrlInput = z.object({
   purpose: z.enum(['observation', 'avatar']),
   mimeType: z.enum(ALLOWED_MIME),
   sizeBytes: z.number().int().positive().max(MAX_UPLOAD_BYTES),
-  draftId: z.string().uuid().optional(),
+  draftId: z.uuid().optional(),
 })
 
 export const deleteUploadInput = z.object({ path: imagePathSchema })

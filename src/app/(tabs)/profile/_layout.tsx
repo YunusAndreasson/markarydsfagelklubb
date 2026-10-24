@@ -9,7 +9,7 @@ export const unstable_settings = { initialRouteName: 'index' };
 export default function ProfileTabLayout() {
   return (
     <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
-      <Stack.Screen name="index" options={{ title: sv.profile.title, headerLargeTitle: true }} />
+      <Stack.Screen name="index" options={{ title: sv.profile.title, headerLargeTitleEnabled: true }} />
     </Stack>
   );
 }

@@ -70,7 +70,7 @@ export function usePushRegistration(canRoute: boolean): void {
     // A placeless "Larm härifrån" alert carries no observation — there is nothing
     // to open, so the tap just brings the app to the foreground.
     if (!observationId) return;
-    void Notifications.clearLastNotificationResponseAsync();
+    Notifications.clearLastNotificationResponse();
     router.push({ pathname: '/observation/[id]', params: { id: observationId } });
   }, [canRoute, response]);
 }

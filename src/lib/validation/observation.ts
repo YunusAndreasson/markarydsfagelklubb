@@ -42,10 +42,10 @@ const baseObservationFields = {
   observedAt: z.coerce
     .date()
     .refine((d) => d.getTime() <= Date.now() + 60_000, {
-      message: 'Tiden får inte vara i framtiden',
+      error: 'Tiden får inte vara i framtiden',
     })
     .refine((d) => d.getTime() > Date.parse('2000-01-01'), {
-      message: 'Datum verkar för långt bakåt',
+      error: 'Datum verkar för långt bakåt',
     }),
   locationId: z.number().int().positive().nullable().optional(),
   latitude: latitudeSchema.nullable().optional(),
@@ -77,7 +77,7 @@ const refineLocation = (
   // Förbjud "halva koordinater".
   if (data.latitude != null && data.longitude == null) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Ofullständiga koordinater — longitud saknas.',
       path: ['longitude'],
     })
@@ -85,7 +85,7 @@ const refineLocation = (
   }
   if (data.longitude != null && data.latitude == null) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Ofullständiga koordinater — latitud saknas.',
       path: ['latitude'],
     })
@@ -96,7 +96,7 @@ const refineLocation = (
   // Plats är obligatorisk: exakt en av lokal/koordinater måste anges.
   if (!hasLocation && !hasCoords) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Ange var observationen gjordes.',
       path: ['locationId'],
     })
@@ -104,7 +104,7 @@ const refineLocation = (
   }
   if (hasLocation && hasCoords) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Välj antingen en lokal eller egna koordinater, inte båda.',
       path: ['locationId'],
     })
@@ -114,7 +114,7 @@ const refineLocation = (
 export const createObservationInput = z.object(baseObservationFields).superRefine(refineLocation)
 
 export const updateObservationInput = z
-  .object({ id: z.string().uuid(), ...baseObservationFields })
+  .object({ id: z.uuid(), ...baseObservationFields })
   .superRefine(refineLocation)
 
 export type CreateObservationInput = z.infer<typeof createObservationInput>

@@ -16,6 +16,7 @@
  */
 import { type ComponentProps, type ReactNode, useEffect } from 'react';
 import Animated, {
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -50,6 +51,8 @@ export function ListItemEntrance({
       delay,
       withTiming(1, { duration: Duration.quick, easing: Curve.out }),
     );
+
+    return () => cancelAnimation(progress);
   }, [reduced, index, speed, progress]);
 
   const style = useAnimatedStyle(() => ({

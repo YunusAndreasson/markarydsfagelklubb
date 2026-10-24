@@ -18,7 +18,7 @@ export const phoneSchema = z
   .trim()
   .max(30, 'Telefonnumret är för långt')
   .refine((s) => (s.match(/\d/g) ?? []).length >= 6, {
-    message: 'Telefonnumret ser inte rätt ut',
+    error: 'Telefonnumret ser inte rätt ut',
   })
 
 export const upsertProfileInput = z.object({

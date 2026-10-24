@@ -6,7 +6,7 @@
  *
  * Ported from the edenmind reference so the whole app shares one settings idiom.
  */
-import { Children, type ReactNode } from 'react';
+import { Children, isValidElement, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -48,7 +48,7 @@ export function SettingsGroup({ title, caption, footer, entranceIndex, children 
       <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
         {items.map((child, index) => (
           <View
-            key={index}
+            key={isValidElement(child) && child.key !== null ? child.key : index}
             style={
               index > 0
                 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }

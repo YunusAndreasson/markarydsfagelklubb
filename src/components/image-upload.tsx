@@ -184,13 +184,15 @@ export function ImageUpload({
       const picked = await processImage(asset, shape);
       setLocalUri(picked.uri); // processed preview
       setBusy('uploading');
-      const target = await createUploadUrl({
-        purpose,
-        mimeType: picked.mimeType,
-        sizeBytes: picked.sizeBytes,
-        draftId: purpose === 'observation' ? draftId : undefined,
-      });
-      const bytes = await readBytes(picked.uri);
+      const [target, bytes] = await Promise.all([
+        createUploadUrl({
+          purpose,
+          mimeType: picked.mimeType,
+          sizeBytes: picked.sizeBytes,
+          draftId: purpose === 'observation' ? draftId : undefined,
+        }),
+        readBytes(picked.uri),
+      ]);
       await uploadSignedImage(target, bytes, picked.mimeType);
       onChange(target.path);
       hapticSuccess();

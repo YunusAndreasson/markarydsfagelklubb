@@ -66,7 +66,7 @@
  * feedback" toggle, both of which the native engines above honor at the OS layer.
  * The in-app Haptics preference is the only thing that flips `enabled` below.
  *
- * Safe to call from a Reanimated worklet only via `runOnJS` — these touch the
+ * Safe to call from a Reanimated worklet only via `scheduleOnRN` — these touch the
  * JS bridge and must run on the JS thread.
  */
 import * as Haptics from 'expo-haptics';
@@ -76,7 +76,7 @@ const isAndroid = Platform.OS === 'android';
 
 // Gated by the user's "Haptics" preference. A preferences provider pushes the
 // stored value here via `setHapticsEnabled` (added with Settings in M7), so call
-// sites (including the Reanimated worklet ones invoked through `runOnJS`) stay
+// sites (including the Reanimated worklet ones invoked through `scheduleOnRN`) stay
 // unchanged and simply no-op when haptics are turned off.
 let enabled = true;
 

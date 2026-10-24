@@ -19,7 +19,7 @@
  * cards would mount hundreds of detail screens for no gain over the cache seeding
  * that already makes those pushes instant.
  */
-import type { FetchQueryOptions, QueryKey } from '@tanstack/react-query';
+import { noop, type QueryExecuteOptions, type QueryKey } from '@tanstack/react-query';
 
 import { queryClient } from '@/lib/query-client';
 
@@ -27,12 +27,19 @@ import { queryClient } from '@/lib/query-client';
  * Warm a query in the background. Fire-and-forget: a failure here is not the
  * user's problem — the destination's own `useQuery` will surface it.
  *
- * All four generics are threaded so a `queryOptions()` factory passes straight
+ * All the generics are threaded so a `queryOptions()` factory passes straight
  * through. Collapsing them (e.g. to a single `TData`) widens `TQueryKey` to
  * `readonly unknown[]`, which no longer matches the tuple keys in `query/keys.ts`.
+ *
+ * `query()` is what the deprecated `prefetchQuery()` wrapped (via `fetchQuery`),
+ * minus the error swallowing — hence the `.catch(noop)`.
  */
-export function prefetchOnIntent<TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
-  options: FetchQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
-): void {
-  void queryClient.prefetchQuery(options);
+export function prefetchOnIntent<
+  TQueryFnData,
+  TError,
+  TData,
+  TQueryData,
+  TQueryKey extends QueryKey,
+>(options: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryData, TQueryKey>): void {
+  void queryClient.query(options).catch(noop);
 }

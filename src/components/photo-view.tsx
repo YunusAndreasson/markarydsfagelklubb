@@ -19,11 +19,11 @@ import { useImperativeHandle, useRef, useState } from 'react';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   clamp,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExpandBadge, FloatingIconButton } from '@/components/floating-control';
@@ -203,7 +203,7 @@ function ZoomableImage({
   const singleTap = Gesture.Tap()
     .numberOfTaps(1)
     .onEnd(() => {
-      if (savedScale.value <= 1) runOnJS(onDismiss)();
+      if (savedScale.value <= 1) scheduleOnRN(onDismiss);
     });
   /* eslint-enable react-hooks/immutability */
 

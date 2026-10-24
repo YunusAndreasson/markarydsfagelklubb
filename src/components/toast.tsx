@@ -14,12 +14,8 @@
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ALERT, BOUNCE_ONCE, CHECK, Icon, type IconName } from '@/components/icon';
@@ -133,7 +129,7 @@ export function ToastHost() {
         0,
         { duration: reduced ? 0 : Duration.quick, easing: Curve.out },
         (finished) => {
-          if (finished) runOnJS(clearToast)();
+          if (finished) scheduleOnRN(clearToast);
         },
       );
       return;

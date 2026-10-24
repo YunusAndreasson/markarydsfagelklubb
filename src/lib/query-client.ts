@@ -1,4 +1,4 @@
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { onlineManager, QueryClient } from '@tanstack/react-query';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
 import * as Network from 'expo-network';
@@ -60,6 +60,9 @@ onlineManager.setEventListener((setOnline) => {
 //
 // superjson (not plain JSON) so `Date` fields on FeedObservation survive the
 // round-trip — `groupFeed`/`timeFriendly` need real Dates, not ISO strings.
+//
+// The async persister takes this synchronous store as-is: its storage contract
+// is `MaybePromise`, so plain return values are awaited like resolved promises.
 type WebStorageLike = {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
@@ -72,10 +75,12 @@ export const PERSIST_BUSTER = 'mafk-cache-v2';
 /** Discard persisted data older than this on restore (offline tolerance window). */
 export const PERSIST_MAX_AGE = 1000 * 60 * 60 * 24 * 7; // 7 days
 
-export const persister = createSyncStoragePersister({
+export const persister = createAsyncStoragePersister({
   storage,
   key: 'mafk.queryCache',
-  // Throttle disk writes so serializing the cache on rapid changes doesn't jank.
+  // Throttle disk writes so serializing the cache on rapid changes doesn't jank:
+  // at most one write per 2 s. The first change after a quiet spell is written
+  // at once; the rest of a burst lands as one trailing write of the final state.
   throttleTime: 2000,
   serialize: (client) => superjsonStringify(client),
   deserialize: (cached) => superjsonParse<PersistedClient>(cached),
