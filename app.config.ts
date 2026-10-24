@@ -1,4 +1,10 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
+import {
+  AndroidConfig,
+  type ConfigPlugin,
+  withInfoPlist,
+  withStringsXml,
+} from 'expo/config-plugins';
 
 import { version } from './package.json';
 
@@ -24,8 +30,31 @@ const PHOTOS_PERMISSION =
   'Appen behöver tillgång till dina bilder för att lägga till foton på fynd.';
 const CAMERA_PERMISSION = 'Appen använder kameran för att ta foton på fynd.';
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+// expo/eas-cli#4715 (open as of 2026-10-24): SDK 58's prebuild names the iOS target
+// "MarkarydsFagelklubb" (å → a), but eas-cli still bundles the SDK 55 name sanitizer,
+// which drops the å and then can't find "MarkarydsFgelklubb" in the Xcode project —
+// every iOS build fails in "Configure Xcode project". An ASCII `name` gives both the
+// same target, and `withDisplayName` puts app.json's real name back wherever people see
+// it. Remove both once eas-cli bundles @expo/config-plugins 58: the target stays the same.
+const asciiName = (name: string) => name.normalize('NFKD').replace(/\p{M}/gu, '');
+
+const withDisplayName: ConfigPlugin<string> = (config, displayName) => {
+  config = withInfoPlist(config, (c) => {
+    c.modResults.CFBundleDisplayName = displayName;
+    return c;
+  });
+  return withStringsXml(config, (c) => {
+    c.modResults = AndroidConfig.Strings.setStringItem(
+      [AndroidConfig.Resources.buildResourceItem({ name: 'app_name', value: displayName })],
+      c.modResults,
+    );
+    return c;
+  });
+};
+
+export default ({ config }: ConfigContext): ExpoConfig => withDisplayName({
   ...(config as ExpoConfig),
+  name: asciiName(config.name ?? ''),
   // Single source of truth for the marketing version is `package.json` — bump it there
   // (`npm version patch|minor|major`) and it flows everywhere: the native binary
   // (CFBundleShortVersionString / versionName), the `appVersion` runtimeVersion policy
@@ -60,4 +89,4 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       { ios: { extraPods: [{ name: 'AppCheckCore', version: '= 11.2.0' }] } },
     ],
   ] as ExpoConfig['plugins'],
-});
+}, config.name ?? '');

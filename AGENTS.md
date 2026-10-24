@@ -46,7 +46,10 @@ Magic-link → **Apple + Google sign-in** (M5) · Leaflet → `react-native-maps
 
 - **Identity:** name "Markaryds Fågelklubb", slug/scheme `mafk`, bundle id
   `nu.markarydsfagelklubb.mafk` (iOS + Android). Locked — used by deep links +
-  OAuth in M5.
+  OAuth in M5. `app.json` holds the real name; `app.config.ts` hands Expo an
+  ASCII copy ("Markaryds Fagelklubb") and restores the real one as the iOS/Android
+  display name, until expo/eas-cli#4715 is fixed — don't "fix" that, or every iOS
+  EAS build fails with "Could not find target".
 - **Imports:** path aliases `@/*` → `src/*`, `@/assets/*` → `assets/*`.
 - **TypeScript is strict** (see `tsconfig.json`). ESLint is type-aware; use
   `void promise()` for deliberate fire-and-forget.
