@@ -23,14 +23,18 @@ import { Duration } from '@/constants/motion';
 import { FontSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
 import { useTheme } from '@/hooks/use-theme';
+import { sv } from '@/lib/i18n/sv';
+
+export type SettingsSaveState = 'saving' | 'saved' | 'error';
 
 export type SettingsFormInputProps = TextInputProps & {
   ref?: Ref<TextInputInstance>;
   label: string;
   error?: string | null;
+  saveState?: SettingsSaveState;
 };
 
-export function SettingsFormInput({ ref, label, error, style, ...rest }: SettingsFormInputProps) {
+export function SettingsFormInput({ ref, label, error, saveState, style, ...rest }: SettingsFormInputProps) {
   const theme = useTheme();
   // Gated like every other inline-error entrance in the app (`picker-field`,
   // `text-field`) — this one had drifted off both the token and the gate.
@@ -38,12 +42,19 @@ export function SettingsFormInput({ ref, label, error, style, ...rest }: Setting
 
   return (
     <View style={styles.row}>
-      <ThemedText
-        type="small"
-        style={{ color: error ? theme.destructive : theme.mutedForeground }}
-      >
-        {label}
-      </ThemedText>
+      <View style={styles.labelRow}>
+        <ThemedText
+          type="small"
+          style={[styles.label, { color: error ? theme.destructive : theme.mutedForeground }]}
+        >
+          {label}
+        </ThemedText>
+        {saveState ? (
+          <ThemedText type="micro" themeColor={saveState === 'error' ? 'destructive' : saveState === 'saved' ? 'tint' : 'mutedForeground'}>
+            {saveState === 'saving' ? sv.profile.saving : saveState === 'saved' ? sv.profile.savedLabel : sv.profile.unsavedLabel}
+          </ThemedText>
+        ) : null}
+      </View>
       <TextInput
         ref={ref}
         accessibilityLabel={label}
@@ -65,6 +76,8 @@ export function SettingsFormInput({ ref, label, error, style, ...rest }: Setting
 }
 
 const styles = StyleSheet.create({
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  label: { flex: 1 },
   row: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,

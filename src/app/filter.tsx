@@ -5,12 +5,10 @@
  * scope (Alla/Mina), raritet, aktivitet, plats.
  *
  * It reads the feed from the query CACHE to derive the same chip options + a live
- * result count, and reads/writes the shared `feed-filter-store` — so toggling a
- * chip updates the feed rendered behind the half-height sheet instantly, with no
- * "Apply" step. The primary action at the end just closes and doubles as result-
- * count feedback ("Visa N träffar").
+ * result count. Changes stay local until "Visa N träffar" commits the draft to
+ * the shared feed-filter store. Dismissing the sheet leaves the feed unchanged.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,7 +31,6 @@ import {
   applyFeedFilter,
   deriveFilterOptions,
   EMPTY_FILTER,
-  type FeedFilter,
 } from '@/lib/feed-filter';
 import { setFeedFilter, useFeedFilter } from '@/lib/feed-filter-store';
 import { activityLabel, sv } from '@/lib/i18n/sv';
@@ -56,7 +53,8 @@ export default function FilterSheet() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const filter = useFeedFilter();
+  const appliedFilter = useFeedFilter();
+  const [filter, change] = useState(appliedFilter);
 
   // Same derivation as the feed, straight from the warm cache (no refetch).
   const feed = useQuery(feedQueryOptions());
@@ -90,7 +88,6 @@ export default function FilterSheet() {
   );
 
   const count = activeFilterCount(filter);
-  const change = (next: FeedFilter) => setFeedFilter(next);
 
   return (
     /* The `Screen` scroller IS the route root — no wrapping flex column, exactly
@@ -192,8 +189,7 @@ export default function FilterSheet() {
         </View>
       ) : null}
 
-      {/* Actions ride at the end of the content (see the note on the root). The
-          count still reads live — the feed behind updates as chips toggle. */}
+      {/* The count previews the draft; the feed changes only on confirmation. */}
       <View style={[styles.actions, { borderTopColor: theme.border }]}>
         {/* The secondary takes only the width its own label needs; the primary
             takes the rest. Splitting the row 50/50 left the primary too narrow
@@ -204,7 +200,7 @@ export default function FilterSheet() {
         <Button
           title={sv.filter.clear}
           variant="secondary"
-          onPress={() => setFeedFilter(EMPTY_FILTER)}
+          onPress={() => change(EMPTY_FILTER)}
           disabled={count === 0}
         />
         <Button
@@ -213,7 +209,10 @@ export default function FilterSheet() {
           // ever grows past the button again, the spoken phrase stays whole.
           accessibilityLabel={sv.filter.applyA11y(resultCount)}
           variant="primary"
-          onPress={() => router.back()}
+          onPress={() => {
+            setFeedFilter(filter);
+            router.back();
+          }}
           style={styles.actionButton}
         />
       </View>

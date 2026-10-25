@@ -1,0 +1,27 @@
+# Recorded walkthrough, polished to semantic selectors.
+# Requires the existing signed-in QA session. Never submits a report.
+steps:
+  - launch: nu.markarydsfagelklubb.mafk
+  - await: { visible: { text: Filter, role: Button } }
+  - await: { idle: true }
+  - echo: Open locations tab; expect location search.
+  - tap: { text: Lokaler, role: FrameLayout }
+  - await: { visible: { text: Sök lokal } }
+  - await: { idle: true }
+  - echo: Open profile and exercise themes.
+  - tap: { text: Profil, role: FrameLayout }
+  - await: { visible: { text: Dina uppgifter } }
+  - await: { idle: true }
+  - tap: { text: Mörkt, role: RadioButton }
+  - tap: { text: Ljust, role: RadioButton }
+  - tap: { text: System, role: RadioButton }
+  - tap: { text: Larm, role: FrameLayout }
+  - await: { visible: { text: Filter, role: Button } }
+  - await: { idle: true }
+  - echo: Open blank composer. Never tap its submit control.
+  - tap: { text: Larma, role: Button }
+  - await: { visible: { text: Nytt larm } }
+  - await: { idle: true }
+  - tap: { text: Välj art, role: Button }
+  - await: { visible: { text: Sök art } }
+  - await: { idle: true }

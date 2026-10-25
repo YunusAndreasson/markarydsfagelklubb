@@ -1,26 +1,29 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import { onlineManager, QueryClient } from '@tanstack/react-query';
+import { focusManager, onlineManager, QueryClient } from '@tanstack/react-query';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
 import * as Network from 'expo-network';
 import 'expo-sqlite/localStorage/install';
 import { parse as superjsonParse, stringify as superjsonStringify } from 'superjson';
+
+import { watchQueryFocus } from '@/lib/query-focus';
+import { CACHE_RETENTION_MS } from '@/lib/query-policy';
 
 // Single app-wide query client (mirrors the web app's TanStack Query setup).
 // Mounted in `src/app/_layout.tsx`. Defaults tuned for a mobile feed used on
 // flaky/slow networks:
 //   • staleTime 2 min — fewer refetches (each one re-hits the network + re-mints
 //     signed URLs); user actions still invalidate, and pull-to-refresh forces it.
-//   • gcTime 24 h — keep already-loaded screens cached for the whole session, so
+//   • gcTime 7 days — aligned with disk retention; keep already-loaded screens so
 //     navigating back shows content instantly and a failed refetch keeps showing
 //     the last-good data instead of an error.
 //   • retry 2 with a capped backoff — let a transient mobile failure self-heal
 //     before surfacing an error (mutations are NOT retried — see below).
-//   • no window-focus refetch (a web-only concept, noise on native).
+//   • foreground refresh is opt-in for report queries; registers stay session-fresh.
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 120_000,
-      gcTime: 1000 * 60 * 60 * 24,
+      gcTime: CACHE_RETENTION_MS,
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
       refetchOnWindowFocus: false,
@@ -31,6 +34,8 @@ export const queryClient = new QueryClient({
     mutations: { retry: 0 },
   },
 });
+
+focusManager.setEventListener(watchQueryFocus);
 
 // ── Network awareness ────────────────────────────────────────────────────────
 // React Native has no `navigator.onLine`, so by default TanStack Query treats the
@@ -43,13 +48,17 @@ export const queryClient = new QueryClient({
 // strand the app in a false-offline state). This is the one connectivity source;
 // the persisted cache still paints last-known data while paused.
 onlineManager.setEventListener((setOnline) => {
+  let receivedEvent = false;
   const isOnline = (s: { isInternetReachable?: boolean; isConnected?: boolean }) =>
     s.isInternetReachable ?? s.isConnected ?? true;
   // Seed the current state — the listener only fires on subsequent changes.
   void Network.getNetworkStateAsync()
-    .then((s) => setOnline(isOnline(s)))
-    .catch(() => setOnline(true));
-  const subscription = Network.addNetworkStateListener((s) => setOnline(isOnline(s)));
+    .then((s) => { if (!receivedEvent) setOnline(isOnline(s)); })
+    .catch(() => { if (!receivedEvent) setOnline(true); });
+  const subscription = Network.addNetworkStateListener((s) => {
+    receivedEvent = true;
+    setOnline(isOnline(s));
+  });
   return () => subscription.remove();
 });
 
@@ -73,7 +82,7 @@ const storage = (globalThis as unknown as { localStorage: WebStorageLike }).loca
 /** Bump when persisted data shapes change — invalidates any old on-disk cache. */
 export const PERSIST_BUSTER = 'mafk-cache-v2';
 /** Discard persisted data older than this on restore (offline tolerance window). */
-export const PERSIST_MAX_AGE = 1000 * 60 * 60 * 24 * 7; // 7 days
+export const PERSIST_MAX_AGE = CACHE_RETENTION_MS;
 
 export const persister = createAsyncStoragePersister({
   storage,

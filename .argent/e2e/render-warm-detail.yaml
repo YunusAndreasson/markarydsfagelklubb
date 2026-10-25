@@ -1,0 +1,24 @@
+steps:
+  - tool: open-url
+    args:
+      url: mafk://observation/69b60af3-9b24-4973-a932-99c37cdaffd2
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Förstora bilden
+        role: Button
+      timeoutMs: 20000
+  - tool: button
+    args:
+      button: back
+    delayMs: 2000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Senaste 14 dagarna
+      timeoutMs: 20000
+executionPrerequisite: Signed in with the feed loaded. Uses the Järnsparv report
+  deep link for repeatable render profiling, without submitting or changing
+  reports.

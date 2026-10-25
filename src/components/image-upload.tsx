@@ -59,6 +59,8 @@ export type ImageUploadProps = {
   value: string | null;
   /** Reports the new path after an upload, or null after a remove. */
   onChange: (path: string | null) => void;
+  /** Prevent saving the parent record before its photo operation finishes. */
+  onBusyChange?: (busy: boolean) => void;
   purpose: 'observation' | 'avatar';
   /** Observation draft id (generated here when omitted). */
   draftId?: string;
@@ -77,12 +79,15 @@ export type ImageUploadProps = {
   disabled?: boolean;
   /** Render only the chooser sheet (no inline preview/links). Drive via `ref.open()`. */
   headless?: boolean;
+  /** Use a small action row until a photo has been selected. */
+  compactEmpty?: boolean;
 };
 
 export function ImageUpload({
   ref,
   value,
   onChange,
+  onBusyChange,
   purpose,
   draftId: propDraftId,
   shape = 'rectangle',
@@ -91,6 +96,7 @@ export function ImageUpload({
   invalid,
   disabled,
   headless = false,
+  compactEmpty = false,
 }: ImageUploadProps) {
   const theme = useTheme();
   const { colorScheme } = useThemeMode();
@@ -100,6 +106,10 @@ export function ImageUpload({
   const draftId = useMemo(() => propDraftId ?? Crypto.randomUUID(), [propDraftId]);
 
   const [busy, setBusy] = useState<Busy>('idle');
+  function changeBusy(next: Busy) {
+    setBusy(next);
+    onBusyChange?.(next !== 'idle');
+  }
   const [localUri, setLocalUri] = useState<string | null>(null);
   // Signed display URL paired with the path it belongs to, so a stale URL never
   // shows once the value changes (e.g. after a remove). Seeded from the parent's
@@ -127,6 +137,7 @@ export function ImageUpload({
   const remoteUrl = minted && minted.path === value ? minted.url : null;
   const previewSource = localUri ?? remoteUrl;
   const hasImage = !!previewSource;
+  const compact = compactEmpty && !isSquare && !value && !hasImage;
   const locked = disabled || busy !== 'idle';
 
   function openChooser() {
@@ -180,10 +191,10 @@ export function ImageUpload({
 
     setLocalUri(asset.uri); // instant raw preview
     try {
-      setBusy('compressing');
+      changeBusy('compressing');
       const picked = await processImage(asset, shape);
       setLocalUri(picked.uri); // processed preview
-      setBusy('uploading');
+      changeBusy('uploading');
       const [target, bytes] = await Promise.all([
         createUploadUrl({
           purpose,
@@ -201,14 +212,14 @@ export function ImageUpload({
       hapticError();
       setError(e instanceof ImageTooLargeError ? sv.image.tooLarge : sv.image.uploadFailed);
     } finally {
-      setBusy('idle');
+      changeBusy('idle');
     }
   }
 
   async function onRemove() {
     if (locked) return;
     setError(null);
-    setBusy('removing');
+    changeBusy('removing');
     try {
       // Only delete uncommitted drafts here. A path a saved record still
       // references (`preservePath`) is left in place — its deletion belongs to
@@ -222,7 +233,7 @@ export function ImageUpload({
       hapticError();
       setError(sv.image.removeFailed);
     } finally {
-      setBusy('idle');
+      changeBusy('idle');
     }
   }
 
@@ -237,7 +248,7 @@ export function ImageUpload({
       accessibilityRole="button"
       accessibilityLabel={hasImage ? sv.image.replace : sv.image.add}
       style={[
-        isSquare ? styles.squarePreview : styles.rectPreview,
+        isSquare ? styles.squarePreview : compact ? styles.compactPreview : styles.rectPreview,
         {
           backgroundColor: theme.muted,
           borderColor: invalid ? theme.destructive : theme.border,
@@ -254,10 +265,10 @@ export function ImageUpload({
           transition={reduced ? 0 : ImageFade}
         />
       ) : (
-        <View style={styles.placeholder}>
-          <Icon name={IMAGE} size={isSquare ? 26 : 32} color={theme.mutedForeground} />
+        <View style={compact ? styles.compactPlaceholder : styles.placeholder}>
+          <Icon name={IMAGE} size={compact ? IconSize.control : isSquare ? 26 : 32} color={theme.mutedForeground} />
           {!isSquare ? (
-            <ThemedText type="smallBold" themeColor="mutedForeground">
+            <ThemedText type="smallBold" themeColor={compact ? 'foreground' : 'mutedForeground'}>
               {sv.image.add}
             </ThemedText>
           ) : null}
@@ -433,6 +444,13 @@ export function ImageUpload({
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.two },
+  compactPreview: {
+    minHeight: 52,
+    borderRadius: SurfaceRadius.sm,
+    paddingHorizontal: Spacing.three,
+    justifyContent: 'center',
+  },
+  compactPlaceholder: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   squareRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   squareActions: { flex: 1, gap: Spacing.one, alignItems: 'flex-start' },
   squarePreview: {

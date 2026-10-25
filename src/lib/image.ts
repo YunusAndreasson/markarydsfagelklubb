@@ -4,8 +4,8 @@
  * composes these: pick (camera/library) → process (downscale + JPEG) → read bytes,
  * then hands the bytes to the storage data module for the signed-URL upload.
  *
- * Mirrors the web `image-upload.tsx` semantics (max 8 MiB, ~2048px long side,
- * quality 0.82) but normalizes *everything* to JPEG — which converts HEIC, strips
+ * Uses the shared 8 MiB limit with a phone-sized 1600px long side and quality
+ * 0.82, normalizing *everything* to JPEG — which converts HEIC, strips
  * EXIF, and makes the resulting MIME/extension deterministic, so the upload path
  * scheme (`…/avatar.jpg`, `…/observations/<uuid>.jpg`) is always valid.
  *
@@ -43,7 +43,7 @@ export class ImageTooLargeError extends Error {
 }
 
 /** Long-side cap per shape (avatars need far less resolution than fynd photos). */
-const MAX_DIMENSION: Record<ImageShape, number> = { square: 1024, rectangle: 2048 };
+const MAX_DIMENSION: Record<ImageShape, number> = { square: 1024, rectangle: 1600 };
 const JPEG_QUALITY = 0.82;
 
 /** Ask for camera access; the library path doesn't need a permission. */

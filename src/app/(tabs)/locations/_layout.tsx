@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { Platform } from 'react-native';
 
 // Full-bleed map tab: the map must cover the screen edge-to-edge with only the
 // native search bar on top — no title. A *transparent* header gives exactly that:
@@ -14,7 +15,14 @@ export default function LocationsTabLayout() {
     <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Screen
         name="index"
-        options={{ title: '', headerTransparent: true, headerShadowVisible: false }}
+        options={{
+          title: '',
+          // Android uses the in-screen SearchField. Even an empty transparent
+          // native header intercepts touches over it.
+          headerShown: Platform.OS === 'ios',
+          headerTransparent: true,
+          headerShadowVisible: false,
+        }}
       />
     </Stack>
   );

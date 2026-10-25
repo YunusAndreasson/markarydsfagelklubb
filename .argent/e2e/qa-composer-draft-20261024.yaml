@@ -1,0 +1,67 @@
+# Fragment recorded live. Run qa-stress-20261024 first.
+executionPrerequisite: Signed-in Android QA session, blank composer species picker open after qa-stress-20261024. Never submit.
+steps:
+  - echo: Search impossible species, then clear and choose unlisted species.
+  - type: { into: { text: Sök art, role: TextField }, text: zzzzqa999, submit: false }
+  - await: { visible: { text: Inga arter matchar. } }
+  - tap: { text: Rensa sökningen, role: Button }
+  - tap: { text: Olistad fågelart, role: RadioButton }
+  - await: { visible: { text: 'Art, Olistad fågelart', role: Button } }
+  - await: { idle: true }
+  - echo: Count stress, 15 increments and 20 decrements. Replay uses semantic taps; original rapid timings are in the recording trace.
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Öka antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - tap: { text: Minska antal, role: Button }
+  - assert: { text: { in: { text: '1', role: StaticText }, equals: '1' } }
+  - tap: { text: Välj aktivitet, role: Button }
+  - await: { visible: { text: Drog iväg/ej kvar, role: RadioButton } }
+  - await: { idle: true }
+  - tap: { text: Födosökande, role: RadioButton }
+  - await: { visible: { text: 'Aktivitet, Födosökande', role: Button } }
+  - await: { idle: true }
+  - tap: { text: Välj plats, role: Button }
+  - await: { visible: { text: Välj på karta, role: Button } }
+  - await: { idle: true }
+  - tap: { text: Agghult/Traryd, role: RadioButton }
+  - await: { visible: { text: 'Plats, Agghult/Traryd', role: Button } }
+  - await: { idle: true }
+  - echo: Back must guard unsaved draft. Discard, never submit.
+  - tool: button
+    args: { button: back }
+  - await: { visible: { text: Avbryt rapporten? } }
+  - await: { idle: true }
+  - tap: { text: AVBRYT RAPPORT, role: Button }
+  - await: { visible: { text: Filter, role: Button } }
+  - await: { idle: true }

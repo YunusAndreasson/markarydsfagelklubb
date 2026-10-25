@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-25",
+  "target": "Android API 35 emulator, Expo 58 / React Native 0.88, Hermes",
+  "scope": "Occasional club use: startup, feed scrolling, opening reports, phone photos, draft submission controls",
+  "liveSafety": {
+    "reportsCreated": 0,
+    "reportsEditedOrDeleted": 0,
+    "alertsRequested": 0,
+    "photosUploaded": 0,
+    "submissionCheck": "Empty draft only; simulated ImageUpload onBusyChange locally, verified composer Larma and Avbryt disabled, restored false and dismissed. Submit was never invoked."
+  },
+  "findings": {
+    "feedRowsObserved": 19,
+    "locationRowsObserved": 61,
+    "reactCompilerEnabled": true,
+    "freshDetail": {
+      "beforeQueryEvents": ["fetch", "success"],
+      "afterQueryEvents": [],
+      "change": "Seed complete detail data from feed, retaining feed dataUpdatedAt; invalidated feed seeds stale. Existing two-minute freshness policy remains.",
+      "unitCases": ["fresh source avoids fetch", "day-old source refetches", "invalidated source refetches", "missing deep-link row fetches"]
+    },
+    "startupMap": {
+      "beforeUnvisitedTabMountedMapViews": 1,
+      "afterUnvisitedTabMountedMapViews": 0,
+      "firstVisitMountedMapViews": 1,
+      "sameMapInstanceAfterTabSwitch": true,
+      "change": "Defer LocationsContent until first location route visit, then retain it."
+    },
+    "photo": {
+      "sample": "Cached existing 1801x1200 photo; processed entirely locally, JPEG quality 0.82",
+      "beforeCap": 2048,
+      "beforeEncodedBytes": 308400,
+      "afterCap": 1600,
+      "afterDimensions": [1600, 1066],
+      "afterEncodedBytes": 237901,
+      "sampleByteReductionPercent": 22.86,
+      "change": "New report-photo cap 1600px; avatars remain 1024px. Existing stored photos unchanged."
+    }
+  },
+  "captures": {
+    "reactBefore": "20261025-125815",
+    "reactAfter": "20261025-125936",
+    "nativeBefore": "20261025-125758",
+    "nativeAfter": "20261025-125926",
+    "startupBefore": "20261025-130033",
+    "startupAfterInconclusive": "20261025-130121"
+  },
+  "limitations": [
+    "Emulator GPU/kernel transport dominates native hotspot reports. No physical-device FPS or launch-time speedup is claimed.",
+    "Startup replay after the map change hit Android activity-launch timeout, although the feed loaded and the React tree confirmed the map was absent. Release smoke results are recorded separately.",
+    "React before/after captures include differing background refresh and timing; commit counts and whole-flow elapsed times are not treated as a percentage speedup.",
+    "Photo size reduction is one sample, not a guarantee for all photos; timings include native warm-up and are not reported as a processing speedup.",
+    "No iOS device validation or OTA publication performed in this pass."
+  ],
+  "checks": {
+    "npmRunVerify": "passed: typecheck, lint, deprecated API check, 119 tests",
+    "feedDetailReplay": "passed before and after; after idle check warned about minor ongoing screen changes",
+    "mapReplay": "passed; map instance retained on return to feed",
+    "releaseBuild": "passed: local x86_64 assembleRelease",
+    "releaseSmoke": "cold launch/feed ready, opening report, scrolling and first map visit all passed; detail idle retained minor animation warning"
+  }
+}

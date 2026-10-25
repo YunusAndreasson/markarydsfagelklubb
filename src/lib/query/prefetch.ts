@@ -2,8 +2,8 @@
  * Fetch on *intent* rather than on arrival.
  *
  * Most detail screens here never need this: `observationQueryOptions` and
- * `memberQueryOptions` seed themselves from the feed cache via `placeholderData`,
- * so tapping a card paints the destination fully populated with nothing in flight.
+ * `memberQueryOptions` seed themselves from the feed cache, so tapping a card
+ * paints the destination populated while any needed revalidation runs.
  * The exception is a query with no sibling cache to read from — the lokal peek's
  * larm log — which otherwise starts fetching only once its route has mounted, i.e.
  * *after* the navigation has committed and the sheet has begun presenting.

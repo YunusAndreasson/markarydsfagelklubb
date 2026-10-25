@@ -19,6 +19,7 @@ import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useMotion } from '@/hooks/use-motion';
+import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 import { useBlockedUsers } from '@/lib/blocks';
 import { groupFeed, type FeedBucket } from '@/lib/feed';
@@ -60,10 +61,9 @@ export default function FeedScreen() {
   const { motion } = useMotion();
   const feed = useQuery(feedQueryOptions());
 
-  // Filter lives in a shared store so the native filter sheet (a separate route)
-  // and this feed read/write the same value — the sheet's toggles update the feed
-  // live behind it.
+  // The sheet commits its draft here only when the user confirms.
   const filter = useFeedFilter();
+  const now = useNow();
 
   // Blocked members (Apple 1.2) drop out before anything else, so they're absent
   // from the list, the filter options, and the counts alike.
@@ -74,7 +74,7 @@ export default function FeedScreen() {
   );
   const options = useMemo(() => deriveFilterOptions(data), [data]);
   const filtered = useMemo(() => applyFeedFilter(data, filter, user?.id), [data, filter, user?.id]);
-  const grouped = useMemo(() => groupFeed(filtered), [filtered]);
+  const grouped = useMemo(() => groupFeed(filtered, now), [filtered, now]);
 
   const total = data.length;
   const count = activeFilterCount(filter);
@@ -221,7 +221,10 @@ export default function FeedScreen() {
           )),
         }}
       />
-      <Screen refresh={feed.refetch}>
+      <Screen refresh={feed.refetch} style={{ backgroundColor: theme.backgroundGrouped }}>
+        <ThemedText type="small" themeColor="mutedForeground">
+          {sv.feed.windowLabel}
+        </ThemedText>
         {total > 0 && count > 0 ? (
           <ScrollView
             horizontal

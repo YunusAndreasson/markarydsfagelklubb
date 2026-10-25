@@ -5,7 +5,7 @@
  * `contentInsetAdjustmentBehavior`). Searchable single-select over the ~300 species:
  *   • deferred search on Swedish + scientific name + family,
  *   • "Olistad fågelart" (unlisted) + "Övrigt (ej fågel)" (non-bird) as the list
- *     header (scroll with it), shown as `speciesUnlistedLabel` though matched on
+ *     header when browsing, footer when searching, shown as `speciesUnlistedLabel` though matched on
  *     the DB name `speciesUnlisted`,
  *   • a virtualized `FlatList` with a fixed row height.
  * The chosen species `id` goes back to the report form via the picker bridge.
@@ -19,6 +19,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { RarityBadge, type RarityBadgeCustom } from '@/components/rarity-badge';
 import { SelectRow } from '@/components/select-row';
 import { SearchField } from '@/components/search-field';
+import { SheetTitle } from '@/components/sheet-title';
 import { SkeletonSelectRow } from '@/components/skeleton';
 import { ErrorBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
@@ -113,7 +114,6 @@ export default function SpeciesPickerSheet() {
     );
   }
 
-  const loaded = !speciesQuery.isPending && !speciesQuery.isError;
   const listEmpty = showSkeleton ? (
     <View style={styles.loading}>
       {[0, 1, 2, 3, 4, 5].map((n) => (
@@ -130,6 +130,25 @@ export default function SpeciesPickerSheet() {
     <ThemedText type="small" themeColor="mutedForeground" style={styles.empty}>
       {sv.observation.speciesEmpty}
     </ThemedText>
+  );
+
+  const searching = deferred.trim().length > 0;
+  const specialRows = (
+    <>
+      {unlisted
+        ? renderSpecialRow(
+            unlisted,
+            sv.observation.speciesUnlistedHint,
+            { label: '0', background: theme.destructive, foreground: theme.badgeForeground },
+            sv.observation.speciesUnlistedLabel,
+          )
+        : null}
+      {other
+        ? renderSpecialRow(other, sv.observation.speciesOtherHint, {
+            label: '–', background: theme.border, foreground: theme.mutedForeground,
+          })
+        : null}
+    </>
   );
 
   return (
@@ -156,37 +175,25 @@ export default function SpeciesPickerSheet() {
         // and nothing here calls scrollToIndex, so async measurement is fine.
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        // The two special rows ride at the top of the list (scroll with it).
+        // Search results get priority; fallback choices remain below them.
         ListHeaderComponent={
-          loaded ? (
-            <>
-              {/* Android renders no sheet header, so the native search bar above
-                  never appears there and this ~300-row list was scroll-only —
-                  even though the filter below was already written. No-op on iOS. */}
+          <>
+            {/* Android renders no sheet header, so the native search bar above
+                never appears there and this ~300-row list was scroll-only —
+                even though the filter below was already written. No-op on iOS. */}
+            <View style={styles.header}>
+              <SheetTitle title={sv.observation.speciesLabel} />
               <SearchField
                 value={query}
                 onChangeText={setQuery}
                 placeholder={sv.observation.speciesSearch}
               />
-              {unlisted
-                ? renderSpecialRow(
-                    unlisted,
-                    sv.observation.speciesUnlistedHint,
-                    { label: '0', background: theme.destructive, foreground: theme.badgeForeground },
-                    sv.observation.speciesUnlistedLabel,
-                  )
-                : null}
-              {other
-                ? renderSpecialRow(other, sv.observation.speciesOtherHint, {
-                    label: '–',
-                    background: theme.border,
-                    foreground: theme.mutedForeground,
-                  })
-                : null}
-            </>
-          ) : undefined
+            </View>
+            {searching ? null : specialRows}
+          </>
         }
         ListEmptyComponent={listEmpty}
+        ListFooterComponent={searching ? specialRows : undefined}
         contentContainerStyle={styles.listContent}
       />
     </>
@@ -194,6 +201,7 @@ export default function SpeciesPickerSheet() {
 }
 
 const styles = StyleSheet.create({
+  header: { gap: Spacing.two },
   // `paddingTop` matches the horizontal inset so the search field (now the first
   // thing in the list header) sits inside the sheet rather than jammed against
   // its rounded top edge — with no header on Android there's nothing else to

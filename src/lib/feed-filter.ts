@@ -146,8 +146,20 @@ export function deriveFilterOptions(
     applyFeedFilter(observations, { ...filter, locationIds: [] }, currentUserId),
   )
 
-  // Keep every selected value reachable. A lokal narrowed out of its own facet
-  // still needs its name, which only the unfiltered feed has.
+  // Keep the full set of choices in place as constraints change. A zero count
+  // explains an unavailable combination without removing its control or making
+  // whole sections disappear (especially when switching to an empty "Mina").
+  for (const [level, option] of rarityOptions(observations)) {
+    if (!rarities.has(level)) rarities.set(level, { ...option, count: 0 })
+  }
+  for (const [value, option] of activityOptions(observations)) {
+    if (!activities.has(value)) activities.set(value, { ...option, count: 0 })
+  }
+  for (const [id, option] of locationOptions(observations)) {
+    if (!locations.has(id)) locations.set(id, { ...option, count: 0 })
+  }
+
+  // Keep selected values reachable even if the underlying report disappeared.
   for (const level of filter.rarities) {
     if (!rarities.has(level)) rarities.set(level, { level, count: 0 })
   }

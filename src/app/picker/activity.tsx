@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { SelectRow } from '@/components/select-row';
+import { SheetTitle } from '@/components/sheet-title';
 import { Spacing } from '@/constants/theme';
 import { sv } from '@/lib/i18n/sv';
 import { usePickerResult } from '@/lib/picker-bridge';
@@ -25,6 +26,7 @@ export default function ActivityPickerSheet() {
 
   return (
     <Screen contentContainerStyle={styles.content}>
+      <SheetTitle title={sv.observation.activityLabel} />
       {OPTIONS.map((opt) => (
         <SelectRow
           key={opt.value}

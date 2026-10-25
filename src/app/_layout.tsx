@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ALERT } from '@/components/icon';
 import { Screen } from '@/components/screen';
+import { ReferenceDataQueries } from '@/components/reference-data-queries';
 import { ErrorBlock, OfflineBlock, StateBlock } from '@/components/state-block';
 import { ToastHost } from '@/components/toast';
 import { ThemedView } from '@/components/themed-view';
@@ -30,6 +31,7 @@ import { ThemeModeProvider, useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 import { configureNotificationHandler } from '@/lib/notifications';
 import { persister, PERSIST_BUSTER, PERSIST_MAX_AGE, queryClient } from '@/lib/query-client';
+import { prepareQueriesForColdStart } from '@/lib/query-policy';
 import { myProfileQueryOptions } from '@/lib/query/profile';
 import { isOfflinePending } from '@/lib/query/status';
 
@@ -63,6 +65,7 @@ export default function RootLayout() {
         <PersistQueryClientProvider
           client={queryClient}
           persistOptions={{ persister, maxAge: PERSIST_MAX_AGE, buster: PERSIST_BUSTER }}
+          onSuccess={() => prepareQueriesForColdStart(queryClient)}
         >
           <AuthProvider>
             <SafeAreaProvider>
@@ -197,6 +200,7 @@ function ThemedNavigation() {
         },
       }}
     >
+      {session && hasProfile ? <ReferenceDataQueries key={userId} /> : null}
       <Stack
         screenOptions={{
           headerShown: false,
@@ -268,14 +272,9 @@ function ThemedNavigation() {
             name="picker/location"
             options={sheetOptions([0.6, 0.9], sv.observation.locationLabel)}
           />
-          {/* Larm feed filter — a native sheet like the pickers; reads/writes the
-              shared feed-filter store so the feed behind updates live as chips toggle. */}
-          {/* Also `fitToContents`: the actions ride at the END of the scrolling
-              content (pinning them collapses on iOS — see filter.tsx), so at a
-              0.6 detent the primary "Visa N" sat below the fold, while dragging
-              to 0.9 left a big empty gap under it. Sizing to the content puts the
-              actions on screen at rest with no dead space. */}
-          <Stack.Screen name="filter" options={sheetOptions('fitToContents', sv.filter.title)} />
+          {/* A fixed detent keeps filtering from resizing the sheet as counts or
+              available feed data change. Actions stay inside the scroller. */}
+          <Stack.Screen name="filter" options={sheetOptions([0.9], sv.filter.title)} />
           <Stack.Screen
             name="blocked"
             options={{ headerShown: true, title: sv.blockedMembers.title }}

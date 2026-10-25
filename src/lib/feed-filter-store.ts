@@ -1,10 +1,9 @@
 /**
  * Shared feed-filter state — a tiny external store so the Larm feed and the
  * native filter sheet (a separate `formSheet` route) read and write the SAME
- * filter. That's what keeps the filter LIVE: toggling a chip in the sheet updates
- * this store, and the feed — rendered behind the half-height sheet — re-renders
- * against it instantly, with no "Apply" step. A plain module store (not context)
- * because the two screens sit in different navigation subtrees.
+ * applied filter. The sheet edits a local draft and commits on confirmation;
+ * removing chips in the feed updates this store immediately. A plain module
+ * store because the two screens sit in different navigation subtrees.
  */
 import { useSyncExternalStore } from 'react';
 

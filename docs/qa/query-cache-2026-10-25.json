@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-25",
+  "policy": {
+    "referenceRegisters": "Refresh species and locations after cold-start hydration and authentication, then share session-fresh queries across consumers.",
+    "reports": "Keep cached content visible; refresh active report queries on foreground return, including inside the stale-time window. No polling added.",
+    "derivedLocations": "Activity, common locations and location alert history reuse the cached location register.",
+    "successfulReportChanges": "Create, edit and delete invalidate location activity and common-location lists using exact keys, without invalidating the register.",
+    "retention": "Inactive-query gcTime and persisted-client maxAge both seven days.",
+    "localSettings": "Existing immediate personal-setting updates unchanged."
+  },
+  "checks": {
+    "verify": "Passed typecheck, lint, deprecated API check and all 126 tests.",
+    "latestSharedRegisterTest": "Passed after extending coverage to location alert history.",
+    "nativeForegroundObservation": { "feedFetches": 1, "speciesFetches": 0, "locationRegisterFetches": 0 },
+    "concurrentRegisterConsumersUnitTest": { "consumers": 4, "registerFetches": 1 },
+    "debugRuntimeLog": "Zero captured console entries after the foreground checks.",
+    "releaseBuild": "Local Android x86_64 assembleRelease passed.",
+    "releaseColdLaunch": "perf-cold-launch passed, 2 steps.",
+    "releaseForeground": "cache-foreground-refresh passed, 4 steps.",
+    "releaseMap": "perf-map-first-visit passed, 3 steps."
+  },
+  "safety": {
+    "reportsSubmitted": 0,
+    "reportsEditedOrDeleted": 0,
+    "alertsSent": 0,
+    "mutationInvalidationValidation": "Mocked backend and isolated query cache only.",
+    "published": false
+  },
+  "limits": [
+    "Android emulator validation; no iOS device run in this pass.",
+    "Initial debug bundling exceeded launch/wait timeouts; the final foreground recording and release checks passed.",
+    "A map tap during compilation failed to navigate; the unchanged map check passed after installing the final release build."
+  ]
+}

@@ -16,6 +16,7 @@ import { Platform } from 'react-native';
 export const Colors = {
   light: {
     background: '#FFFFFF',
+    backgroundGrouped: '#F5F5F5',
     foreground: '#0A0A0A',
     card: '#FFFFFF',
     cardForeground: '#0A0A0A',
@@ -45,6 +46,7 @@ export const Colors = {
   },
   dark: {
     background: '#080B09',
+    backgroundGrouped: '#080B09',
     foreground: '#FAFAFA',
     card: '#151816',
     cardForeground: '#FAFAFA',

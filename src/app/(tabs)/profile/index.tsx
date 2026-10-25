@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Linking, StyleSheet } from 'react-native';
@@ -11,7 +11,7 @@ import { LocationPermissionSection } from '@/components/location-permission-sect
 import { NotificationPermissionSection } from '@/components/notification-permission-section';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
-import { SettingsFormInput } from '@/components/settings/settings-form-input';
+import { SettingsFormInput, type SettingsSaveState } from '@/components/settings/settings-form-input';
 import { SettingsGroup } from '@/components/settings/settings-group';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { SettingsStaticRow } from '@/components/settings/settings-static-row';
@@ -60,6 +60,7 @@ export default function ProfileScreen() {
   const [avatarPath, setAvatarPath] = useState(profile?.avatarPath ?? null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<Partial<Record<'displayName' | 'phone', 'saved' | 'error'>>>({});
 
   // The last values known to be persisted. Each autosave sends the changed field
   // plus this snapshot for its siblings — so committing one field never writes a
@@ -78,7 +79,30 @@ export default function ProfileScreen() {
 
   type ProfilePatch = Partial<Persisted>;
 
+  const pendingSaves = useMutationState({
+    filters: { mutationKey: ['profile-autosave', userId], status: 'pending' },
+    select: (entry) => entry.state.variables as ProfilePatch | undefined,
+  });
+
+  function fieldSaveState(field: 'displayName' | 'phone', current: string | null): SettingsSaveState | undefined {
+    // Include queued saves, not just the last mutation observed by useMutation.
+    if (pendingSaves.some((patch) => patch && field in patch)) return 'saving';
+    if (saveFeedback[field] === 'error') return 'error';
+    return saveFeedback[field] === 'saved' && current === saved[field] ? 'saved' : undefined;
+  }
+
+  function updateSaveFeedback(patch: ProfilePatch, status: 'saved' | 'error') {
+    setSaveFeedback((previous) => {
+      const next = { ...previous };
+      for (const field of ['displayName', 'phone'] as const) {
+        if (field in patch) next[field] = status;
+      }
+      return next;
+    });
+  }
+
   const mutation = useMutation({
+    mutationKey: ['profile-autosave', userId],
     scope: { id: 'profile-autosave' },
     mutationFn: async (patch: ProfilePatch) => {
       const previous = savedRef.current;
@@ -99,7 +123,7 @@ export default function ProfileScreen() {
           input.avatarPath !== previous.avatarPath,
       };
     },
-    onSuccess: ({ result, persisted, previousAvatarPath, avatarChanged }) => {
+    onSuccess: ({ result, persisted, previousAvatarPath, avatarChanged }, patch) => {
       // Seed the shared profile query so the gate / header avatar / other readers
       // see the update without a refetch, and advance the persisted snapshot. The
       // editable fields are intentionally NOT overwritten here — they already hold
@@ -111,12 +135,16 @@ export default function ProfileScreen() {
         void deleteUpload(previousAvatarPath).catch(() => {});
       }
       setSaved(persisted);
+      updateSaveFeedback(patch, 'saved');
       hapticSuccess();
-      showToast(sv.profile.saved, 'success');
+      // Name and phone confirm beside the field; the headless avatar still
+      // needs a toast because it has no inline save status.
+      if (avatarChanged) showToast(sv.profile.saved, 'success');
       // The feed embeds the observer's display name — refresh it.
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
     },
     onError: (_error, patch) => {
+      updateSaveFeedback(patch, 'error');
       // An avatar upload precedes the profile write. If that write fails, return
       // the editor to the last committed path instead of presenting an unsaved
       // local value as though it were durable.
@@ -250,9 +278,11 @@ export default function ProfileScreen() {
           onChangeText={(next) => {
             setName(next);
             setNameError(null);
+            setSaveFeedback((previous) => ({ ...previous, displayName: undefined }));
           }}
           onEndEditing={commitName}
           error={nameError}
+          saveState={fieldSaveState('displayName', name.trim())}
           placeholder={sv.profile.namePlaceholder}
           autoCapitalize="words"
           autoComplete="name"
@@ -265,9 +295,11 @@ export default function ProfileScreen() {
           onChangeText={(next) => {
             setPhone(next);
             setPhoneError(null);
+            setSaveFeedback((previous) => ({ ...previous, phone: undefined }));
           }}
           onEndEditing={commitPhone}
           error={phoneError}
+          saveState={fieldSaveState('phone', phone.trim() || null)}
           placeholder={sv.profile.phonePlaceholder}
           keyboardType="phone-pad"
           autoComplete="tel"

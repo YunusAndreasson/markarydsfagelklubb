@@ -61,6 +61,17 @@ const SEARCH_FIELD_HEIGHT = 48;
 const SEARCH_BAR_CLEARANCE = Spacing.two + SEARCH_FIELD_HEIGHT + Spacing.two;
 
 export default function LocationsScreen() {
+  const pathname = usePathname();
+  const visible = pathname.startsWith('/location');
+  const [visited, setVisited] = useState(visible);
+  // Native tabs render every route eagerly. Wait until this tab is used before
+  // creating its map, markers and activity subscription. Keep it mounted after
+  // that first visit so tab switches preserve the viewport and search state.
+  if (visible && !visited) setVisited(true);
+  return visited ? <LocationsContent /> : <ThemedView style={styles.container} />;
+}
+
+function LocationsContent() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const locationsQuery = useQuery(locationsQueryOptions());

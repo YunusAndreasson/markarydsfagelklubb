@@ -101,6 +101,7 @@ export type ObservationFormProps = {
    *  to guard an accidental dismiss (swipe/Avbryt) — the Mail/Calendar "Discard
    *  changes?" convention (Norman: forgiveness). */
   onDirtyChange?: (dirty: boolean) => void;
+  onImageBusyChange?: (busy: boolean) => void;
 };
 
 /** Do two location values point at the same place? Used by the dirty check. */
@@ -141,6 +142,7 @@ export function ObservationForm({
   scrollRef,
   submitInHeader,
   onDirtyChange,
+  onImageBusyChange,
 }: ObservationFormProps) {
   const theme = useTheme();
   // The mount-time snapshot the dirty check compares against. Both hosting
@@ -151,8 +153,18 @@ export function ObservationForm({
   // the snap silently overwrote a manually chosen time.)
   const [initialValue] = useState<ObservationFormValue>(() => initial ?? emptyObservation());
   const [value, setValue] = useState<ObservationFormValue>(initialValue);
+  const [commentOpen, setCommentOpen] = useState(() => !!initialValue.comment);
   const [showErrors, setShowErrors] = useState(false);
   const busy = !!submitting || !!deleting;
+  const [imageBusy, setImageBusy] = useState(false);
+  const imageBusyRef = useRef(false);
+
+  function changeImageBusy(next: boolean) {
+    // Guard the imperative submit immediately, before the header re-renders.
+    imageBusyRef.current = next;
+    setImageBusy(next);
+    onImageBusyChange?.(next);
+  }
 
   // Surface "has unsaved input" to the route so it can guard an accidental
   // dismiss. `onDirtyChange` from `useState`'s setter is stable, so this only
@@ -202,6 +214,7 @@ export function ObservationForm({
   }
 
   function handleSubmit() {
+    if (busy || imageBusyRef.current) return;
     if (!value.speciesId || value.location.kind === 'none' || value.activity === null) {
       // The invalid PickerFields flip red and each buzz once (PickerField owns the
       // error haptic), then we scroll the first one into view. A summary toast
@@ -226,6 +239,7 @@ export function ObservationForm({
   useImperativeHandle(ref, () => ({ submit: handleSubmit }));
 
   async function confirmDelete() {
+    if (busy || imageBusyRef.current) return;
     // `confirm()` fires the warning haptic itself as the dialog presents.
     const ok = await confirm({
       title: sv.observation.deleteTitle,
@@ -281,27 +295,41 @@ export function ObservationForm({
         />
       </View>
 
-      <TextField
-        label={sv.observation.commentLabel}
-        optional
-        value={value.comment}
-        onChangeText={(t) => update('comment', t)}
-        placeholder={sv.observation.commentPlaceholder}
-        multiline
-        numberOfLines={6}
-        maxLength={2000}
-        autoCapitalize="sentences"
-        editable={!busy}
-        style={styles.comment}
-      />
+      {commentOpen ? (
+        <TextField
+          label={sv.observation.commentLabel}
+          optional
+          value={value.comment}
+          onChangeText={(t) => update('comment', t)}
+          placeholder={sv.observation.commentPlaceholder}
+          multiline
+          autoFocus={!initialValue.comment}
+          numberOfLines={6}
+          maxLength={2000}
+          autoCapitalize="sentences"
+          editable={!busy}
+          style={styles.comment}
+        />
+      ) : (
+        <Button
+          title={sv.observation.addComment}
+          variant="secondary"
+          onPress={() => setCommentOpen(true)}
+          disabled={busy}
+          haptic={false}
+          style={styles.addComment}
+        />
+      )}
 
       <View style={styles.imageField}>
-        <FieldLabel label={sv.observation.imageLabel} optional />
+        {value.imagePath ? <FieldLabel label={sv.observation.imageLabel} optional /> : null}
         <ImageUpload
           value={value.imagePath}
           onChange={(path) => update('imagePath', path)}
+          onBusyChange={changeImageBusy}
           purpose="observation"
           shape="rectangle"
+          compactEmpty
           // The saved photo (edit) must survive until Spara commits: "Ta bort"
           // only clears the field, and a replace uploads to a fresh draft path.
           // The route's save flow deletes the old object once the update lands —
@@ -333,7 +361,7 @@ export function ObservationForm({
           title={mode === 'create' ? sv.observation.submitNew : sv.observation.submitEdit}
           onPress={handleSubmit}
           loading={submitting}
-          disabled={deleting}
+          disabled={deleting || imageBusy}
           haptic="commit"
         />
       ) : null}
@@ -344,7 +372,7 @@ export function ObservationForm({
           variant="destructive"
           onPress={() => void confirmDelete()}
           loading={deleting}
-          disabled={submitting}
+          disabled={submitting || imageBusy}
           haptic="commit"
         />
       ) : null}
@@ -355,6 +383,7 @@ export function ObservationForm({
 const styles = StyleSheet.create({
   form: { gap: Spacing.three },
   comment: { minHeight: 120, textAlignVertical: 'top' },
+  addComment: { alignItems: 'flex-start', paddingHorizontal: Spacing.three },
   imageField: { gap: Spacing.one },
   // `flex-start` so the bell sits on the caption's FIRST line when it wraps.
   alertNote: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },

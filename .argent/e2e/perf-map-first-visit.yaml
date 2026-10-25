@@ -1,0 +1,15 @@
+steps:
+  - tap:
+      text: Lokaler
+      role: FrameLayout
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Google Map
+      timeoutMs: 20000
+  - tap:
+      text: Larm
+      role: FrameLayout
+executionPrerequisite: Signed in on Larm feed. Covers the first map visit after a
+  fresh launch, or a later return to the retained map. Read-only navigation only.

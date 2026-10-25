@@ -24,6 +24,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SelectRow } from '@/components/select-row';
 import { SearchField } from '@/components/search-field';
+import { SheetTitle } from '@/components/sheet-title';
 import { SkeletonSelectRow } from '@/components/skeleton';
 import { ErrorBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
@@ -185,6 +186,7 @@ export default function LocationPickerSheet() {
         }}
       />
       <Screen contentContainerStyle={styles.content}>
+        <SheetTitle title={sv.observation.locationLabel} />
         {/* Android has no sheet header, so the native bar above never renders
             there — this is the same search, in the content. No-op on iOS. */}
         <SearchField

@@ -2,14 +2,14 @@ import { queryOptions } from '@tanstack/react-query';
 
 import { LOKAL_RADIUS_M, nearestLocationWithin } from '@/lib/lokal-proximity';
 import { queryKeys } from '@/lib/query/keys';
+import { queryClient } from '@/lib/query-client';
+import { reportQueryPolicy } from '@/lib/query-policy';
+import { locationsQueryOptions, type LocatedLocation } from '@/lib/query/locations';
 import { supabase } from '@/lib/supabase';
 
 /** Half-width of the server-side prefilter box. Comfortably wider than
  *  {@link LOKAL_RADIUS_M} so the precise circular test client-side is what decides. */
 const BBOX_M = 500;
-
-type LocationPoint = { id: number; latitude: number | null; longitude: number | null };
-type Positioned = { id: number; latitude: number; longitude: number };
 
 /**
  * A larm (bird alert) as stored in the durable `alerts` log. The row is
@@ -88,11 +88,9 @@ function toAlert(row: RawAlertRow): Alert {
  * snapshotted at send time, the select just never asked for them.
  */
 export async function listLocationAlerts(locationId: number): Promise<Alert[]> {
-  const locRes = await supabase.from('locations').select('id,latitude,longitude');
-  if (locRes.error) throw locRes.error;
-
-  const locations = ((locRes.data ?? []) as LocationPoint[]).filter(
-    (l): l is Positioned => l.latitude != null && l.longitude != null,
+  const register = await queryClient.query(locationsQueryOptions());
+  const locations = register.filter(
+    (l): l is LocatedLocation => l.latitude != null && l.longitude != null,
   );
   const target = locations.find((l) => l.id === locationId);
 
@@ -127,6 +125,7 @@ export async function listLocationAlerts(locationId: number): Promise<Alert[]> {
 
 export function locationAlertsQueryOptions(locationId: number) {
   return queryOptions({
+    ...reportQueryPolicy,
     queryKey: queryKeys.alertsForLocation(locationId),
     queryFn: () => listLocationAlerts(locationId),
   });

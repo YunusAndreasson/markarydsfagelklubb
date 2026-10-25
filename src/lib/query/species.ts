@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query/keys';
+import { catalogQueryPolicy } from '@/lib/query-policy';
 import { supabase } from '@/lib/supabase';
 
 export type Species = {
@@ -41,5 +42,5 @@ export async function listSpecies(): Promise<Species[]> {
 }
 
 export function speciesQueryOptions() {
-  return queryOptions({ queryKey: queryKeys.species, queryFn: listSpecies });
+  return queryOptions({ ...catalogQueryPolicy, queryKey: queryKeys.species, queryFn: listSpecies });
 }

@@ -1,0 +1,188 @@
+steps:
+  - echo: >-
+      Use the dedicated QA account with original name QA Test Claude. No report is submitted;
+      restore the name after checking autosave.
+  - launch: nu.markarydsfagelklubb.mafk
+  - await:
+      visible:
+        text: Senaste 14 dagarna
+      timeout: 20000
+  - await:
+      idle: true
+  - tap:
+      text: Larma
+  - await:
+      visible:
+        text: Lägg till kommentar
+      timeout: 10000
+  - await:
+      visible:
+        text: Lägg till bild
+      timeout: 10000
+  - echo: >-
+      The compact photo action must still open the source chooser; cancel it without picking or
+      uploading.
+  - tap:
+      text: Lägg till bild
+      role: Button
+  - await:
+      visible:
+        text: Ta foto
+      timeout: 10000
+  - await:
+      idle: true
+  - tool: button
+    args:
+      button: back
+  - await:
+      hidden:
+        text: Ta foto
+      timeout: 10000
+  - tap:
+      text: Lägg till kommentar
+      role: Button
+  - await:
+      hidden:
+        text: Lägg till kommentar
+      timeout: 10000
+  - await:
+      visible:
+        text: Kommentar
+      timeout: 10000
+  - tool: keyboard
+    args:
+      text: QA endast, skickas inte.
+  - tool: button
+    args:
+      button: back
+  - tap:
+      text: Välj art
+  - await:
+      visible:
+        text: Sök art…
+      timeout: 10000
+  - await:
+      idle: true
+  - echo: Search havsorn; the matching Havsörn row should appear before both fallback choices.
+  - tap:
+      text: Sök art…
+      role: TextField
+  - tool: keyboard
+    args:
+      text: havsorn
+  - await:
+      visible:
+        text: Havsörn
+      timeout: 10000
+  - tap:
+      text: Stäng
+  - await:
+      hidden:
+        text: Sök art…
+      timeout: 10000
+  - await:
+      visible:
+        text: QA endast, skickas inte.
+      timeout: 10000
+  - tool: button
+    args:
+      button: back
+  - await:
+      visible:
+        text: Avbryt rapporten?
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      id: android:id/button1
+  - await:
+      visible:
+        text: Senaste 14 dagarna
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Profil
+      role: FrameLayout
+  - await:
+      visible:
+        text: Dina uppgifter
+      timeout: 10000
+  - await:
+      idle: true
+  - echo: >-
+      Append QA to the dedicated test profile name, blur to save, and verify the inline Sparat
+      status. Restore the original name next.
+  - tap:
+      text: Namn
+      role: TextField
+  - tool: keyboard
+    args:
+      text: ' QA'
+  - tap:
+      text: Telefonnummer
+      role: TextField
+  - await:
+      visible:
+        text: Sparat
+      timeout: 15000
+  - tap:
+      text: Namn
+      role: TextField
+  - tool: keyboard
+    args:
+      key: backspace
+  - tool: keyboard
+    args:
+      key: backspace
+  - tool: keyboard
+    args:
+      key: backspace
+  - await:
+      hidden:
+        text: Sparat
+      timeout: 10000
+  - tap:
+      text: Telefonnummer
+      role: TextField
+  - await:
+      visible:
+        text: Sparat
+      timeout: 15000
+  - echo: >-
+      The original QA name is restored. Check the grouped feed in dark mode, then restore System
+      appearance.
+  - tool: button
+    args:
+      button: back
+  - tap:
+      text: Mörkt
+  - tap:
+      text: Larm
+      role: FrameLayout
+  - await:
+      visible:
+        text: Senaste 14 dagarna
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Profil
+      role: FrameLayout
+  - await:
+      visible:
+        text: Dina uppgifter
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: System
+  - tap:
+      text: Larm
+      role: FrameLayout
+  - await:
+      visible:
+        text: Senaste 14 dagarna
+      timeout: 10000
+  - await:
+      idle: true

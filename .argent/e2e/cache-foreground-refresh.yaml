@@ -1,0 +1,21 @@
+steps:
+  - tool: button
+    args:
+      button: home
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: com.google.android.apps.nexuslauncher:id/workspace
+      timeoutMs: 10000
+  - tool: launch-app
+    args:
+      bundleId: nu.markarydsfagelklubb.mafk
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Senaste 14 dagarna
+      timeoutMs: 20000
+executionPrerequisite: "Signed in with the Larm feed visible and its initial
+  reads finished. Read-only: no report submission or alert calls."

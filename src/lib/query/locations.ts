@@ -2,6 +2,8 @@ import { queryOptions } from '@tanstack/react-query';
 
 import { LOKAL_RADIUS_M, nearestLocationWithin } from '@/lib/lokal-proximity';
 import { queryKeys } from '@/lib/query/keys';
+import { queryClient } from '@/lib/query-client';
+import { catalogQueryPolicy, reportQueryPolicy } from '@/lib/query-policy';
 import { sinceIso } from '@/lib/query/observations';
 import { requireUserId } from '@/lib/query/session';
 import { supabase } from '@/lib/supabase';
@@ -60,7 +62,7 @@ export async function listLocations(): Promise<Location[]> {
 }
 
 export function locationsQueryOptions() {
-  return queryOptions({ queryKey: queryKeys.locations, queryFn: listLocations });
+  return queryOptions({ ...catalogQueryPolicy, queryKey: queryKeys.locations, queryFn: listLocations });
 }
 
 /** Rolling window for "does this lokal have current activity?" (matches the feed). */
@@ -82,17 +84,14 @@ const ACTIVITY_WINDOW_DAYS = 14;
  * loop, and it keeps the rule identical to the one the report picker applies.
  */
 export async function listLocationActivity(): Promise<Record<number, number>> {
-  const [locRes, obsRes] = await Promise.all([
-    supabase.from('locations').select('id,name,description,latitude,longitude'),
+  const [locations, obsRes] = await Promise.all([
+    queryClient.query(locationsQueryOptions()),
     supabase
       .from('observations')
       .select('location_id,latitude,longitude')
       .gte('observed_at', sinceIso(ACTIVITY_WINDOW_DAYS)),
   ]);
-  if (locRes.error) throw locRes.error;
   if (obsRes.error) throw obsRes.error;
-
-  const locations = ((locRes.data ?? []) as RawLocationRow[]).map(toLocation);
   const counts: Record<number, number> = {};
   const bump = (id: number) => {
     counts[id] = (counts[id] ?? 0) + 1;
@@ -117,6 +116,7 @@ export async function listLocationActivity(): Promise<Record<number, number>> {
 
 export function locationActivityQueryOptions() {
   return queryOptions({
+    ...reportQueryPolicy,
     queryKey: queryKeys.locationsActivity,
     queryFn: listLocationActivity,
     staleTime: 5 * 60 * 1000,
@@ -143,12 +143,8 @@ const MAX_COMMON = 15;
  * back to A–Ö. The list therefore grows by itself as lokaler come into use.
  */
 export async function listCommonLocations(): Promise<CommonLocation[]> {
-  const [locRes, useRes] = await Promise.all([
-    supabase
-      .from('locations')
-      .select('id,name,latitude,longitude')
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null),
+  const [locations, useRes] = await Promise.all([
+    queryClient.query(locationsQueryOptions()),
     supabase
       .from('observations')
       .select('location_id')
@@ -156,7 +152,6 @@ export async function listCommonLocations(): Promise<CommonLocation[]> {
       .order('created_at', { ascending: false })
       .limit(1000),
   ]);
-  if (locRes.error) throw locRes.error;
   if (useRes.error) throw useRes.error;
 
   const uses = new Map<number, number>();
@@ -164,8 +159,8 @@ export async function listCommonLocations(): Promise<CommonLocation[]> {
     if (row.location_id != null) uses.set(row.location_id, (uses.get(row.location_id) ?? 0) + 1);
   }
 
-  return ((locRes.data ?? []) as RawLocationRow[])
-    .filter((l): l is RawLocationRow & { latitude: number; longitude: number } =>
+  return locations
+    .filter((l): l is LocatedLocation =>
       l.latitude != null && l.longitude != null && (uses.get(l.id) ?? 0) > 0,
     )
     .sort(
@@ -178,10 +173,20 @@ export async function listCommonLocations(): Promise<CommonLocation[]> {
 
 export function commonLocationsQueryOptions() {
   return queryOptions({
+    ...reportQueryPolicy,
     queryKey: queryKeys.locationsCommon,
     queryFn: listCommonLocations,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/** Reports change usage/activity, not the location register itself. Exact keys
+ * keep a successful report from triggering another catalog fetch. */
+export function invalidateLocationSummaries(): Promise<void[]> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.locationsActivity, exact: true }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.locationsCommon, exact: true }),
+  ]);
 }
 
 /**

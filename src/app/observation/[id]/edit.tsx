@@ -24,6 +24,7 @@ import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
+import { invalidateLocationSummaries } from '@/lib/query/locations';
 import {
   deleteObservation,
   observationQueryOptions,
@@ -49,6 +50,7 @@ export default function ObservationEditScreen() {
   // "Discard changes?" convention (Norman: forgiveness). Swipe is disabled while
   // dirty so the guarded Avbryt is the only exit.
   const [dirty, setDirty] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
 
   const updateMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => updateObservation({ id, ...formToInput(value) }),
@@ -73,6 +75,7 @@ export default function ObservationEditScreen() {
         void deleteUpload(obs.imagePath).catch(() => {});
       }
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
+      void invalidateLocationSummaries();
       void queryClient.invalidateQueries({ queryKey: queryKeys.observation(id) });
       // The owner's member-profile feed also embeds this row.
       if (obs) void queryClient.invalidateQueries({ queryKey: queryKeys.member(obs.userId) });
@@ -98,6 +101,7 @@ export default function ObservationEditScreen() {
       showToast(sv.observation.deleted, 'success');
       if (obs?.imagePath) void deleteUpload(obs.imagePath).catch(() => {});
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
+      void invalidateLocationSummaries();
       // Drop the now-deleted row's detail cache so it can't be re-shown (or
       // persisted to disk) as a stale, still-"editable" record. The user has
       // already been popped back to the feed by `onDelete`, so this can't flash a
@@ -113,7 +117,7 @@ export default function ObservationEditScreen() {
     },
   });
 
-  const busy = updateMutation.isPending || deleteMutation.isPending;
+  const busy = updateMutation.isPending || deleteMutation.isPending || imageBusy;
   // Keep the modal mounted until its write settles. This preserves both the
   // mutation continuation and the form needed to retry a failure.
   const { dismiss, gestureEnabled } = useDiscardGuard({ mode: 'edit', dirty, busy });
@@ -180,6 +184,7 @@ export default function ObservationEditScreen() {
         scrollRef={scrollRef}
         submitInHeader
         onDirtyChange={setDirty}
+        onImageBusyChange={setImageBusy}
         onSubmit={(v) => {
           updateMutation.mutate(v, { onSuccess: () => router.back() });
         }}
@@ -221,7 +226,7 @@ export default function ObservationEditScreen() {
                     title={sv.observation.submitEdit}
                     onPress={() => formRef.current?.submit()}
                     loading={updateMutation.isPending}
-                    disabled={deleteMutation.isPending}
+                    disabled={deleteMutation.isPending || imageBusy}
                   />
                 )
               : undefined,

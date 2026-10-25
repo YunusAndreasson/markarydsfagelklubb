@@ -304,8 +304,8 @@ const styles = StyleSheet.create({
     // horizontal + bottom padding (the content column's padding no longer wraps it).
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,
-    paddingBottom: Spacing.three,
-    marginTop: Spacing.three,
+    paddingBottom: Spacing.two,
+    marginTop: Spacing.two,
     // The footer is its own press target (→ member profile); keep it ≥44px tall.
     minHeight: 44,
   },

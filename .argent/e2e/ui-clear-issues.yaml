@@ -1,0 +1,189 @@
+steps:
+  - launch: nu.markarydsfagelklubb.mafk
+  - await:
+      visible:
+        text: Filter
+        role: Button
+      timeout: 20000
+  - await:
+      idle: true
+  - echo: Open Lokaler; focus and type into the Android map search.
+  - tap:
+      text: Lokaler
+      role: FrameLayout
+  - await:
+      visible:
+        text: Sök lokal
+      timeout: 15000
+  - await:
+      idle: true
+  - type:
+      into:
+        text: Sök lokal
+      text: zzqxy
+  - await:
+      visible:
+        text: Inga lokaler matchar sökningen.
+      timeout: 10000
+  - await:
+      idle: true
+  - echo: Clear the search and return to Larm to check filter draft cancellation.
+  - tap:
+      text: Rensa sökningen
+  - tool: button
+    args:
+      button: back
+  - tap:
+      text: Larm
+      role: FrameLayout
+  - await:
+      visible:
+        text: Filter
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Filter
+  - await:
+      visible:
+        text: Filtrera larm
+      timeout: 10000
+  - await:
+      idle: true
+  - echo: >-
+      Select Mina; expect all filter sections to remain in place with zero counts. Close without
+      applying.
+  - tap:
+      text: Mina
+  - await:
+      visible:
+        text: Raritet
+      timeout: 10000
+  - await:
+      idle: true
+  - tool: button
+    args:
+      button: back
+  - await:
+      hidden:
+        text: Filtrera larm
+      timeout: 10000
+  - await:
+      visible:
+        text: Filter
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Filter
+  - await:
+      visible:
+        text: Filtrera larm
+      timeout: 10000
+  - await:
+      idle: true
+  - echo: Apply Mina; the feed should become empty only after Visa träffar. Then restore all reports.
+  - tap:
+      text: Mina
+  - await:
+      visible:
+        text: Visa 0 träffar
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Visa 0 träffar
+  - await:
+      visible:
+        text: Inga obsar matchar filtret.
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Rensa
+  - await:
+      hidden:
+        text: Inga obsar matchar filtret.
+      timeout: 10000
+  - echo: Open a blank report to inspect picker headers only. Never press its Larma submit action.
+  - tap:
+      text: Larma
+  - await:
+      visible:
+        text: Nytt larm
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Välj art
+  - await:
+      visible:
+        text: Sök art…
+      timeout: 10000
+  - await:
+      idle: true
+  - await:
+      visible:
+        text: Stäng
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Stäng
+  - await:
+      hidden:
+        text: Sök art…
+      timeout: 10000
+  - tap:
+      text: Välj plats
+  - await:
+      visible:
+        text: Använd min position
+      timeout: 10000
+  - await:
+      idle: true
+  - await:
+      visible:
+        text: Stäng
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Stäng
+  - await:
+      hidden:
+        text: Använd min position
+      timeout: 10000
+  - tap:
+      text: Välj aktivitet
+  - await:
+      visible:
+        text: Drog iväg/ej kvar
+      timeout: 10000
+  - await:
+      idle: true
+  - await:
+      visible:
+        text: Stäng
+      timeout: 10000
+  - await:
+      idle: true
+  - tap:
+      text: Stäng
+  - await:
+      hidden:
+        text: Drog iväg/ej kvar
+      timeout: 10000
+  - tool: button
+    args:
+      button: back
+  - await:
+      hidden:
+        text: Nytt larm
+      timeout: 10000
+  - await:
+      visible:
+        text: Filter
+      timeout: 10000
+  - await:
+      idle: true

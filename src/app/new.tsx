@@ -20,6 +20,7 @@ import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/lib/query/keys';
+import { invalidateLocationSummaries } from '@/lib/query/locations';
 import { createObservation, type FeedObservation } from '@/lib/query/observations';
 import { beginOptimistic, rollback } from '@/lib/query/optimistic';
 import { type MyProfile } from '@/lib/query/profile';
@@ -42,6 +43,7 @@ export default function NewObservationScreen() {
   // changes?" convention). While dirty, swipe-to-dismiss is disabled too, so the
   // guarded Avbryt is the only exit and no draft is lost silently.
   const [dirty, setDirty] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: (value: ObservationFormValue) => createObservation(formToInput(value)),
@@ -60,6 +62,7 @@ export default function NewObservationScreen() {
       hapticSuccess();
       showToast(sv.observation.reported, 'success');
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed });
+      void invalidateLocationSummaries();
       // The reporter's own member-profile feed embeds this row too — refresh it
       // so a previously-visited profile screen doesn't show stale data.
       if (user) void queryClient.invalidateQueries({ queryKey: queryKeys.member(user.id) });
@@ -91,7 +94,7 @@ export default function NewObservationScreen() {
   // Never dismiss while the insert is in flight: doing so would unmount the
   // per-call success continuation and make a successful report look stuck. A
   // clean form closes immediately; a dirty one still gets the discard guard.
-  const busy = createMutation.isPending;
+  const busy = createMutation.isPending || imageBusy;
   const { dismiss, gestureEnabled } = useDiscardGuard({ mode: 'create', dirty, busy });
 
   return (
@@ -113,6 +116,7 @@ export default function NewObservationScreen() {
               title={sv.observation.submitNew}
               onPress={() => formRef.current?.submit()}
               loading={createMutation.isPending}
+              disabled={imageBusy}
             />
           )),
         }}
@@ -124,6 +128,7 @@ export default function NewObservationScreen() {
           scrollRef={scrollRef}
           submitInHeader
           onDirtyChange={setDirty}
+          onImageBusyChange={setImageBusy}
           onSubmit={(v) => {
             createMutation.mutate(v, { onSuccess: () => router.back() });
           }}

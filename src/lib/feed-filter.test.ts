@@ -205,6 +205,28 @@ describe('deriveFilterOptions facet counts', () => {
     expect(opts.activities.find((a) => a.value === 'rastande')?.count).toBe(1)
   })
 
+  it('keeps all choices visible with zero counts when Mina has no reports', () => {
+    const reports = [
+      obs({ userId: 'other', speciesRarity: 4, activity: 'rastande', locationId: 5, locationName: 'Åmot' }),
+    ]
+    const options = deriveFilterOptions(reports, { ...EMPTY_FILTER, onlyMine: true }, 'me')
+    expect(options).toEqual({
+      rarities: [{ level: 4, count: 0 }],
+      activities: [{ value: 'rastande', count: 0 }],
+      locations: [{ id: 5, name: 'Åmot', count: 0 }],
+    })
+  })
+
+  it('retains unselected choices narrowed out by another facet', () => {
+    const reports = [
+      obs({ speciesRarity: 0, activity: 'rastande', locationId: 5, locationName: 'Åmot' }),
+      obs({ speciesRarity: 5, activity: 'födosökande', locationId: 7, locationName: 'Byasjön' }),
+    ]
+    const options = deriveFilterOptions(reports, { ...EMPTY_FILTER, rarities: [0] })
+    expect(options.activities.find((a) => a.value === 'födosökande')?.count).toBe(0)
+    expect(options.locations.find((l) => l.id === 7)).toEqual({ id: 7, name: 'Byasjön', count: 0 })
+  })
+
   it('is unchanged from plain totals when no filter is passed', () => {
     expect(deriveFilterOptions(data)).toEqual(deriveFilterOptions(data, EMPTY_FILTER))
   })

@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
 import { queryClient } from '@/lib/query-client';
+import { reportQueryPolicy } from '@/lib/query-policy';
 import { queryKeys } from '@/lib/query/keys';
 import { requireUserId } from '@/lib/query/session';
 import { avatarCacheKey, signedUrlFor, signedUrlMap } from '@/lib/query/storage';
@@ -169,7 +170,7 @@ export async function listFeed(): Promise<FeedObservation[]> {
 }
 
 export function feedQueryOptions() {
-  return queryOptions({ queryKey: queryKeys.feed, queryFn: listFeed });
+  return queryOptions({ ...reportQueryPolicy, queryKey: queryKeys.feed, queryFn: listFeed });
 }
 
 /** A member's profile + their observations, last 14 days (`fetchMemberFeedFn`). */
@@ -221,6 +222,7 @@ export async function fetchMemberFeed(
 
 export function memberQueryOptions(userId: string) {
   return queryOptions({
+    ...reportQueryPolicy,
     queryKey: queryKeys.member(userId),
     queryFn: () => fetchMemberFeed(userId),
     // Seed from the feed cache so the member screen paints instantly with the
@@ -262,13 +264,18 @@ export async function fetchObservation(id: string): Promise<FeedObservation | nu
 
 export function observationQueryOptions(id: string) {
   return queryOptions({
+    ...reportQueryPolicy,
     queryKey: queryKeys.observation(id),
     queryFn: () => fetchObservation(id),
-    // Seed from the feed cache: the user almost always arrives from a card
-    // whose full row shape is already loaded, so the detail paints instantly
-    // (no skeleton) and the fetch just revalidates.
-    placeholderData: () =>
+    // Feed rows already contain the complete detail shape. Share their actual
+    // freshness so a recently refreshed feed doesn't trigger another row/profile/
+    // signed-URL fetch on every first visit. Old persisted feeds still revalidate.
+    initialData: () =>
       queryClient.getQueryData<FeedObservation[]>(queryKeys.feed)?.find((o) => o.id === id),
+    initialDataUpdatedAt: () => {
+      const feed = queryClient.getQueryState(queryKeys.feed);
+      return feed?.isInvalidated ? 0 : (feed?.dataUpdatedAt ?? 0);
+    },
   });
 }
 

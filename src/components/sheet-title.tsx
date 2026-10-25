@@ -16,17 +16,30 @@
  *     <Stack.Screen options={{ title: name }} />   // iOS
  *     <SheetTitle title={name} />                  // Android
  */
-import { Platform } from 'react-native';
+import { router } from 'expo-router';
+import { Platform, StyleSheet, View } from 'react-native';
 
+import { HeaderButton } from '@/components/header-button';
+import { CLOSE } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
+import { Spacing } from '@/constants/theme';
+import { sv } from '@/lib/i18n/sv';
 
 export function SheetTitle({ title }: { title: string | null | undefined }) {
   // iOS shows it in the native sheet header.
   if (Platform.OS === 'ios' || !title) return null;
 
   return (
-    <ThemedText type="heading" numberOfLines={2} accessibilityRole="header">
-      {title}
-    </ThemedText>
+    <View style={styles.row}>
+      <ThemedText type="heading" numberOfLines={2} accessibilityRole="header" style={styles.title}>
+        {title}
+      </ThemedText>
+      <HeaderButton icon={CLOSE} title={sv.common.close} onPress={() => router.back()} />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minHeight: 44 },
+  title: { flex: 1 },
+});

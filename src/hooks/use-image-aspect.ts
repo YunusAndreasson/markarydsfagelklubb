@@ -27,10 +27,19 @@ export function useImageAspect(uri: string | null, cacheKey?: string | null) {
   const aspect = loaded?.identity === identity ? loaded.aspect : known;
 
   function onLoad(event: ImageLoadEventData) {
+    // Storage paths identify immutable photos. Once this identity has a known
+    // frame, keep it: Android's viewport-sized decodes can round width/height
+    // differently in feed and detail, without the underlying image changing.
+    if (aspect !== undefined) return;
     const { width, height } = event.source;
     const measured = cache.remember(cacheKey, width, height);
     if (measured === undefined) return;
-    setLoaded({ identity, aspect: aspect ?? measured });
+    // Repeated native events before the first commit share that first update.
+    setLoaded((previous) =>
+      previous?.identity === identity
+        ? previous
+        : { identity, aspect: measured },
+    );
   }
 
   return { aspect: aspect ?? ASPECT_DEFAULT, ready: aspect !== undefined, onLoad };

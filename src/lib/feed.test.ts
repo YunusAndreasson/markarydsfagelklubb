@@ -58,4 +58,17 @@ describe('groupFeed', () => {
     const grouped = groupFeed([obs(old, '4')], now)
     expect(grouped.earlier).toHaveLength(1)
   })
+
+  it('moves unchanged reports into their new buckets when the clock advances', () => {
+    const reports = [obs(new Date('2026-10-23T08:25:00+02:00'))]
+    expect(groupFeed(reports, new Date('2026-10-24T22:00:00+02:00')).yesterday).toHaveLength(1)
+    const nextDay = groupFeed(reports, new Date('2026-10-25T10:00:00+01:00'))
+    expect(nextDay.yesterday).toHaveLength(0)
+    expect(nextDay.thisWeek).toHaveLength(1)
+  })
+
+  it('uses the previous Stockholm calendar day across the spring DST change', () => {
+    const report = obs(new Date('2026-03-29T12:00:00+02:00'))
+    expect(groupFeed([report], new Date('2026-03-30T00:30:00+02:00')).yesterday).toHaveLength(1)
+  })
 })
