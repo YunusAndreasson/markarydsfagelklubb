@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { sv } from '@/lib/i18n/sv';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,8 +21,11 @@ export default function FeedTabLayout() {
         options={{
           title: sv.feed.title,
           headerLargeTitleEnabled: true,
-          headerStyle: { backgroundColor: theme.backgroundGrouped },
-          headerLargeStyle: { backgroundColor: theme.backgroundGrouped },
+          // Android only: on iOS 26 a header background color makes the large title
+          // invisible. The transparent iOS bar shows `contentStyle` through instead.
+          ...(Platform.OS === 'android' && {
+            headerStyle: { backgroundColor: theme.backgroundGrouped },
+          }),
           contentStyle: { backgroundColor: theme.backgroundGrouped },
         }}
       />

@@ -12,7 +12,13 @@
  * app's own Profile form (M7), not the web's scroll-to-error.
  */
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import { StyleSheet, View, type ScrollViewInstance, type ViewInstance } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  type ScrollViewInstance,
+  type TextInputInstance,
+  type ViewInstance,
+} from 'react-native';
 
 import { ActivityPicker } from '@/components/activity-picker';
 import { Button } from '@/components/button';
@@ -28,6 +34,7 @@ import { ThemedText } from '@/components/themed-text';
 import { showToast } from '@/components/toast';
 import { sharedStyles } from '@/constants/shared-styles';
 import { IconSize, Spacing } from '@/constants/theme';
+import { useKeepAboveKeyboard } from '@/hooks/use-keep-above-keyboard';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/confirm';
 import { sv } from '@/lib/i18n/sv';
@@ -179,6 +186,8 @@ export function ObservationForm({
   const speciesRef = useRef<ViewInstance>(null);
   const locationRef = useRef<ViewInstance>(null);
   const activityRef = useRef<ViewInstance>(null);
+  const commentRef = useRef<TextInputInstance>(null);
+  useKeepAboveKeyboard(commentRef, scrollRef);
 
   function update<K extends keyof ObservationFormValue>(key: K, next: ObservationFormValue[K]) {
     setValue((v) => ({ ...v, [key]: next }));
@@ -297,6 +306,7 @@ export function ObservationForm({
 
       {commentOpen ? (
         <TextField
+          ref={commentRef}
           label={sv.observation.commentLabel}
           optional
           value={value.comment}
@@ -382,7 +392,9 @@ export function ObservationForm({
 
 const styles = StyleSheet.create({
   form: { gap: Spacing.three },
-  comment: { minHeight: 120, textAlignVertical: 'top' },
+  // Fixed height: long text scrolls inside the box. If the box grew while typing,
+  // new lines would drop behind the keyboard, since nothing re-scrolls the form.
+  comment: { height: 140, textAlignVertical: 'top' },
   addComment: { alignItems: 'flex-start', paddingHorizontal: Spacing.three },
   imageField: { gap: Spacing.one },
   // `flex-start` so the bell sits on the caption's FIRST line when it wraps.

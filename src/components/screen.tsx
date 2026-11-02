@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { sharedStyles } from '@/constants/shared-styles';
 import { Spacing } from '@/constants/theme';
+import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -93,10 +94,12 @@ export function Screen({
   // fixed 24px. On iOS `contentInsetAdjustmentBehavior="automatic"` already
   // insets scroll content for the home indicator, so adding it again would
   // double up into a visible dead gap under the last row.
-  const safeBottom =
-    bottomInset && Platform.OS === 'android'
-      ? { paddingBottom: Spacing.four + insets.bottom }
-      : null;
+  const safeBottom = bottomInset && Platform.OS === 'android' ? insets.bottom : 0;
+  // Android has no `automaticallyAdjustKeyboardInsets`, so make room to scroll a
+  // focused input above the keyboard here. Always 0 on iOS.
+  const keyboardBottom = useAndroidKeyboardHeight(keyboardAware);
+  const extraBottom = safeBottom + keyboardBottom;
+  const bottomPadding = extraBottom > 0 ? { paddingBottom: Spacing.four + extraBottom } : null;
 
   // Always called; inert until a `refresh` is supplied.
   const { refreshing, onRefresh } = usePullToRefresh(refresh ?? NO_REFRESH);
@@ -123,7 +126,7 @@ export function Screen({
       automaticallyAdjustKeyboardInsets={keyboardAware}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[base, safeBottom, contentContainerStyle]}
+      contentContainerStyle={[base, bottomPadding, contentContainerStyle]}
       refreshControl={control}
       {...rest}
     >
