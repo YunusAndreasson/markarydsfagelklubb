@@ -54,8 +54,22 @@ like the club, and signing in takes an Apple or Google account.
 - **Radera konto.** Deleting your account in Profil removes your profile,
   reports and photos from the database, as both stores require.
 
-There's no web version and no iPad version, and it won't run in Expo Go. The
-store listings have screenshots.
+<table>
+  <tr>
+    <td width="25%"><img src=".github/readme/hem.jpg" alt="Hem: the newest larm first, a rörhöna (moorhen), five birds at their nest on Särlagatan in Malmö, reported two days ago with a photo of the nest, and a strandskata (oystercatcher) below it."></td>
+    <td width="25%"><img src=".github/readme/observation.jpg" alt="One observation: rörhöna, Gallinula chloropus, five individuals nesting, Monday 8 June at 08:56, with its place on a map and the photo."></td>
+    <td width="25%"><img src=".github/readme/larma.jpg" alt="Nytt larm: fields for species, count and time, and a map of Markaryd for the place."></td>
+    <td width="25%"><img src=".github/readme/plats.jpg" alt="The place picker: a full-screen map around Markaryd and Timsfors, with a prompt to tap the spot or use your position."></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Larm</b>, newest first</sub></td>
+    <td align="center"><sub>One report, with map and photo</sub></td>
+    <td align="center"><sub><b>Larma</b>, a new report</sub></td>
+    <td align="center"><sub>The place, a pin on the map</sub></td>
+  </tr>
+</table>
+
+There's no web version and no iPad version, and it won't run in Expo Go.
 
 ## Development
 
