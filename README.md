@@ -104,4 +104,4 @@ so schema changes in `supabase/` are applied by hand, never by CI.
 
 The code is [MIT](LICENSE). The club's name, emblem and texts belong to
 Markaryds Fågelklubb, and the reports and photos members send belong to them;
-[LICENSE](LICENSE) lists the paths.
+[NOTICE.md](NOTICE.md) lists the paths.
