@@ -1,0 +1,42 @@
+# Weekly, grouped so a week's updates arrive as a few pull requests. Each one
+# runs CI; merge it when it's green.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Expo pins React Native and its native modules to each SDK. A new SDK
+      # is an upgrade done by hand (`npm run deps:update:latest`, then
+      # `npx expo install --fix`), not a version bump.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-native-*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+    groups:
+      expo:
+        patterns: ["expo", "expo-*", "@expo/*", "eslint-config-expo", "react", "react-dom", "@types/react", "react-native", "react-native-*"]
+      npm:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

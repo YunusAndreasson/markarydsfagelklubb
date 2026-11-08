@@ -1,0 +1,40 @@
+# Verify every push and PR with `npm run verify`, the same command as locally:
+# TypeScript, ESLint, the deprecated-API check and Vitest.
+#
+# Deliberately NOT here:
+# - Builds and store submissions. Those run on EAS, started from the
+#   maintainer's machine (scripts/release.sh), with credentials that never
+#   reach GitHub.
+# - Database changes. The Supabase project is shared with the live website
+#   and the members using the app; its SQL is applied by hand.
+#
+# No secrets either, so forks and pull requests from forks run the same job.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.13.0'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run verify
