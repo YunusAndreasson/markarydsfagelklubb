@@ -7,6 +7,11 @@ updates:
     schedule:
       interval: weekly
     ignore:
+      # eslint-config-expo lints through typescript-eslint, which doesn't support
+      # TypeScript 7 (the native compiler) yet: typescript-eslint/typescript-eslint#10940.
+      # Lift this once it does.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
       # Expo pins React Native and its native modules to each SDK. A new SDK
       # is an upgrade done by hand (`npm run deps:update:latest`, then
       # `npx expo install --fix`), not a version bump.
