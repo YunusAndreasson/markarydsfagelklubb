@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://apps.apple.com/se/app/id6778564624"><b>App Store</b></a> ·
   <a href="https://play.google.com/store/apps/details?id=nu.markarydsfagelklubb.mafk"><b>Google Play</b></a> ·
-  <a href="https://github.com/YunusAndreasson/markarydsfagelklubb-web">The website</a> ·
+  <a href="https://github.com/YunusAndreasson/markarydsfagelklubb.nu">The website</a> ·
   <a href="#development">Development</a> ·
   <a href="AGENTS.md">Conventions</a>
 </p>
@@ -28,7 +28,7 @@
 
 Members report the birds they see, and every report reaches the rest of the
 club as a push. The same reports appear on the club's
-[website](https://github.com/YunusAndreasson/markarydsfagelklubb-web), with
+[website](https://github.com/YunusAndreasson/markarydsfagelklubb.nu), with
 the place coarsened to a nearby lokal or the kommun. The app is in Swedish,
 like the club, and signing in takes an Apple or Google account.
 

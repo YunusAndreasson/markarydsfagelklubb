@@ -4,7 +4,7 @@ contact_links:
     url: https://github.com/YunusAndreasson/markarydsfagelklubb/security/advisories/new
     about: Privately, please, never in a public issue (SECURITY.md).
   - name: Something on the website
-    url: https://github.com/YunusAndreasson/markarydsfagelklubb-web/issues/new/choose
+    url: https://github.com/YunusAndreasson/markarydsfagelklubb.nu/issues/new/choose
     about: The club's website has its own repository.
   - name: Read the conventions
     url: https://github.com/YunusAndreasson/markarydsfagelklubb/blob/main/AGENTS.md

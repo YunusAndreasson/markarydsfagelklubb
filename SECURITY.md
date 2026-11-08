@@ -37,6 +37,6 @@ In scope:
 - this repository's workflows
 
 Out of scope: the
-[website](https://github.com/YunusAndreasson/markarydsfagelklubb-web/security/advisories/new),
+[website](https://github.com/YunusAndreasson/markarydsfagelklubb.nu/security/advisories/new),
 which has its own reporting, and Supabase, Expo, Apple and Google themselves.
 Report those to their owners.
