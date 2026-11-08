@@ -1,6 +1,6 @@
 steps:
   - tap:
-      text: 'Raritetsnivå 5. Järnsparv. 1 individ. Stationär. fre 23 okt. 08:25. Västergårdsgatan, Kronobergs län. Rapporterad av Per Persson'
+      text: 'Rapporterad av'
       role: Button
   - await:
       idle: true
@@ -23,5 +23,5 @@ steps:
       toY: 0.8
       durationMs: 500
       momentum: false
-executionPrerequisite: Signed in, Larm feed at the top; first Järnsparv report
-  visible. Read-only flow; never submit a report.
+executionPrerequisite: Signed in, Larm feed at the top, so the first report's
+  card is the one tapped. Read-only flow; never submit a report.

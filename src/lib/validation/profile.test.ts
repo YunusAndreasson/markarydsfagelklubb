@@ -18,10 +18,10 @@ describe('displayNameSchema', () => {
 
 describe('phoneSchema', () => {
   it('accepts svenska format with spaces', () => {
-    expect(phoneSchema.safeParse('070-123 45 67').success).toBe(true)
+    expect(phoneSchema.safeParse('070-174 06 50').success).toBe(true)
   })
   it('accepts internationella format', () => {
-    expect(phoneSchema.safeParse('+46 70 123 45 67').success).toBe(true)
+    expect(phoneSchema.safeParse('+46 70 174 06 50').success).toBe(true)
   })
   it('rejects strings with too few digits', () => {
     expect(phoneSchema.safeParse('1234').success).toBe(false)
@@ -33,10 +33,10 @@ describe('phoneSchema', () => {
 
 describe('digitsForTel', () => {
   it('keeps leading plus and strips formatting', () => {
-    expect(digitsForTel('+46 70-123 45 67')).toBe('+46701234567')
+    expect(digitsForTel('+46 70-174 06 50')).toBe('+46701740650')
   })
   it('drops everything but digits when no plus', () => {
-    expect(digitsForTel('070-123 45 67')).toBe('0701234567')
+    expect(digitsForTel('070-174 06 50')).toBe('0701740650')
   })
 })
 
@@ -46,7 +46,7 @@ describe('upsertProfileInput', () => {
     expect(r.success).toBe(true)
   })
   it('accepts phone', () => {
-    const r = upsertProfileInput.safeParse({ displayName: 'Anna', phone: '070-123 45 67' })
+    const r = upsertProfileInput.safeParse({ displayName: 'Anna', phone: '070-174 06 50' })
     expect(r.success).toBe(true)
   })
   it('accepts null phone for explicit removal', () => {
