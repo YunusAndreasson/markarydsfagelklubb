@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
 
     return json({ deleted: true }, 200);
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error('[delete-account] failed', err);
+    return json({ error: 'internt fel' }, 500);
   }
 });
