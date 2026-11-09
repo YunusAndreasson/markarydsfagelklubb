@@ -56,7 +56,6 @@ supabase/.branches/
 *.p8
 *-service-account*.json
 google-play-*.json
-fastlane/report.xml
 # @generated expo skills start
 .claude/skills/expo-sqlite
 # @generated expo skills end
