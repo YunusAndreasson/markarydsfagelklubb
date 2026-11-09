@@ -207,6 +207,7 @@ Deno.serve(async (req) => {
 
     return json({ sent: messages.length, pruned: dead.length, logged: true }, 200);
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error('[send-bird-alert] failed', err);
+    return json({ error: 'internt fel' }, 500);
   }
 });
