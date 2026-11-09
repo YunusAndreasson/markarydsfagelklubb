@@ -12,6 +12,11 @@ updates:
       # Lift this once it does.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # ESLint 10 dropped context.getFilename(), which eslint-plugin-react (inside
+      # eslint-config-expo) still calls, so every lint fails. Lift this once
+      # eslint-config-expo supports 10.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
       # Expo pins React Native and its native modules to each SDK. A new SDK
       # is an upgrade done by hand (`npm run deps:update:latest`, then
       # `npx expo install --fix`), not a version bump.
