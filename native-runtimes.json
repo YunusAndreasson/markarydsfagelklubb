@@ -15,6 +15,10 @@
     "1.1.3": {
       "ios": "5b6d86cfb361dcae17dd91d515dddd0ca4a35f16",
       "android": "35aa082a7f5ff6b28cc6d3e0750a8bfb61f7d941"
+    },
+    "1.1.4": {
+      "ios": "07c20dab35d3254276f82ae521b93bdb7d805327",
+      "android": "a2a3bdd2123e770540fb12f2027bcf9c866b548f"
     }
   }
 }
