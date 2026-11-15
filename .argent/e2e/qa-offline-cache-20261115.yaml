@@ -1,0 +1,19 @@
+steps:
+  - echo: Android Wi-Fi and mobile data must be disabled externally; QA feed/profile/location register cached, Grysshultasjö reports uncached. No writes.
+  - launch: nu.markarydsfagelklubb.mafk
+  - await: { visible: { text: Filter, role: Button }, timeout: 15000 }
+  - await: { visible: { text: Rapporterad av, role: Button } }
+  - await: { idle: true }
+  - tap: { text: Profil, role: FrameLayout }
+  - await: { visible: { text: Dina uppgifter } }
+  - await: { idle: true }
+  - tap: { text: Lokaler, role: FrameLayout }
+  - await: { visible: { text: Sök lokal } }
+  - await: { idle: true }
+  - tap: { text: Sök lokal, role: TextField }
+  - tool: keyboard
+    args: { text: Gryss }
+  - await: { visible: { text: Grysshultasjö, role: Button }, timeout: 10000 }
+  - tap: { text: Grysshultasjö, role: Button }
+  - await: { visible: { text: Ingen anslutning }, timeout: 10000 }
+  - await: { idle: true }

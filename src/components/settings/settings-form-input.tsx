@@ -86,5 +86,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   // TextInput needs a concrete fontSize — ThemedText types can't apply.
-  input: { fontSize: FontSize.input, lineHeight: 22, padding: 0 },
+  // The row's height doesn't enlarge the input's touch area: its label and
+  // padding are plain Views. Give the editable surface the full tap minimum.
+  input: { fontSize: FontSize.input, lineHeight: 22, minHeight: 44, padding: 0 },
 });

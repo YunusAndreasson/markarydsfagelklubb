@@ -63,7 +63,8 @@ const DEFAULT_DELTA = 0.3; // ≈ web zoom 11 over the Markaryd area.
 const CENTER_ANCHOR = { x: 0.5, y: 0.5 } as const;
 /** Visible disc; the transparent box around it is what makes the pin tappable. */
 const DOT_SIZE = 16;
-const DOT_HIT = 36;
+// Keep the small visible dot, but give a one-handed tap the app's 44pt minimum.
+const DOT_HIT = 44;
 
 function regionFor(center: { latitude: number; longitude: number }, zoom?: number) {
   const delta = zoom ? 360 / 2 ** zoom : DEFAULT_DELTA;

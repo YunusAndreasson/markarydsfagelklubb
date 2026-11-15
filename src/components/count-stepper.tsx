@@ -36,8 +36,8 @@ export function CountStepper({
   const [draft, setDraft] = useState('');
 
   function commit() {
-    const parsed = Number.parseInt(draft, 10);
-    onChange(Number.isFinite(parsed) ? clamp(parsed) : value);
+    // Valid digits already update the form on change. Reapplying the draft on
+    // blur could undo a subsequent +/- press while the input was focused.
     setEditing(false);
   }
 
@@ -66,6 +66,7 @@ export function CountStepper({
             if (atMin) hapticError();
             else {
               hapticPress();
+              setEditing(false);
               onChange(value - 1);
             }
           }}
@@ -81,10 +82,19 @@ export function CountStepper({
         {editing ? (
           <TextInput
             value={draft}
-            onChangeText={(t) => setDraft(t.replace(/[^0-9]/g, ''))}
+            onChangeText={(t) => {
+              const digits = t.replace(/[^0-9]/g, '');
+              setDraft(digits);
+              // The native header can submit without blurring this input. Keep
+              // the form current as digits arrive so it never saves the count
+              // that was displayed before editing. An empty draft keeps the
+              // last valid count until blur restores the display.
+              if (digits) onChange(clamp(Number.parseInt(digits, 10)));
+            }}
             onBlur={commit}
             onSubmitEditing={commit}
             keyboardType="number-pad"
+            editable={!disabled}
             maxLength={4}
             autoFocus
             selectTextOnFocus
@@ -105,6 +115,7 @@ export function CountStepper({
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={sv.observation.countEditHint}
+            accessibilityValue={{ min: MIN, max: MAX, now: value }}
             accessibilityState={{ disabled: !!disabled }}
             style={styles.countWrap}
           >
@@ -125,6 +136,7 @@ export function CountStepper({
             if (atMax) hapticError();
             else {
               hapticPress();
+              setEditing(false);
               onChange(value + 1);
             }
           }}

@@ -1,0 +1,26 @@
+steps:
+  - launch: nu.markarydsfagelklubb.mafk
+  - await: { visible: { text: Filter, role: Button }, timeout: 15000 }
+  - await: { idle: true }
+  - tap: { text: Larma, role: Button }
+  - await: { visible: { text: Nytt larm } }
+  - await: { idle: true }
+  - tap: { text: Tryck för att skriva antal, role: Button }
+  - tool: keyboard
+    args:
+      text: '42'
+  - await: { text: { in: { text: Antal, role: TextField }, contains: '42' } }
+  - tap: { text: Avbryt, role: Button }
+  - await: { visible: { text: Avbryt rapporten? } }
+  - await: { idle: true }
+  - tap: { id: 'android:id/button2' }
+  - await: { hidden: { text: Avbryt rapporten? } }
+  - await: { idle: true }
+  - tap: { text: Öka antal, role: Button }
+  - await: { visible: { text: '43', role: StaticText } }
+  - tap: { text: Avbryt, role: Button }
+  - await: { visible: { text: Avbryt rapporten? } }
+  - await: { idle: true }
+  - tap: { id: 'android:id/button1' }
+  - await: { visible: { text: Filter, role: Button } }
+  - await: { idle: true }

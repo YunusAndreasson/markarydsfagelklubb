@@ -1,0 +1,22 @@
+steps:
+  - echo: Signed-out Android session; validate an empty email without sending a login link or report.
+  - launch: nu.markarydsfagelklubb.mafk
+  - await:
+      visible: { text: Fortsätt med Google }
+      timeout: 10000
+  - await: { idle: true }
+  - tap:
+      text: Logga in med e-post
+  - await:
+      visible: { text: E-postadress, role: TextField }
+  - await: { idle: true }
+  - tap:
+      text: Skicka inloggningslänk
+  - await:
+      visible: { text: Ogiltig e-postadress }
+  - await: { idle: true }
+  - tap:
+      text: Gå tillbaka
+  - await:
+      visible: { text: Fortsätt med Google }
+  - await: { idle: true }

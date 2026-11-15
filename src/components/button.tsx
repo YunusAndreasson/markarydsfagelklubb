@@ -15,7 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
   variant?: 'primary' | 'secondary' | 'destructive' | 'tint';
-  /** `default` is the 52pt screen CTA; `compact` (40pt) is for inline buttons that
+  /** `default` is the 52pt screen CTA; `compact` (44pt) is for inline buttons that
    *  sit in a row of content (an inline "reveal"), not as the page's primary action. */
   size?: 'default' | 'compact';
   loading?: boolean;
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   compact: {
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },

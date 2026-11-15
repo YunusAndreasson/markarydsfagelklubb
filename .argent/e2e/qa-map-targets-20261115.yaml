@@ -1,0 +1,14 @@
+steps:
+  - launch: nu.markarydsfagelklubb.mafk
+  - await: { visible: { text: Filter, role: Button }, timeout: 15000 }
+  - await: { idle: true }
+  - tap: { text: Lokaler, role: FrameLayout }
+  - await: { visible: { text: Sök lokal }, timeout: 15000 }
+  - await: { idle: true }
+  - tap: { text: Skararps ängar. }
+  - await: { visible: { text: Skararps ängar }, timeout: 5000 }
+  - await: { visible: { text: Larm härifrån } }
+  - await: { idle: true }
+  - tap: { text: Stäng, role: Button }
+  - await: { visible: { text: Visa alla lokaler } }
+  - await: { idle: true }

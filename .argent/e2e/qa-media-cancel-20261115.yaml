@@ -1,0 +1,20 @@
+steps:
+  - echo: Android 15 with English system photo picker; QA session signed in. Never select an image or submit a report.
+  - launch: nu.markarydsfagelklubb.mafk
+  - await: { visible: { text: Filter, role: Button }, timeout: 15000 }
+  - await: { idle: true }
+  - tap: { text: Larma, role: Button }
+  - await: { visible: { text: Nytt larm } }
+  - await: { idle: true }
+  - tap: { text: Lägg till bild, role: Button }
+  - await: { visible: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tap: { text: Välj från galleri, role: Button }
+  - await: { visible: { id: 'com.google.android.providers.media.module:id/privacy_text' } }
+  - await: { idle: true }
+  - tap: { text: Cancel, role: Button }
+  - await: { visible: { text: Lägg till bild, role: Button } }
+  - await: { idle: true }
+  - tap: { text: Avbryt, role: Button }
+  - await: { visible: { text: Filter, role: Button } }
+  - await: { idle: true }
