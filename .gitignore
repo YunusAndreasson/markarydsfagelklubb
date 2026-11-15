@@ -59,3 +59,7 @@ google-play-*.json
 # @generated expo skills start
 .claude/skills/expo-sqlite
 # @generated expo skills end
+
+# argent screen recordings and failed fastlane runs are local artifacts
+.argent/recordings/
+fastlane/report.xml

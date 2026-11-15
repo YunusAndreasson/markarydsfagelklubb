@@ -1,0 +1,23 @@
+steps:
+  - tap:
+      x: 0.4995
+      y: 0.93
+  - tap:
+      id: nu.markarydsfagelklubb.mafk:id/navigation_bar_item_active_indicator_view
+  - tap:
+      x: 0.078
+      y: 0.0835
+  - tool: button
+    args:
+      button: back
+  - tap:
+      x: 0.922
+      y: 0.0835
+  - tool: button
+    args:
+      button: back
+  - tap:
+      x: 0.5
+      y: 0.4485
+executionPrerequisite: Signed-in QA account, Profile at top; read-only visual
+  inspection. Never submit reports or send alerts.

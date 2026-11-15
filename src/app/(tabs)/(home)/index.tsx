@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { FilterChip } from '@/components/filter-chip';
+import { Button } from '@/components/button';
 import { HeaderButton, headerLeftAction, headerRightAction } from '@/components/header-button';
 import { FILTER, FILTER_ACTIVE, PLUS, TRAY } from '@/components/icon';
 import { ListItemEntrance } from '@/components/list-item-entrance';
@@ -16,10 +17,12 @@ import { ObservationCardSkeleton } from '@/components/skeleton';
 import { ErrorBlock, OfflineBlock, StateBlock } from '@/components/state-block';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { SurfaceRadius } from '@/constants/surface';
 import { useAuth } from '@/hooks/use-auth';
 import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useMotion } from '@/hooks/use-motion';
 import { useNow } from '@/hooks/use-now';
+import { useOnline } from '@/hooks/use-online';
 import { useTheme } from '@/hooks/use-theme';
 import { useBlockedUsers } from '@/lib/blocks';
 import { groupFeed, type FeedBucket } from '@/lib/feed';
@@ -60,6 +63,7 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const { motion } = useMotion();
   const feed = useQuery(feedQueryOptions());
+  const online = useOnline();
 
   // The sheet commits its draft here only when the user confirms.
   const filter = useFeedFilter();
@@ -222,6 +226,21 @@ export default function FeedScreen() {
         }}
       />
       <Screen refresh={feed.refetch} style={{ backgroundColor: theme.backgroundGrouped }}>
+        {feed.data !== undefined && (!online || feed.isError) ? (
+          <View style={[styles.freshness, { backgroundColor: theme.card, borderColor: theme.border }]}
+            accessibilityLiveRegion="polite">
+            <ThemedText type="smallBold">
+              {!online ? sv.feed.offlineCached : sv.feed.refreshFailedCached}
+            </ThemedText>
+            {feed.dataUpdatedAt > 0 ? (
+              <ThemedText type="small" themeColor="mutedForeground">
+                {sv.feed.lastUpdated(new Date(feed.dataUpdatedAt))}
+              </ThemedText>
+            ) : null}
+            {online ? <Button title={sv.errors.tryAgain} size="compact" variant="tint"
+              onPress={() => void feed.refetch()} loading={feed.isFetching} /> : null}
+          </View>
+        ) : null}
         <ThemedText type="small" themeColor="mutedForeground">
           {sv.feed.windowLabel}
         </ThemedText>
@@ -296,6 +315,7 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
+  freshness: { borderWidth: StyleSheet.hairlineWidth, borderRadius: SurfaceRadius.md, padding: Spacing.three, gap: Spacing.two },
   section: { gap: Spacing.three },
   chipsRow: { gap: Spacing.two, alignItems: 'center', paddingVertical: Spacing.half },
   clearLink: { paddingHorizontal: Spacing.two, paddingVertical: Spacing.one },

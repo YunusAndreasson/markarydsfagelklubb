@@ -22,6 +22,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Elevation } from '@/constants/theme';
 import { elevationStyle } from '@/constants/surface';
 import { useTheme } from '@/hooks/use-theme';
+import { overlappingMarkerIds } from '@/lib/map-overlap';
 
 export type MapMarker = {
   id: string | number;
@@ -30,6 +31,7 @@ export type MapMarker = {
   label?: string;
   /** Per-marker pin colour. Defaults to the brand tint when omitted. */
   tint?: string;
+  active?: boolean;
 };
 
 export type MapProps = {
@@ -42,6 +44,7 @@ export type MapProps = {
   /** Tap a specific pin (by its `id`). Distinct from `onPick`, which is a
    *  map-level tap used to set a point. */
   onMarkerPress?: (id: MapMarker['id']) => void;
+  onOverlappingMarkersPress?: (ids: MapMarker['id'][]) => void;
   markerDraggable?: boolean;
   /** Imperative recenter — bump `token` to pan to the point (lat/lng alone won't
    *  trigger it, matching the web). */
@@ -96,6 +99,7 @@ function DotMarker({
     <Marker
       coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
       title={marker.label}
+      zIndex={marker.active ? 2 : 1}
       anchor={CENTER_ANCHOR}
       tracksViewChanges={tracks}
       onPress={onPress ? () => onPress(marker.id) : undefined}
@@ -107,7 +111,7 @@ function DotMarker({
           if (tracks) setTracks(false);
         }}
       >
-        <View style={[styles.dot, { backgroundColor: tint, borderColor: ring }]} />
+        <View style={[styles.dot, marker.active === true ? styles.activeDot : marker.active === false ? styles.quietDot : null, { backgroundColor: tint, borderColor: ring }]} />
       </View>
     </Marker>
   );
@@ -119,6 +123,7 @@ export function Map({
   zoom,
   onPick,
   onMarkerPress,
+  onOverlappingMarkersPress,
   markerDraggable = false,
   recenter,
   fitToken,
@@ -128,6 +133,27 @@ export function Map({
 }: MapProps) {
   const theme = useTheme();
   const ref = useRef<MapView>(null);
+  const pressToken = useRef(0);
+  useEffect(() => () => { pressToken.current++; }, []);
+
+  async function handleMarkerPress(id: MapMarker['id']) {
+    if (!onOverlappingMarkersPress || markers.length < 2) {
+      onMarkerPress?.(id);
+      return;
+    }
+    const token = ++pressToken.current;
+    const view = ref.current;
+    const projected = await Promise.all(markers.map(async (marker) => {
+      try {
+        const point = await view?.pointForCoordinate(marker);
+        return point && Number.isFinite(point.x) && Number.isFinite(point.y) ? { id: marker.id, ...point } : null;
+      } catch { return null; }
+    }));
+    if (token !== pressToken.current) return;
+    const ids = overlappingMarkerIds(markers, id, projected.filter((point) => point !== null), DOT_HIT);
+    if (ids.length > 1) onOverlappingMarkersPress(ids);
+    else onMarkerPress?.(id);
+  }
 
   // Imperative recenter, keyed on `token` so a stable parent doesn't re-pan on
   // every render — only an explicit bump moves the camera (web parity).
@@ -194,11 +220,11 @@ export function Map({
           // Keyed on the tint too, so a lokal flipping active↔quiet REMOUNTS the
           // marker and re-rasterizes at the new colour (see DotMarker).
           <DotMarker
-            key={`${m.id}-${m.tint}`}
+            key={`${m.id}-${m.tint}-${String(m.active)}`}
             marker={m}
             tint={m.tint}
             ring={theme.card}
-            onPress={onMarkerPress}
+            onPress={onMarkerPress ? (id) => void handleMarkerPress(id) : undefined}
           />
         ) : (
           <Marker
@@ -207,7 +233,7 @@ export function Map({
             title={m.label}
             pinColor={theme.tint}
             draggable={markerDraggable}
-            onPress={onMarkerPress ? () => onMarkerPress(m.id) : undefined}
+            onPress={onMarkerPress ? () => void handleMarkerPress(m.id) : undefined}
             onDragEnd={
               markerDraggable && onPick
                 ? (e) => onPick(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)
@@ -223,6 +249,8 @@ export function Map({
 const styles = StyleSheet.create({
   map: { width: '100%' },
   dotHit: { width: DOT_HIT, height: DOT_HIT, alignItems: 'center', justifyContent: 'center' },
+  activeDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 3 },
+  quietDot: { width: 10, height: 10, borderRadius: 5 },
   dot: {
     width: DOT_SIZE,
     height: DOT_SIZE,

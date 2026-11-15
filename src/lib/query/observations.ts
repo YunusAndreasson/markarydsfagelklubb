@@ -3,6 +3,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
 import { reportQueryPolicy } from '@/lib/query-policy';
 import { queryKeys } from '@/lib/query/keys';
+import { shareMemberFeed, shareObservation, shareObservationList, type MemberFeed } from '@/lib/query/observation-sharing';
 import { requireUserId } from '@/lib/query/session';
 import { avatarCacheKey, signedUrlFor, signedUrlMap } from '@/lib/query/storage';
 import { supabase } from '@/lib/supabase';
@@ -170,7 +171,13 @@ export async function listFeed(): Promise<FeedObservation[]> {
 }
 
 export function feedQueryOptions() {
-  return queryOptions({ ...reportQueryPolicy, queryKey: queryKeys.feed, queryFn: listFeed });
+  return queryOptions({
+    ...reportQueryPolicy,
+    queryKey: queryKeys.feed,
+    queryFn: listFeed,
+    structuralSharing: (previous, next) =>
+      shareObservationList(previous as FeedObservation[] | undefined, next as FeedObservation[]),
+  });
 }
 
 /** A member's profile + their observations, last 14 days (`fetchMemberFeedFn`). */
@@ -225,6 +232,8 @@ export function memberQueryOptions(userId: string) {
     ...reportQueryPolicy,
     queryKey: queryKeys.member(userId),
     queryFn: () => fetchMemberFeed(userId),
+    structuralSharing: (previous, next) =>
+      shareMemberFeed(previous as MemberFeed | undefined, next as MemberFeed),
     // Seed from the feed cache so the member screen paints instantly with the
     // rows (and observer identity) the user just tapped through from; the real
     // fetch replaces it. MUST return undefined (not `{ profile: null }`) when
@@ -267,6 +276,9 @@ export function observationQueryOptions(id: string) {
     ...reportQueryPolicy,
     queryKey: queryKeys.observation(id),
     queryFn: () => fetchObservation(id),
+    structuralSharing: (previous, next) => next === null
+      ? null
+      : shareObservation(previous as FeedObservation | null | undefined, next as FeedObservation),
     // Feed rows already contain the complete detail shape. Share their actual
     // freshness so a recently refreshed feed doesn't trigger another row/profile/
     // signed-URL fetch on every first visit. Old persisted feeds still revalidate.

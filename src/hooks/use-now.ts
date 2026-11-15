@@ -22,6 +22,8 @@
 import { useSyncExternalStore } from 'react';
 import { AppState, type EventSubscription } from 'react-native';
 
+import { resetDateFormatters } from '@/lib/i18n/sv';
+
 /** A minute — the finest granularity `sv.feed.timeAgo` renders. */
 const TICK_MS = 60 * 1000;
 
@@ -40,10 +42,14 @@ function start(): void {
   // The stored value is as old as the last unmount; refresh before the first
   // read. No notify needed — `useSyncExternalStore` re-reads right after
   // subscribing and re-renders if the snapshot moved.
+  resetDateFormatters();
   current = new Date();
   timer = setInterval(emit, TICK_MS);
   appState = AppState.addEventListener('change', (next) => {
-    if (next === 'active') emit();
+    if (next === 'active') {
+      resetDateFormatters();
+      emit();
+    }
   });
 }
 

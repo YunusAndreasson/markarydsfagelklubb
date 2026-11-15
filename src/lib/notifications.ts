@@ -20,6 +20,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { isPushOptedOut } from '@/lib/push-prefs';
 
 /** Brand green — Android small-icon tint + channel light. Matches the plugin. */
 const ACCENT = Colors.light.primary;
@@ -35,12 +36,10 @@ export function configureNotificationHandler(): void {
   if (handlerConfigured) return;
   handlerConfigured = true;
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async () => {
+      const show = !isPushOptedOut();
+      return { shouldShowBanner: show, shouldShowList: show, shouldPlaySound: show, shouldSetBadge: false };
+    },
   });
 }
 

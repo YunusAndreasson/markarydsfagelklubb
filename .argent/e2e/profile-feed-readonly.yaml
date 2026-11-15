@@ -1,0 +1,22 @@
+executionPrerequisite: Signed-in QA session on the feed at its top, connected to Metro 8082; no other profiler active. Read-only, never submits.
+steps:
+  - tool: react-profiler-start
+    args: { device_id: emulator-5554, port: 8082, sample_interval_us: 1000 }
+  - tool: native-profiler-start
+    args: { device_id: emulator-5554 }
+  - run: perf-feed-detail.yaml
+  - tool: react-profiler-stop
+    args: { device_id: emulator-5554, port: 8082 }
+  - tool: native-profiler-stop
+    args: { device_id: emulator-5554 }
+  - tool: react-profiler-analyze
+    args:
+      device_id: emulator-5554
+      port: 8082
+      platform: android
+      project_root: /home/yunus/Work/mafk-mobie
+      rn_version: 0.88.1
+  - tool: native-profiler-analyze
+    args: { device_id: emulator-5554 }
+  - tool: profiler-combined-report
+    args: { device_id: emulator-5554, port: 8082 }

@@ -1,4 +1,3 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { type ComponentProps } from 'react';
 import { DynamicColorIOS, Platform } from 'react-native';
@@ -9,8 +8,8 @@ import { sv } from '@/lib/i18n/sv';
 
 // Native bottom tabs: UITabBarController on iOS (Liquid Glass on iOS 26),
 // Material bottom navigation on Android. Icons are platform-native — SF Symbols
-// on iOS (`sf`, no assets), @expo/vector-icons Material glyphs on Android via an
-// image `src`. Mirrors edenmind's tab shell; here the three triggers are the
+// on iOS (`sf`, no assets), Material Symbols on Android (`md`).
+// Mirrors edenmind's tab shell; here the three triggers are the
 // mafk IA: Larm · Lokaler · Profil — all nouns (destinations). "Larm" is the
 // club's alerts stream (the feed); the create action ("Larma") is a header button
 // on it that opens the compose modal (see the root `_layout` `new` route), so the
@@ -61,22 +60,22 @@ export default function TabsLayout() {
         {/* "Larm" = the club's alerts stream (the feed). A megaphone reads as
             "announcements broadcast to the club" — not the notifications inbox a
             bell implies. The verb ("Larma") lives on the header button that opens
-            the compose modal. MaterialIcons `campaign` is the megaphone glyph —
-            same font as person, so no extra font ships. */}
+            the compose modal. Material Symbols `campaign` is the megaphone glyph —
+            same native symbol family as the other destinations. */}
         {Platform.OS === 'ios' ? (
           <Trigger.Icon sf="megaphone.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="campaign" />} />
+          <Trigger.Icon md="campaign" />
         )}
       </Trigger>
       <Trigger name="locations">
         <Trigger.Label>{sv.bottomNav.locations}</Trigger.Label>
-        {/* A map pin reads as "places / sites" — the club's lokaler. MaterialIcons
+        {/* A map pin reads as "places / sites" — the club's lokaler. Material Symbols
             `map` is the same font as person/campaign, so no extra font ships. */}
         {Platform.OS === 'ios' ? (
           <Trigger.Icon sf="map.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="map" />} />
+          <Trigger.Icon md="map" />
         )}
       </Trigger>
       <Trigger name="profile">
@@ -84,7 +83,7 @@ export default function TabsLayout() {
         {Platform.OS === 'ios' ? (
           <Trigger.Icon sf="person.fill" />
         ) : (
-          <Trigger.Icon src={<Trigger.VectorIcon family={MaterialIcons} name="person" />} />
+          <Trigger.Icon md="person" />
         )}
       </Trigger>
     </NativeTabs>

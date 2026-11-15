@@ -19,6 +19,7 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
+import { Button } from '@/components/button';
 import { Duration } from '@/constants/motion';
 import { FontSize, Spacing } from '@/constants/theme';
 import { useMotion } from '@/hooks/use-motion';
@@ -32,9 +33,10 @@ export type SettingsFormInputProps = TextInputProps & {
   label: string;
   error?: string | null;
   saveState?: SettingsSaveState;
+  onRetry?: () => void;
 };
 
-export function SettingsFormInput({ ref, label, error, saveState, style, ...rest }: SettingsFormInputProps) {
+export function SettingsFormInput({ ref, label, error, saveState, onRetry, style, ...rest }: SettingsFormInputProps) {
   const theme = useTheme();
   // Gated like every other inline-error entrance in the app (`picker-field`,
   // `text-field`) — this one had drifted off both the token and the gate.
@@ -70,6 +72,10 @@ export function SettingsFormInput({ ref, label, error, saveState, style, ...rest
             {error}
           </ThemedText>
         </Animated.View>
+      ) : null}
+      {saveState === 'error' && onRetry ? (
+        <Button title={sv.errors.tryAgain} accessibilityLabel={sv.profile.retrySave(label)}
+          variant="tint" size="compact" onPress={onRetry} />
       ) : null}
     </View>
   );

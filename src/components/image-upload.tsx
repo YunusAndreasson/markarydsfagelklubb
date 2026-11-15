@@ -250,7 +250,7 @@ export function ImageUpload({
       style={[
         isSquare ? styles.squarePreview : compact ? styles.compactPreview : styles.rectPreview,
         {
-          backgroundColor: theme.muted,
+          backgroundColor: compact ? theme.card : theme.muted,
           borderColor: invalid ? theme.destructive : theme.border,
           borderWidth: invalid ? 1.5 : StyleSheet.hairlineWidth,
         },
@@ -268,7 +268,7 @@ export function ImageUpload({
         <View style={compact ? styles.compactPlaceholder : styles.placeholder}>
           <Icon name={IMAGE} size={compact ? IconSize.control : isSquare ? 26 : 32} color={theme.mutedForeground} />
           {!isSquare ? (
-            <ThemedText type="smallBold" themeColor={compact ? 'foreground' : 'mutedForeground'}>
+            <ThemedText type="smallBold" themeColor="mutedForeground">
               {sv.image.add}
             </ThemedText>
           ) : null}

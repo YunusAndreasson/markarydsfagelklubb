@@ -193,26 +193,25 @@ export function ObservationCard({
         >
           {/* Name-first: the species name is the flush-left hero and shares its
               left edge with the location + meta below — one clean anchor, no
-              hanging indent. The rarity grade and the time cluster top-right as
-              compact metadata; the grade's colour (loud when rare) still carries. */}
+              hanging indent. Rarity belongs with the species; time is secondary
+              metadata on the location row. */}
           <View style={styles.header}>
             <ThemedText type="heading" numberOfLines={1} style={sharedStyles.flex}>
               {observation.speciesSwedishName}
             </ThemedText>
-            <View style={styles.metaRight}>
-              <RarityBadge level={level} />
-              {veryRecent ? <PulsingDot /> : null}
-              <ThemedText type="smallBold" themeColor={veryRecent ? 'primary' : 'mutedForeground'}>
-                {sv.feed.timeAgo(observation.observedAt, clock)}
-              </ThemedText>
-            </View>
+            <RarityBadge level={level} />
           </View>
-
-          {locationLabel ? (
-            <ThemedText type="smallBold" themeColor="foreground" numberOfLines={1}>
-              {locationLabel}
+          <View style={styles.metaRight}>
+            {locationLabel ? (
+              <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1} style={sharedStyles.flex}>
+                {locationLabel}
+              </ThemedText>
+            ) : <View style={sharedStyles.flex} />}
+            {veryRecent ? <PulsingDot /> : null}
+            <ThemedText type="small" themeColor={veryRecent ? 'primary' : 'mutedForeground'}>
+              {sv.feed.timeAgo(observation.observedAt, clock)}
             </ThemedText>
-          ) : null}
+          </View>
 
           <ThemedText type="small" themeColor="mutedForeground" numberOfLines={1}>
             {meta}

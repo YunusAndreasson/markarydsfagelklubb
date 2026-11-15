@@ -14,7 +14,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
-  variant?: 'primary' | 'secondary' | 'destructive' | 'tint';
+  variant?: 'primary' | 'secondary' | 'destructive' | 'tint' | 'outline';
   /** `default` is the 52pt screen CTA; `compact` (44pt) is for inline buttons that
    *  sit in a row of content (an inline "reveal"), not as the page's primary action. */
   size?: 'default' | 'compact';
@@ -54,21 +54,23 @@ export function Button({
   // token is a near-invisible step (#F5F5F5 / #232724), so it reads the same as
   // before everywhere it already worked.
   const background =
-    variant === 'primary'
-      ? theme.primary
-      : variant === 'destructive'
-        ? theme.destructive
-        : variant === 'tint'
-          ? theme.tint
-          : theme.secondary;
+    variant === 'outline'
+      ? theme.card
+      : variant === 'primary'
+        ? theme.primary
+        : variant === 'destructive'
+          ? theme.destructive
+          : variant === 'tint'
+            ? theme.tint
+            : theme.secondary;
   const labelColor =
-    variant === 'secondary'
-      ? // Paired with the `secondary` fill above, so the two move together if the
-        // palette ever changes.
-        theme.secondaryForeground
-      : variant === 'tint'
-        ? theme.badgeForeground
-        : theme.primaryForeground;
+    variant === 'outline'
+      ? theme.mutedForeground
+      : variant === 'secondary'
+        ? theme.secondaryForeground
+        : variant === 'tint'
+          ? theme.badgeForeground
+          : theme.primaryForeground;
 
   return (
     <PressableScale
@@ -86,7 +88,7 @@ export function Button({
         styles.button,
         size === 'compact' && styles.compact,
         { backgroundColor: background },
-        variant === 'secondary' && {
+        (variant === 'secondary' || variant === 'outline') && {
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: theme.border,
         },

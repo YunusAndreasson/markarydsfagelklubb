@@ -3,6 +3,35 @@
  * källa när texter behövs i komponenter — så blir det enkelt att lägga till
  * fler språk om vi någon gång ska göra det.
  */
+// Locale formatter construction is expensive on Hermes. Reuse each fixed
+// Swedish format across cards and clock ticks; create it only on first use.
+const clearDateFormatters: (() => void)[] = []
+
+function dateFormatter(options: Intl.DateTimeFormatOptions) {
+  let formatter: Intl.DateTimeFormat | undefined
+  clearDateFormatters.push(() => { formatter = undefined })
+  return (date: Date) => {
+    // Date's locale methods return a string for an invalid date; Intl.format
+    // throws instead. Keep the existing behavior on this exceptional path.
+    if (Number.isNaN(date.getTime())) return date.toLocaleString('sv-SE', options)
+    formatter ??= new Intl.DateTimeFormat('sv-SE', options)
+    return formatter.format(date)
+  }
+}
+
+/** Intl captures the default timezone at construction. Clear it on foreground
+ * before the shared clock notifies cards, in case the device timezone changed. */
+export function resetDateFormatters(): void {
+  clearDateFormatters.forEach((clear) => clear())
+}
+
+const formatTime = dateFormatter({ hour: '2-digit', minute: '2-digit' })
+const formatWeekday = dateFormatter({ weekday: 'short', day: 'numeric', month: 'short' })
+const formatDateWithYear = dateFormatter({ day: 'numeric', month: 'short', year: 'numeric' })
+const formatFullDateTime = dateFormatter({
+  weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+})
+
 export const sv = {
   app: {
     name: 'Markaryds Fågelklubb',
@@ -38,6 +67,9 @@ export const sv = {
     subtitle: 'Rapportera och följ fågelobservationer i Markaryd.',
   },
   login: {
+    otherMethods: 'Andra sätt att logga in',
+    resend: 'Skicka en ny länk',
+    resendWait: (seconds: number) => `Du kan be om en ny länk om ${seconds} sekunder.`,
     title: 'Logga in',
     // Social sign-in (M5) — Apple/Google are primary, e-post är reservväg.
     continueWithApple: 'Fortsätt med Apple',
@@ -70,6 +102,7 @@ export const sv = {
     errors: {
       invalidEmail: 'Ogiltig e-postadress.',
       sendFailed: 'Kunde inte skicka e-post. Försök igen om en stund.',
+      rateLimited: 'E-postinloggningen är tillfälligt begränsad. Vänta innan du försöker igen, eller välj ett annat sätt att logga in.',
       verifyFailed: 'Länken är ogiltig eller har gått ut. Försök igen.',
       callbackMissingCode: 'Inloggningslänken är ofullständig.',
       callbackFailed: 'Kunde inte slutföra inloggningen.',
@@ -87,6 +120,9 @@ export const sv = {
     error: 'Kunde inte spara. Försök igen.',
   },
   feed: {
+    offlineCached: 'Ingen anslutning – visar sparade fynd.',
+    refreshFailedCached: 'Kunde inte uppdatera – visar sparade fynd.',
+    lastUpdated: (date: Date) => `Senast uppdaterat: ${formatFullDateTime(date)}`,
     title: 'Larm',
     empty: 'Inga observationer ännu. Bli den första att larma!',
     // Flödet är ett rullande 14-dagarsfönster (samma fönster som lokalernas
@@ -104,7 +140,7 @@ export const sv = {
     locationOnMap: 'På karta',
     refreshed: 'Observationerna uppdaterade',
     count: (n: number) => (n === 1 ? '1 individ' : `${n} individer`),
-    timeOnly: (d: Date) => d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
+    timeOnly: formatTime,
     // Kort relativ tid för kortens hörn: "nu", "5m sedan", "2h sedan", "3d sedan",
     // "8v sedan", "1år sedan". "sedan" gör det tydligare att det är förfluten tid;
     // exakt tid finns kvar via `timeFriendly` / `fullDateTime`.
@@ -120,16 +156,8 @@ export const sv = {
       if (day < 365) return `${Math.floor(day / 7)}v sedan`
       return `${Math.floor(day / 365)}år sedan`
     },
-    weekday: (d: Date) =>
-      d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' }),
-    fullDateTime: (d: Date) =>
-      d.toLocaleString('sv-SE', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+    weekday: formatWeekday,
+    fullDateTime: formatFullDateTime,
     observerDialogTitle: 'Kontakta observatören',
     callButton: (name: string) => `Ring ${name}`,
     callButtonGeneric: 'Ring',
@@ -249,15 +277,12 @@ export const sv = {
     // Läsvänlig svensk tid utan årtals-brus: "Idag 14:30", "Igår 09:15",
     // "fre 31 maj 14:30". Årtal visas bara om det inte är innevarande år.
     timeFriendly: (d: Date, now: Date = new Date()) => {
-      const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+      const time = formatTime(d)
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
       if (d.toDateString() === now.toDateString()) return `Idag ${time}`
       if (d.toDateString() === yesterday.toDateString()) return `Igår ${time}`
-      const dateOpts: Intl.DateTimeFormatOptions =
-        d.getFullYear() === now.getFullYear()
-          ? { weekday: 'short', day: 'numeric', month: 'short' }
-          : { day: 'numeric', month: 'short', year: 'numeric' }
-      return `${d.toLocaleDateString('sv-SE', dateOpts)} ${time}`
+      const date = d.getFullYear() === now.getFullYear() ? formatWeekday(d) : formatDateWithYear(d)
+      return `${date} ${time}`
     },
     locationLabel: 'Plats',
     locationPlaceholder: 'Välj plats',
@@ -365,6 +390,9 @@ export const sv = {
     openSettings: 'Öppna inställningar',
   },
   locations: {
+    chooseTitle: 'Välj lokal',
+    chooseHelp: 'Flera lokaler ligger nära varandra. Välj den du vill visa.',
+    chooseEmpty: 'Inga lokaler att välja mellan.',
     title: 'Lokaler i Markaryd',
     empty: 'Inga lokaler ännu.',
     addButton: 'Lägg till lokal',
@@ -404,6 +432,9 @@ export const sv = {
     larmsError: 'Kunde inte hämta larm.',
   },
   profile: {
+    autosaveHelp: 'Ändringar sparas automatiskt när du lämnar ett fält.',
+    changeAvatar: 'Ändra profilbild',
+    retrySave: (field: string) => `Försök spara ${field.toLocaleLowerCase('sv-SE')} igen`,
     title: 'Profil',
     avatarLabel: 'Profilbild',
     nameLabel: 'Namn',
@@ -457,6 +488,14 @@ export const sv = {
     // "ladda om sidan"), och i appen skickar raden användaren till enhetens
     // inställningar via `Linking.openSettings()` i stället för att förklara.
     notifications: {
+      enabling: 'Aktiverar fågelnotiser…',
+      disabling: 'Stänger av fågelnotiser…',
+      unavailable: 'Det gick inte att bekräfta fågelnotiser på den här enheten.',
+      unconfirmed: 'Inte bekräftat',
+      enableFailed: 'Kunde inte aktivera fågelnotiser. Försök igen.',
+      disableFailed: 'Avstängningen är inte bekräftad. Notiser kan fortfarande komma fram.',
+      retry: 'Försök bekräfta fågelnotiser igen',
+      cancelEnable: 'Avbryt aktiveringen av fågelnotiser',
       title: 'Fågelnotiser',
       enabled: 'Notiser aktiverade.',
       disabled: 'Notiser avstängda.',

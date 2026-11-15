@@ -30,9 +30,6 @@ export function useNearbyLokalName(
   const { data } = useQuery({ ...locationsQueryOptions(), enabled });
   if (!enabled || !data) return null;
 
-  const positioned = data.filter(
-    (l): l is typeof l & { latitude: number; longitude: number } =>
-      l.latitude != null && l.longitude != null,
-  );
-  return nearestLocationWithin(latitude, longitude, positioned, LOKAL_RADIUS_M)?.name ?? null;
+  // The shared proximity helper already skips locations without coordinates.
+  return nearestLocationWithin(latitude, longitude, data, LOKAL_RADIUS_M)?.name ?? null;
 }

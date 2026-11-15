@@ -7,7 +7,8 @@
  * doesn't silently re-subscribe a user who turned notiser off.
  *
  * Backed by the same `expo-sqlite/localStorage` shim the theme + Supabase auth
- * already use; every call is best-effort (storage may be unavailable mid-init).
+ * already use. Read failures fall back to the default; write failures are
+ * surfaced by the synchronization coordinator before any server change.
  */
 import 'expo-sqlite/localStorage/install';
 
@@ -29,10 +30,7 @@ export function isPushOptedOut(): boolean {
 }
 
 export function setPushOptedOut(optedOut: boolean): void {
-  try {
-    if (optedOut) storage?.setItem(OPT_OUT_KEY, '1');
-    else storage?.removeItem(OPT_OUT_KEY);
-  } catch {
-    // best-effort
-  }
+  if (!storage) throw new Error('Push preference storage unavailable');
+  if (optedOut) storage.setItem(OPT_OUT_KEY, '1');
+  else storage.removeItem(OPT_OUT_KEY);
 }

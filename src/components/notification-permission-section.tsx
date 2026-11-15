@@ -1,101 +1,40 @@
-/**
- * Push-notification row for the Profil screen — a single `SettingsRow` meant to
- * sit inside the "Aviseringar och plats" settings card. A `Switch` reflects the
- * on/off state (granted *and* not opted-out); flipping it requests OS permission
- * + registers this device's Expo token, or records an opt-out and drops the
- * token. When the OS permission is blocked, the row becomes a chevron that deep-
- * links to device settings (the OS won't re-prompt once denied).
- */
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Linking } from 'react-native';
 
 import { BELL } from '@/components/icon';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { watchOnForeground } from '@/lib/app-state';
-import { hapticSuccess } from '@/lib/haptics';
 import { sv } from '@/lib/i18n/sv';
-import {
-  getCachedPushToken,
-  getExpoPushToken,
-  getNotificationPermission,
-  requestNotificationPermission,
-  type NotificationPermission,
-} from '@/lib/notifications';
-import { isPushOptedOut, setPushOptedOut } from '@/lib/push-prefs';
-import { registerPushToken, unregisterPushToken } from '@/lib/query/push-tokens';
+import { pushRegistration } from '@/lib/push-registration';
 
 export function NotificationPermissionSection() {
-  const [permission, setPermission] = useState<NotificationPermission>('undetermined');
-  const [optedOut, setOptedOut] = useState<boolean>(() => isPushOptedOut());
-  const [busy, setBusy] = useState(false);
-
-  // Read on mount, and re-read when returning from system settings so a flip
-  // there reflects back without a manual refresh.
-  useEffect(() => watchOnForeground(getNotificationPermission, setPermission), []);
-
-  const enabled = permission === 'granted' && !optedOut;
-
-  async function onEnable() {
-    setBusy(true);
-    let next = permission;
-    if (permission !== 'granted') {
-      next = await requestNotificationPermission();
-      setPermission(next);
-    }
-    if (next === 'granted') {
-      setPushOptedOut(false);
-      setOptedOut(false);
-      const token = await getExpoPushToken();
-      if (token) {
-        try {
-          await registerPushToken(token);
-          hapticSuccess();
-        } catch {
-          // best-effort
-        }
-      }
-    }
-    setBusy(false);
-  }
-
-  async function onDisable() {
-    setBusy(true);
-    setPushOptedOut(true);
-    setOptedOut(true);
-    // The session-cached token suffices to delete our row — only fall back to
-    // re-minting one from Expo's push service when nothing was cached (also
-    // lets the opt-out delete work offline-ish).
-    const token = getCachedPushToken() ?? (await getExpoPushToken());
-    if (token) {
-      try {
-        await unregisterPushToken(token);
-      } catch {
-        // best-effort
-      }
-    }
-    setBusy(false);
-  }
-
-  if (permission === 'denied') {
-    return (
-      <SettingsRow
-        icon={BELL}
-        label={sv.profile.notifications.title}
-        sublabel={sv.profile.status.blocked}
-        accessory="chevron"
-        onPress={() => void Linking.openSettings()}
-      />
-    );
-  }
+  const state = useSyncExternalStore(pushRegistration.subscribe, pushRegistration.getSnapshot);
+  const copy = sv.profile.notifications;
+  const message = state.busy
+    ? (state.desired ? copy.enabling : copy.disabling)
+    : state.error === 'unavailable' ? copy.unavailable
+      : state.error === 'enable' ? copy.enableFailed
+        : state.error === 'disable' ? copy.disableFailed : undefined;
 
   return (
-    <SettingsRow
-      icon={BELL}
-      label={sv.profile.notifications.title}
-      accessory="switch"
-      switchValue={enabled}
-      onSwitchChange={(next) => void (next ? onEnable() : onDisable())}
-      disabled={busy}
-    />
+    <>
+      {state.permission === 'denied' ? (
+        <SettingsRow icon={BELL} label={copy.title} sublabel={sv.profile.status.blocked}
+          accessory="chevron" onPress={() => void Linking.openSettings()} />
+      ) : (
+        <SettingsRow icon={BELL} label={copy.title} sublabel={message}
+          value={state.confirmed === null || state.error ? copy.unconfirmed : undefined}
+          accessory="switch" switchValue={state.confirmed === true}
+          onSwitchChange={(next) => void pushRegistration.setEnabled(next)}
+          disabled={state.busy} />
+      )}
+      {state.error ? (
+        <SettingsRow label={copy.retry} sublabel={state.permission === 'denied' ? message : undefined}
+          action onPress={() => void pushRegistration.sync()} disabled={state.busy} />
+      ) : null}
+      {state.error && state.desired && state.confirmed !== true ? (
+        <SettingsRow label={copy.cancelEnable} action
+          onPress={() => void pushRegistration.setEnabled(false)} disabled={state.busy} />
+      ) : null}
+    </>
   );
 }

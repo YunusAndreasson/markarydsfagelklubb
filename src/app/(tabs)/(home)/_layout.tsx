@@ -18,6 +18,9 @@ export default function FeedTabLayout() {
     <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Screen
         name="index"
+        // Suspend hidden feed effects while keeping its list state. Scope this
+        // to the leaf route: map camera and profile upload effects stay active.
+        activityEnabled={1}
         options={{
           title: sv.feed.title,
           headerLargeTitleEnabled: true,

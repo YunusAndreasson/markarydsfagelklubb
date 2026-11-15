@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ACTIVITIES, LEGACY_ACTIVITIES } from '../validation/observation'
-import { activityLabel, sv } from './sv'
+import { activityLabel, resetDateFormatters, sv } from './sv'
 
 describe('activityLabel', () => {
   it('resolves a known activity to its Swedish label', () => {
@@ -40,5 +40,77 @@ describe('activityLabel', () => {
     const labels: Record<string, string | undefined> = sv.observation.activity
     const missing = [...ACTIVITIES, ...LEGACY_ACTIVITIES].filter((a) => !labels[a])
     expect(missing).toEqual([])
+  })
+})
+
+describe('Swedish date formatting', () => {
+  const cases = [
+    [new Date(2026, 10, 15, 0, 5), new Date(2026, 10, 15, 12)],
+    [new Date(2026, 10, 14, 23, 59), new Date(2026, 10, 15, 12)],
+    [new Date(2026, 9, 25, 2, 30), new Date(2026, 10, 15, 12)],
+    [new Date(2026, 2, 29, 3, 30), new Date(2026, 10, 15, 12)],
+    [new Date(2025, 11, 31, 23, 59), new Date(2026, 0, 1, 12)],
+    [new Date(2024, 1, 29, 9, 35), new Date(2026, 10, 15, 12)],
+  ]
+
+  it.each(cases)('preserves date and time copy for %s', (date, now) => {
+    const time = date.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+    const weekday = date.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const friendly = date.toDateString() === now.toDateString()
+      ? `Idag ${time}`
+      : date.toDateString() === yesterday.toDateString()
+        ? `Igår ${time}`
+        : `${date.toLocaleDateString('sv-SE', date.getFullYear() === now.getFullYear()
+          ? { weekday: 'short', day: 'numeric', month: 'short' }
+          : { day: 'numeric', month: 'short', year: 'numeric' })} ${time}`
+
+    expect(sv.feed.timeOnly(date)).toBe(time)
+    expect(sv.feed.weekday(date)).toBe(weekday)
+    expect(sv.feed.fullDateTime(date)).toBe(date.toLocaleString('sv-SE', {
+      weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+    }))
+    expect(sv.observation.timeFriendly(date, now)).toBe(friendly)
+  })
+
+  it('recreates cached formats after the device timezone changes', () => {
+    const DateTimeFormat = Intl.DateTimeFormat
+    let timezone = 'Europe/Stockholm'
+    // Vitest workers do not all respond to process.env.TZ changes. Model the
+    // OS default at construction, while using real Intl formatting in each zone.
+    const constructor = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(function (locales, options) {
+      return new DateTimeFormat(locales, { ...options, timeZone: timezone })
+    })
+    try {
+      resetDateFormatters()
+      const date = new Date('2026-11-15T12:00:00Z')
+      const timeOptions = { hour: '2-digit', minute: '2-digit' } as const
+      const stockholmTime = new DateTimeFormat('sv-SE', { ...timeOptions, timeZone: timezone }).format(date)
+      expect(sv.feed.timeOnly(date)).toBe(stockholmTime)
+      timezone = 'America/New_York'
+      const newYorkTime = new DateTimeFormat('sv-SE', { ...timeOptions, timeZone: timezone }).format(date)
+      expect(newYorkTime).not.toBe(stockholmTime)
+      expect(sv.feed.timeOnly(date)).toBe(stockholmTime)
+      expect(constructor).toHaveBeenCalledOnce()
+
+      resetDateFormatters()
+      expect(sv.feed.timeOnly(date)).toBe(newYorkTime)
+      expect(constructor).toHaveBeenCalledTimes(2)
+      expect(sv.feed.weekday(date)).toBe(new DateTimeFormat('sv-SE', {
+        weekday: 'short', day: 'numeric', month: 'short', timeZone: timezone,
+      }).format(date))
+    } finally {
+      constructor.mockRestore()
+      resetDateFormatters()
+    }
+  })
+
+  it('retains the previous nonthrowing behavior for invalid dates', () => {
+    const date = new Date(NaN)
+    const invalid = date.toLocaleString('sv-SE')
+    expect(sv.feed.timeOnly(date)).toBe(invalid)
+    expect(sv.feed.weekday(date)).toBe(invalid)
+    expect(sv.feed.fullDateTime(date)).toBe(invalid)
+    expect(sv.observation.timeFriendly(date)).toBe(`${invalid} ${invalid}`)
   })
 })

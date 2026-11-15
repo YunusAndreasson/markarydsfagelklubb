@@ -27,12 +27,14 @@ import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { sv } from '@/lib/i18n/sv';
+import { magicLinkFailure } from '@/lib/auth/magic-link-error';
 import {
   composeDisplayName,
   setPendingDisplayName,
 } from '@/lib/auth/pending-display-name';
 import { createStrictContext } from '@/lib/create-strict-context';
 import { persister, queryClient } from '@/lib/query-client';
+import { stopPushRegistration } from '@/lib/push-registration';
 import { unregisterCurrentDeviceToken } from '@/lib/query/push-tokens';
 import { supabase } from '@/lib/supabase';
 import { emailInput } from '@/lib/validation/auth';
@@ -46,7 +48,7 @@ const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
 /** A `cancelled` result means the user dismissed the provider sheet — not an error. */
-export type AuthActionResult = { error?: string; cancelled?: boolean };
+export type AuthActionResult = { error?: string; cancelled?: boolean; rateLimited?: boolean };
 
 type AuthContextValue = {
   session: Session | null;
@@ -192,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: parsed.data.email,
       options: { emailRedirectTo: Linking.createURL('/auth/callback') },
     });
-    return { error: error ? sv.login.errors.sendFailed : undefined };
+    return error ? magicLinkFailure(error) : {};
   }, []);
 
   const exchangeMagicLinkCode = useCallback(async (code: string): Promise<AuthActionResult> => {
@@ -208,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Stop this device receiving club alerts for the account being signed out —
     // best-effort, and BEFORE clearing the session (the owner-scoped RLS delete
     // needs the user's auth).
+    await stopPushRegistration();
     await unregisterCurrentDeviceToken().catch(() => {});
     await supabase.auth.signOut();
     // Drop ALL cached + persisted data so the previous user's feed/profile is
@@ -233,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // `error` and nothing local is cleared, so the user stays signed in.
     const { error } = await supabase.functions.invoke('delete-account');
     if (error) return { error: sv.profile.deleteAccount.failed };
+    await stopPushRegistration();
     // Account is gone. Clear the now-orphaned local session (local scope — the
     // server token is already invalid) + all cached/persisted data; the auth
     // listener then routes back to sign-in.

@@ -1,0 +1,65 @@
+steps:
+  - echo: SDK 58 development client; Metro on 8083 and signed-in QA account. Switches only change local preview state; never submit reports or select photos.
+  - launch: nu.markarydsfagelklubb.mafk
+  - tool: open-url
+    args: { url: 'exp+mafk://?__expo_url=http%3A%2F%2F10.0.2.2%3A8083&__expo_disable_onboarding=1&__expo_disable_fab=1&__expo_disable_auto_launch=1' }
+  - await: { visible: { text: Senaste 14 dagarna }, timeout: 30000 }
+  - await: { idle: true }
+  - tap: { text: Profil, role: FrameLayout }
+  - await: { visible: { text: Dina uppgifter } }
+  - await: { idle: true }
+  - tap: { text: Ändra profilbild, role: Button }
+  - await: { visible: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tool: button
+    args: { button: back }
+  - await: { hidden: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tap: { text: Larm, role: FrameLayout }
+  - await: { visible: { text: Senaste 14 dagarna } }
+  - await: { idle: true }
+  - tap: { text: Filter, role: Button }
+  - await: { visible: { text: Filtrera larm } }
+  - await: { idle: true }
+  - tap: { text: Mina }
+  - await: { visible: { text: Visa 0 träffar } }
+  - tap: { text: Alla }
+  - tool: button
+    args: { button: back }
+  - await: { hidden: { text: Filtrera larm } }
+  - await: { idle: true }
+  - tool: open-url
+    args: { url: 'mafk://kitchensink?nativeControls=1' }
+  - await: { visible: { text: Inbyggda reglage, role: StaticText } }
+  - await: { idle: true }
+  - assert: { visible: { text: Av, role: StaticText } }
+  - tap: { text: Testreglage, role: View }
+  - await: { visible: { text: På, role: StaticText } }
+  - tap: { text: Testreglage, role: View }
+  - await: { visible: { text: Av, role: StaticText } }
+  - tap: { text: Låst testreglage, role: View }
+  - assert: { visible: { text: Av, role: StaticText } }
+  - tap: { text: Mörkt, role: Button }
+  - await: { idle: true }
+  - tap: { text: Testreglage, role: View }
+  - await: { visible: { text: På, role: StaticText } }
+  - tap: { text: Testreglage, role: View }
+  - await: { visible: { text: Av, role: StaticText } }
+  - tool: button
+    args: { button: back }
+  - await: { visible: { text: Senaste 14 dagarna } }
+  - await: { idle: true }
+  - tap: { text: Profil, role: FrameLayout }
+  - await: { visible: { text: Dina uppgifter } }
+  - await: { idle: true }
+  - tap: { text: Ändra profilbild, role: Button }
+  - await: { visible: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tool: button
+    args: { button: back }
+  - await: { hidden: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tap: { text: System, role: RadioButton }
+  - await: { idle: true }
+  - tap: { text: Larm, role: FrameLayout }
+  - await: { visible: { text: Senaste 14 dagarna } }

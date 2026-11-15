@@ -1,11 +1,10 @@
 import { useMutation, useMutationState, useQuery } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Linking, StyleSheet } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { SIGN_OUT, TRASH, type IconName } from '@/components/icon';
-import { headerRightAction } from '@/components/header-button';
+import { CHEVRON, Icon, SIGN_OUT, TRASH, type IconName } from '@/components/icon';
 import { ImageUpload, type ImageUploadHandle } from '@/components/image-upload';
 import { LocationPermissionSection } from '@/components/location-permission-section';
 import { NotificationPermissionSection } from '@/components/notification-permission-section';
@@ -18,7 +17,10 @@ import { SettingsStaticRow } from '@/components/settings/settings-static-row';
 import { ThemePicker } from '@/components/theme-picker';
 import { showToast } from '@/components/toast';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/legal';
-import { Spacing } from '@/constants/theme';
+import { SurfaceRadius } from '@/constants/surface';
+import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
+import { IconSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { versionLabel } from '@/lib/app-version';
 import { useBlockedUsers } from '@/lib/blocks';
@@ -31,18 +33,14 @@ import { myProfileQueryOptions, upsertMyProfile } from '@/lib/query/profile';
 import { deleteUpload } from '@/lib/query/storage';
 import { displayNameSchema, phoneSchema } from '@/lib/validation/profile';
 
-const ADMIN_BADGE: IconName = { sf: 'checkmark.shield.fill', material: 'verified-user' };
+const ADMIN_BADGE: IconName = { sf: 'checkmark.shield.fill', material: 'verified_user' };
 
 type Persisted = { displayName: string; phone: string | null; avatarPath: string | null };
 
-// Profil — the user's own profile + settings in the app's grouped-settings grammar
-// (bordered SettingsGroup cards of rows). The **avatar lives in the native header**
-// (top-right) and opens the source chooser on tap — driven via the headless
-// `ImageUpload` host mounted below. Name / phone / avatar **autosave** on commit
-// (field blur or avatar pick); there is no Save button. Email is a read-only row;
-// appearance, the device-permission rows (M8 location · M14 push), and sign-out
-// round it out. The tab nests a native Stack (`profile/_layout.tsx`).
+// Profile identity/photo editing is grouped above the autosaving personal fields.
+// Appearance, permissions and account actions use the shared settings cards.
 export default function ProfileScreen() {
+  const theme = useTheme();
   const { signOut, deleteAccount, user } = useAuth();
   const userId = user?.id ?? '';
   const { data: profile } = useQuery({
@@ -231,33 +229,10 @@ export default function ProfileScreen() {
   }
 
   return (
-    <Screen keyboardAware keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-      <Stack.Screen
-        options={{
-          // The avatar is its own circular graphic, so iOS 26's glass capsule
-          // would ring it with a second circle — same reason as the feed's
-          // actions. See `headerRightAction`.
-          ...headerRightAction(() => (
-            <PressableScale
-              variant="icon"
-              onPress={() => uploadRef.current?.open()}
-              accessibilityRole="button"
-              accessibilityLabel={sv.profile.avatarLabel}
-            >
-              <Avatar
-                name={name || saved.displayName}
-                uri={profile?.avatarUrl ?? null}
-                cacheKey={profile?.avatarCacheKey}
-                size="md"
-              />
-            </PressableScale>
-          )),
-        }}
-      />
+    <Screen style={{ backgroundColor: theme.backgroundGrouped }} keyboardAware keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
 
-      {/* Headless host: owns the source chooser + upload pipeline for the header
-          avatar (no inline preview). Renders only the chooser sheet (and any
-          error / camera-blocked notice). */}
+
+      {/* The identity card opens this shared photo chooser/upload pipeline. */}
       <ImageUpload
         ref={uploadRef}
         headless
@@ -271,7 +246,17 @@ export default function ProfileScreen() {
         preservePath={saved.avatarPath}
       />
 
-      <SettingsGroup title={sv.profile.detailsSection} footer={sv.profile.phoneHelp}>
+      <PressableScale variant="row" onPress={() => uploadRef.current?.open()}
+        accessibilityRole="button" accessibilityLabel={sv.profile.changeAvatar}
+        style={[styles.identity, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Avatar name={name || saved.displayName} uri={profile?.avatarUrl ?? null} cacheKey={profile?.avatarCacheKey} size="md" />
+        <View style={styles.identityText}>
+          <ThemedText type="heading">{name || saved.displayName}</ThemedText>
+          <ThemedText type="small" themeColor="mutedForeground">{sv.profile.changeAvatar}</ThemedText>
+        </View>
+        <Icon name={CHEVRON} size={IconSize.control} color={theme.mutedForeground} />
+      </PressableScale>
+      <SettingsGroup title={sv.profile.detailsSection} footer={`${sv.profile.autosaveHelp} ${sv.profile.phoneHelp}`}>
         <SettingsFormInput
           label={sv.profile.nameLabel}
           value={name}
@@ -283,6 +268,7 @@ export default function ProfileScreen() {
           onEndEditing={commitName}
           error={nameError}
           saveState={fieldSaveState('displayName', name.trim())}
+          onRetry={commitName}
           placeholder={sv.profile.namePlaceholder}
           autoCapitalize="words"
           autoComplete="name"
@@ -300,6 +286,7 @@ export default function ProfileScreen() {
           onEndEditing={commitPhone}
           error={phoneError}
           saveState={fieldSaveState('phone', phone.trim() || null)}
+          onRetry={commitPhone}
           placeholder={sv.profile.phonePlaceholder}
           keyboardType="phone-pad"
           autoComplete="tel"
@@ -363,4 +350,6 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: Spacing.four },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: SurfaceRadius.md, borderWidth: StyleSheet.hairlineWidth, minHeight: 72 },
+  identityText: { flex: 1, gap: Spacing.one },
 });

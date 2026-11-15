@@ -12,3 +12,10 @@ isn't the author's to give; all rights stay with its owners.
   supabase/migrations/20260607120000_species_rarity.sql.
 - The reports and photos members send through the app belong to them. They
   live in the club's database, not in this repository.
+
+# Bundled third-party assets
+
+- Google Material Symbols, bundled through `expo-symbols` /
+  `@expo-google-fonts/material-symbols`, are licensed under Apache 2.0.
+  Source: https://github.com/google/material-design-icons.
+  See [the font license](assets/licenses/MaterialSymbols-LICENSE.txt).

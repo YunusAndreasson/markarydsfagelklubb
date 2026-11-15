@@ -99,6 +99,7 @@ function LocationsContent() {
         latitude: l.latitude,
         longitude: l.longitude,
         label: l.name,
+        active: (activity[l.id] ?? 0) > 0,
         tint: (activity[l.id] ?? 0) > 0 ? theme.tint : theme.mutedForeground,
       })),
     [withCoords, activity, theme.tint, theme.mutedForeground],
@@ -280,6 +281,7 @@ function LocationsContent() {
       <Map
         markers={markers}
         onMarkerPress={handleMarkerPress}
+        onOverlappingMarkersPress={(ids) => router.push({ pathname: '/location/choose', params: { ids: ids.join(',') } })}
         recenter={recenter}
         fitToken={fitToken}
         style={styles.map}

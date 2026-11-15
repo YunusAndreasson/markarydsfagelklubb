@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,6 +16,8 @@ import { PickerSheet, SheetActionRow } from '@/components/picker-sheet';
 import { PressableScale } from '@/components/pressable-scale';
 import { RarityBadge } from '@/components/rarity-badge';
 import { Screen } from '@/components/screen';
+import { SettingsGroup } from '@/components/settings/settings-group';
+import { SettingsRow } from '@/components/settings/settings-row';
 import { SectionHeader } from '@/components/section-header';
 import { SelectRow } from '@/components/select-row';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
@@ -103,9 +105,11 @@ function ThemeModeToggle() {
 
 export default function KitchenSink() {
   const theme = useTheme();
+  const { nativeControls } = useLocalSearchParams<{ nativeControls?: string }>();
   const [name, setName] = useState('');
   const [showError, setShowError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [nativeToggle, setNativeToggle] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
 
   // Confirm/action-sheet demo state.
@@ -123,8 +127,27 @@ export default function KitchenSink() {
   // M10 image-upload state.
   const [obsImage, setObsImage] = useState<string | null>(null);
 
+  const controls = (
+      <SettingsGroup title="Inbyggda reglage" footer="Testreglagen ändrar bara den här förhandsvisningen.">
+        <SettingsRow label="Testreglage" value={nativeToggle ? 'På' : 'Av'}
+          accessory="switch" switchValue={nativeToggle} onSwitchChange={setNativeToggle} />
+        <SettingsRow label="Låst testreglage" accessory="switch" switchValue={false}
+          onSwitchChange={setNativeToggle} disabled />
+      </SettingsGroup>
+  );
+
   // Dev-only showcase — never reachable in a production build.
   if (!__DEV__) return <Redirect href="/" />;
+
+  // A short, local-only QA surface avoids mounting the maps/media demos when
+  // validating native switches. It cannot register push tokens or edit a profile.
+  if (nativeControls === '1') return (
+    <Screen bottomInset contentContainerStyle={{ paddingTop: Spacing.three }}>
+      <Stack.Screen options={{ headerShown: true, title: 'Inbyggda reglage' }} />
+      <ThemeModeToggle />
+      {controls}
+    </Screen>
+  );
 
   return (
     <Screen keyboardAware>
@@ -138,6 +161,8 @@ export default function KitchenSink() {
         <SectionHeader title="Tema" />
         <ThemeModeToggle />
       </View>
+
+      {controls}
 
       <View style={styles.section}>
         <SectionHeader title="Typografi" />

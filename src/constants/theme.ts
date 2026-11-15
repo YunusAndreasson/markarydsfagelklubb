@@ -234,6 +234,7 @@ export const IconSize = {
  */
 export const FontSize = {
   input: 16,
+  heading: 19,
   display: 32,
 } as const;
 

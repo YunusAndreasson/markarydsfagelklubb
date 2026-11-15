@@ -29,6 +29,7 @@ import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { Icon, type IconName } from '@/components/icon';
 import { PressableScale, type PressableScaleHaptic } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
+import { SurfaceRadius } from '@/constants/surface';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -60,6 +61,8 @@ export type HeaderButtonProps = {
   /** Fill the box as a solid brand-green circle (the primary create mini-FAB).
    *  Pair with a contrasting `iconColor`. Requires `icon`. */
   disc?: boolean;
+  /** Filled text action for a screen's primary submit. */
+  primary?: boolean;
   /** Haptic intent. Bar actions are silent by default (the platform already
    *  ticks on navigation); pass `'press'` on a genuinely meaningful one, e.g.
    *  the create action that opens the composer. */
@@ -76,6 +79,7 @@ export function HeaderButton({
   iconSize = ICON_GLYPH,
   iconWeight,
   disc,
+  primary = false,
   haptic = false,
 }: HeaderButtonProps) {
   const theme = useTheme();
@@ -83,19 +87,20 @@ export function HeaderButton({
   // and it's what keeps both sides of the bar the same size. The native header
   // already insets bar items from the screen edge, and the link/icon variants
   // add hitSlop (8/12px), so the tap target clears 44pt either way.
-  if (loading) return <ActivityIndicator color={theme.tint} style={styles.text} />;
+  if (loading) return <ActivityIndicator color={theme.tint} style={primary ? styles.primary : styles.text} />;
   return (
     <PressableScale
       // An icon-only action uses the `icon` variant (larger hit-slop, opacity dim
       // on press); a text action stays `link`.
-      variant={icon ? 'icon' : 'link'}
+      variant={icon ? 'icon' : primary ? 'button' : 'link'}
       haptic={haptic}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={title}
       style={[
-        icon ? styles.iconBox : styles.text,
+        icon ? styles.iconBox : primary ? styles.primary : styles.text,
+        primary ? { backgroundColor: theme.primary } : null,
         disc ? { backgroundColor: theme.tint } : null,
         disabled ? styles.disabled : null,
       ]}
@@ -103,7 +108,7 @@ export function HeaderButton({
       {icon ? (
         <Icon name={icon} size={iconSize} weight={iconWeight} color={iconColor ?? theme.tint} />
       ) : (
-        <ThemedText type="smallBold" themeColor="tint" numberOfLines={1}>
+        <ThemedText type="smallBold" themeColor={primary ? 'primaryForeground' : 'tint'} numberOfLines={1}>
           {title}
         </ThemedText>
       )}
@@ -152,6 +157,7 @@ export function headerRightAction(render: (() => ReactElement) | undefined) {
 }
 
 const styles = StyleSheet.create({
+  primary: { minHeight: 44, paddingHorizontal: Spacing.three, borderRadius: SurfaceRadius.sm, justifyContent: 'center', alignItems: 'center' },
   text: { paddingHorizontal: Spacing.half, paddingVertical: Spacing.half },
   iconBox: {
     width: ICON_BOX,

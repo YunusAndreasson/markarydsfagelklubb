@@ -1,5 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,6 +31,21 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [resendAfter, setResendAfter] = useState(0);
+  const [clock, setClock] = useState(Date.now);
+  const sending = useRef(false);
+  const remaining = Math.max(0, Math.ceil((resendAfter - clock) / 1000));
+  // This is our duplicate-send guard after a successful request, not an
+  // invented deadline for an unknown server-side rate limit.
+  useEffect(() => {
+    if (!sentTo || resendAfter <= Date.now()) return;
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setClock(now);
+      if (now >= resendAfter) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [sentTo, resendAfter]);
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   // Apple sign-in exists only on iOS (and only on supported versions). Hide the
@@ -55,17 +70,29 @@ export default function SignInScreen() {
   }
 
   async function onSendLink() {
+    if (sending.current || (sentTo && Date.now() < resendAfter)) return;
+    sending.current = true;
     setError(null);
     setPending('email');
-    const res = await sendMagicLink(email);
-    setPending(null);
-    if (res.error) {
+    try {
+      const res = await sendMagicLink(email);
+      if (res.error) {
+        hapticError();
+        setError(res.error);
+        return;
+      }
+      hapticSuccess();
+      const now = Date.now();
+      setClock(now);
+      setResendAfter(now + 60_000);
+      setSentTo(email.trim());
+    } catch {
       hapticError();
-      setError(res.error);
-      return;
+      setError(sv.login.errors.sendFailed);
+    } finally {
+      sending.current = false;
+      setPending(null);
     }
-    hapticSuccess();
-    setSentTo(email.trim());
   }
 
   function resetEmail() {
@@ -117,11 +144,20 @@ export default function SignInScreen() {
                 {Platform.OS === 'ios' ? (
                   <Button title={sv.login.openMail} onPress={openMail} />
                 ) : null}
+                {error ? <ThemedText type="small" themeColor="destructive">{error}</ThemedText> : null}
+                <Button title={sv.login.resend} variant="secondary" onPress={() => void onSendLink()}
+                  disabled={busy || remaining > 0} loading={pending === 'email'} />
+                {remaining > 0 ? <ThemedText type="small" themeColor="mutedForeground">
+                  {sv.login.resendWait(remaining)}
+                </ThemedText> : null}
                 <Button
                   title={sv.login.useDifferentEmail}
                   variant="secondary"
                   onPress={resetEmail}
+                  disabled={busy}
                 />
+                <Button title={sv.login.otherMethods} variant="tint" disabled={busy}
+                  onPress={() => { setSentTo(null); setMode('social'); setError(null); }} />
               </View>
             ) : mode === 'email' ? (
               // Secondary path: email magic-link.
@@ -157,7 +193,7 @@ export default function SignInScreen() {
                   style={styles.linkRow}
                 >
                   <ThemedText type="small" themeColor="mutedForeground">
-                    {sv.errors.goBack}
+                    {sv.login.otherMethods}
                   </ThemedText>
                 </PressableScale>
               </View>

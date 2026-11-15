@@ -23,14 +23,14 @@
  *    `clearLastNotificationResponseAsync` drops the handled response so a later
  *    remount can't silently re-navigate to it.
  */
+import { onlineManager } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useAuth } from '@/hooks/use-auth';
-import { getExpoPushToken, getNotificationPermission } from '@/lib/notifications';
-import { isPushOptedOut } from '@/lib/push-prefs';
-import { registerPushToken } from '@/lib/query/push-tokens';
+import { watchOnForeground } from '@/lib/app-state';
+import { pushRegistration } from '@/lib/push-registration';
 
 /**
  * @param canRoute True once the signed-in app routes (the observation detail
@@ -41,24 +41,16 @@ export function usePushRegistration(canRoute: boolean): void {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  // (Re)register when signed in + granted + not opted out.
+  // Share synchronization with settings so startup cannot undo an opt-out.
+  // Failed requests retain their intent and retry on foreground/reconnection.
   useEffect(() => {
+    pushRegistration.setUser(userId);
     if (!userId) return;
-    let cancelled = false;
-    void (async () => {
-      const permission = await getNotificationPermission();
-      if (cancelled || permission !== 'granted' || isPushOptedOut()) return;
-      const token = await getExpoPushToken();
-      if (cancelled || !token) return;
-      try {
-        await registerPushToken(token);
-      } catch {
-        // Best-effort — a failed upsert just means no pushes until next launch.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const stopForeground = watchOnForeground(() => pushRegistration.sync(), () => {});
+    const stopOnline = onlineManager.subscribe((online) => {
+      if (online) void pushRegistration.sync();
+    });
+    return () => { stopForeground(); stopOnline(); };
   }, [userId]);
 
   // Notification taps → the observation detail, once the routes exist.

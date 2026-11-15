@@ -256,6 +256,7 @@ function ThemedNavigation() {
               activity line + a handful of larm), so a half-screen detent left
               ~40% of the sheet as blank white below the content. */}
           <Stack.Screen name="location/[id]" options={sheetOptions('fitToContents')} />
+          <Stack.Screen name="location/choose" options={sheetOptions([0.5, 0.9], sv.locations.chooseTitle)} />
           {/* Report-form pickers — each is a REAL native sheet (formSheet). The
               field opens the route and awaits its selection via the picker bridge
               (`lib/picker-bridge`). Title in the native header; grabber +
@@ -274,7 +275,7 @@ function ThemedNavigation() {
           />
           {/* A fixed detent keeps filtering from resizing the sheet as counts or
               available feed data change. Actions stay inside the scroller. */}
-          <Stack.Screen name="filter" options={sheetOptions([0.9], sv.filter.title)} />
+          <Stack.Screen name="filter" options={sheetOptions([0.85], sv.filter.title)} />
           <Stack.Screen
             name="blocked"
             options={{ headerShown: true, title: sv.blockedMembers.title }}

@@ -14,7 +14,6 @@ import { StyleSheet } from 'react-native';
 import { CLOSE, Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
-import { HitSlop } from '@/constants/motion';
 import { SurfaceRadius } from '@/constants/surface';
 import { IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -57,12 +56,6 @@ export function FilterChip({
       accessibilityRole={removable ? 'button' : 'checkbox'}
       accessibilityState={removable ? undefined : { checked: selected }}
       accessibilityLabel={accessibilityLabel ?? label}
-      // A pill reads best at 36pt but must be tappable at 44. `variant="button"`
-      // carries no slop of its own, so this row of chips was the one place in the
-      // app under the minimum. 4pt on each side lands exactly on 44 and exactly
-      // fills the 8pt gap between chips — adjacent targets touch, never overlap,
-      // so no chip can steal its neighbour's tap.
-      hitSlop={HitSlop.dense}
       style={[styles.pill, { backgroundColor: fill }]}
     >
       {leading}
@@ -75,7 +68,7 @@ export function FilterChip({
           the chip cap at the container and ellipsize; the untruncated name is
           still spoken via `accessibilityLabel`. */}
       <ThemedText
-        type="smallBold"
+        type="small"
         numberOfLines={1}
         style={[styles.label, { color: textColor }]}
       >
@@ -96,7 +89,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-    minHeight: 36,
+    minHeight: 44,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: SurfaceRadius.pill,

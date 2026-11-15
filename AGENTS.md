@@ -61,7 +61,8 @@ Magic-link → **Apple + Google sign-in** (M5) · Leaflet → `react-native-maps
 
 - Package manager: **npm**.
 - `npm run start` — Metro. `npm run typecheck` — `tsc --noEmit`. `npm run lint`.
-- `npm run verify` — typecheck + lint + test in one command; run before finishing.
+- `npm run verify` — the native runtime gate, typecheck, lint, the deprecated-API check and tests; run before finishing.
+- A native change (a native package, a plugin, native app config) needs a new version (`npm version patch`), then `npm run runtime:record` (`scripts/check-runtime.js`, `native-runtimes.json`). Never edit or replace a recorded hash; `retired` lists the versions shipped before the record existed.
 - `npm run android` — builds + runs the dev client on the Android emulator.
   **JDK 17 is required** (`/usr/lib/jvm/java-17-openjdk`); the default `java` is
   26 and breaks AGP. `scripts/dev-android.sh` pins it and boots the AVD.

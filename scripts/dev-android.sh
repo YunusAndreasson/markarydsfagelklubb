@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 #
-# Android dev flow (`expo run:android`): boots the emulator, builds the dev
+# Android dev flow (Expo agent CLI): boots the emulator, builds the dev
 # client, installs it, wires up `adb reverse`, and starts Metro.
 #
 # Two machine-specific fixes are baked in:
 #   1. JDK is pinned to 17. The `java` on PATH is newer (26) and breaks AGP.
-#   2. The AVD is auto-selected by name. `expo run:android --device` wants an
-#      *AVD name* (e.g. "pixel"), not an adb serial.
+#   2. Select an AVD by name only when no device is already connected.
 set -euo pipefail
 
 # 1. Pin JDK 17 for the Gradle/AGP build.
@@ -45,4 +44,4 @@ else
 fi
 
 # 3. Hand off to Expo.
-exec npx expo run:android "${device_args[@]}" "$@"
+exec npx @expo/agent-cli dev --android "${device_args[@]}" "$@"

@@ -98,8 +98,7 @@ export function CountStepper({
             maxLength={4}
             autoFocus
             selectTextOnFocus
-            // Match the displayed value's cap (ThemedText `subtitle` = 1.3) so editing
-            // doesn't overflow the fixed 56px stepper row.
+            // Keep large type within the stepper while preserving the full value.
             maxFontSizeMultiplier={1.3}
             style={[styles.input, { color: theme.foreground }]}
             accessibilityLabel={sv.observation.countLabel}
@@ -123,7 +122,7 @@ export function CountStepper({
                 signifier that tapping it opens a numeric field to type a value
                 directly — otherwise the tap-to-type affordance is invisible to
                 sighted users (Norman — discoverability). */}
-            <ThemedText type="subtitle">{value}</ThemedText>
+            <ThemedText type="heading" style={styles.number}>{value}</ThemedText>
             <Icon name={EDIT} size={IconSize.meta} color={theme.mutedForeground} />
           </PressableScale>
         )}
@@ -179,13 +178,14 @@ const styles = StyleSheet.create({
   // The whole control dims as one surface (it reads as a single field), rather
   // than each of the three targets dimming on its own.
   dimmed: { opacity: Opacity.disabled },
+  number: { fontVariant: ['tabular-nums'] },
   input: {
     flex: 1,
     minHeight: 56,
     textAlign: 'center',
-    // Concrete fontSize — TextInput isn't a ThemedText so the type token can't
-    // apply. Matches the `subtitle` display size so editing doesn't shift the layout.
-    fontSize: FontSize.display,
+    // Match the displayed heading so editing does not change the number size.
+    fontSize: FontSize.heading,
     fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
 });

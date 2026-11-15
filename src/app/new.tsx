@@ -13,6 +13,7 @@ import {
   type ObservationFormValue,
 } from '@/components/observation-form';
 import { showToast } from '@/components/toast';
+import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useDiscardGuard } from '@/hooks/use-discard-guard';
 import { reverseGeocodePlaceName } from '@/hooks/use-reverse-geocode';
@@ -35,6 +36,7 @@ import { type Species } from '@/lib/query/species';
 // failure rolls the row back while preserving the form for retry. As a modal it
 // unmounts on dismiss, so there's no long-lived form to reset via a bumped key.
 export default function NewObservationScreen() {
+  const theme = useTheme();
   const { user } = useAuth();
   const formRef = useRef<ObservationFormHandle>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -113,6 +115,7 @@ export default function NewObservationScreen() {
           ...headerLeftAction(() => <HeaderDismissButton onPress={dismiss} disabled={busy} />),
           ...headerRightAction(() => (
             <HeaderButton
+              primary
               title={sv.observation.submitNew}
               onPress={() => formRef.current?.submit()}
               loading={createMutation.isPending}
@@ -121,7 +124,7 @@ export default function NewObservationScreen() {
           )),
         }}
       />
-      <Screen ref={scrollRef} bottomInset keyboardAware keyboardShouldPersistTaps="handled">
+      <Screen style={{ backgroundColor: theme.backgroundGrouped }} ref={scrollRef} bottomInset keyboardAware keyboardShouldPersistTaps="handled">
         <ObservationForm
           ref={formRef}
           mode="create"

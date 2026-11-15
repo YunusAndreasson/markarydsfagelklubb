@@ -85,6 +85,13 @@ public, and in the website's `wrangler.jsonc`), and for maps on Android a
 Google Maps key. [AGENTS.md](AGENTS.md) has the setup it's developed with: Linux, Android,
 JDK 17.
 
+`expo-dev-client` supplies the development launcher and debugging tools. On
+Linux, `npm run android` pins JDK 17 and uses Expo's agent CLI to build when
+needed, bind an emulator, and start Metro. To select the existing QA emulator,
+run `npm run android -- --device emulator-5554`. Native dependency changes need
+a new app version and runtime record before building; `npm run verify` checks
+that boundary.
+
 The database is shared with the live website and the members using the app,
 so schema changes in `supabase/` are applied by hand, never by CI.
 

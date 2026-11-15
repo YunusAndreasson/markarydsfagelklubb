@@ -10,8 +10,9 @@
  * Ported from the edenmind reference.
  */
 import { type ReactNode } from 'react';
-import { Platform, StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { NativeSwitch } from '@/components/native-switch';
 import { CHECK, CHEVRON, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
@@ -22,6 +23,7 @@ import { hapticToggle } from '@/lib/haptics';
 export type SettingsRowProps = {
   icon?: IconName;
   label: string;
+  labelNumberOfLines?: number;
   sublabel?: string;
   /** Right-aligned muted value text (e.g. "På", "070-…"). */
   value?: string;
@@ -43,6 +45,7 @@ export type SettingsRowProps = {
 export function SettingsRow({
   icon,
   label,
+  labelNumberOfLines = 1,
   sublabel,
   value,
   trailing,
@@ -77,7 +80,7 @@ export function SettingsRow({
       ) : null}
 
       <View style={styles.textCol}>
-        <ThemedText type="default" style={{ color: labelColor }} numberOfLines={1}>
+        <ThemedText type="default" style={{ color: labelColor }} numberOfLines={labelNumberOfLines}>
           {label}
         </ThemedText>
         {sublabel ? (
@@ -100,8 +103,9 @@ export function SettingsRow({
           <Icon name={CHECK} size={IconSize.control} color={theme.tint} />
         ) : null}
         {accessory === 'switch' ? (
-          <Switch
-            value={switchValue}
+          <NativeSwitch
+            label={label}
+            value={switchValue ?? false}
             onValueChange={(next) => {
               // Direction-aware toggle feedback (Toggle_On/Off on Android,
               // Rigid/Soft on iOS) rather than a flat selection tick.
@@ -109,9 +113,6 @@ export function SettingsRow({
               onSwitchChange?.(next);
             }}
             disabled={disabled}
-            trackColor={{ true: theme.tint, false: theme.backgroundSelected }}
-            thumbColor={Platform.OS === 'android' ? theme.switchThumb : undefined}
-            ios_backgroundColor={theme.backgroundSelected}
           />
         ) : null}
         {trailing}

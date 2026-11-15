@@ -13,8 +13,8 @@ import { sv } from '@/lib/i18n/sv';
 
 const THEME_OPTIONS: readonly { value: ThemeMode; label: string; icon: IconName }[] = [
   { value: 'system', label: sv.theme.system, icon: { sf: 'circle.lefthalf.filled', material: 'contrast' } },
-  { value: 'light', label: sv.theme.light, icon: { sf: 'sun.max', material: 'light-mode' } },
-  { value: 'dark', label: sv.theme.dark, icon: { sf: 'moon', material: 'dark-mode' } },
+  { value: 'light', label: sv.theme.light, icon: { sf: 'sun.max', material: 'light_mode' } },
+  { value: 'dark', label: sv.theme.dark, icon: { sf: 'moon', material: 'dark_mode' } },
 ];
 
 export function ThemePicker() {

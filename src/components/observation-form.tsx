@@ -323,7 +323,7 @@ export function ObservationForm({
       ) : (
         <Button
           title={sv.observation.addComment}
-          variant="secondary"
+          variant="outline"
           onPress={() => setCommentOpen(true)}
           disabled={busy}
           haptic={false}

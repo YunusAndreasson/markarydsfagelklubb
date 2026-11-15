@@ -7,23 +7,22 @@
  * (home, plus-FAB, map pin, camera, person) get added with their milestones
  * (M6 navigation, M8 maps, M10 images, etc).
  */
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolView, type AnimationSpec, type SFSymbol, type SymbolWeight } from 'expo-symbols';
+import { SymbolView, type AndroidSymbol, type AnimationSpec, type SFSymbol, type SymbolWeight } from 'expo-symbols';
 import { Platform } from 'react-native';
 
 export type IconName = {
   sf: SFSymbol;
-  material: keyof typeof MaterialIcons.glyphMap;
+  material: AndroidSymbol;
 };
 
 /** Trailing disclosure chevron, reused by rows and headers. */
-export const CHEVRON: IconName = { sf: 'chevron.right', material: 'chevron-right' };
+export const CHEVRON: IconName = { sf: 'chevron.right', material: 'chevron_right' };
 
 /** Selection checkmark, used by radio-style rows (e.g. the appearance picker). */
 export const CHECK: IconName = { sf: 'checkmark', material: 'check' };
 
 /** Forward / start-action arrow on a CTA. */
-export const ARROW_FORWARD: IconName = { sf: 'arrow.right', material: 'arrow-forward' };
+export const ARROW_FORWARD: IconName = { sf: 'arrow.right', material: 'arrow_forward' };
 
 /** Quick-add affordance. */
 export const PLUS: IconName = { sf: 'plus', material: 'add' };
@@ -41,7 +40,7 @@ export const CLOCK: IconName = { sf: 'clock', material: 'schedule' };
 export const EDIT: IconName = { sf: 'square.and.pencil', material: 'edit' };
 
 /** Camera capture — "take a photo" (image picker chooser). */
-export const CAMERA: IconName = { sf: 'camera', material: 'photo-camera' };
+export const CAMERA: IconName = { sf: 'camera', material: 'photo_camera' };
 
 /** Photo / library — "choose from gallery" (image picker chooser). */
 export const IMAGE: IconName = { sf: 'photo', material: 'image' };
@@ -53,33 +52,33 @@ export const TRASH: IconName = { sf: 'trash', material: 'delete' };
 export const CLOSE: IconName = { sf: 'xmark', material: 'close' };
 
 /** Failed-load / error glyph for state blocks. */
-export const ALERT: IconName = { sf: 'exclamationmark.triangle', material: 'error-outline' };
+export const ALERT: IconName = { sf: 'exclamationmark.triangle', material: 'error_outline' };
 
 /** Empty-tray glyph for "nothing here yet" states. */
 export const TRAY: IconName = { sf: 'tray', material: 'inbox' };
 
 /** Map pin — a saved/observed location marker. */
-export const LOCATION: IconName = { sf: 'mappin.circle.fill', material: 'location-on' };
+export const LOCATION: IconName = { sf: 'mappin.circle.fill', material: 'location_on' };
 
 /** Crosshair — "use my current position". */
-export const MY_LOCATION: IconName = { sf: 'location.fill', material: 'my-location' };
+export const MY_LOCATION: IconName = { sf: 'location.fill', material: 'my_location' };
 
 /** Maximize affordance — expand an inline map to fullscreen. */
 export const EXPAND: IconName = { sf: 'arrow.up.left.and.arrow.down.right', material: 'fullscreen' };
 
 /** Fit-to-bounds — reframe the Lokaler map so every pin is back in view (the
  *  "visa alla" control, paired with fly-to-a-pin from search). */
-export const FIT: IconName = { sf: 'arrow.up.left.and.arrow.down.right', material: 'zoom-out-map' };
+export const FIT: IconName = { sf: 'arrow.up.left.and.arrow.down.right', material: 'zoom_out_map' };
 
 /** Bell — the push-notification (fågelnotiser) settings row. */
-export const BELL: IconName = { sf: 'bell', material: 'notifications-none' };
+export const BELL: IconName = { sf: 'bell', material: 'notifications_none' };
 
 /** Filter funnel — the feed's narrow-by header control. `line.3.horizontal.decrease`
  *  is the iOS filter idiom (Photos/Mail); `.circle` gives it a nav-bar tap target.
- *  MaterialIcons `filter-list` is the matching Android funnel. */
+ *  Material Symbols `filter_list` is the matching Android funnel. */
 export const FILTER: IconName = {
   sf: 'line.3.horizontal.decrease.circle',
-  material: 'filter-list',
+  material: 'filter_list',
 };
 
 /** Filter, active — the "smart" filled state shown when one or more filters are
@@ -87,19 +86,19 @@ export const FILTER: IconName = {
  *  call site so an active filter reads as lit. */
 export const FILTER_ACTIVE: IconName = {
   sf: 'line.3.horizontal.decrease.circle.fill',
-  material: 'filter-alt',
+  material: 'filter_alt',
 };
 
 /** Door-out — the sign-out settings row. */
 export const SIGN_OUT: IconName = { sf: 'rectangle.portrait.and.arrow.right', material: 'logout' };
 
 /** Overflow — opens the report/block menu on another member's content. */
-export const MORE: IconName = { sf: 'ellipsis.circle', material: 'more-horiz' };
+export const MORE: IconName = { sf: 'ellipsis.circle', material: 'more_horiz' };
 
 /** Hidden member — the "their fynd are hidden" state on a member's profile.
  *  (User-facing wording is "dölj/visa", so an eye-slash reads softer than a
  *  raised hand.) */
-export const BLOCKED: IconName = { sf: 'eye.slash', material: 'visibility-off' };
+export const BLOCKED: IconName = { sf: 'eye.slash', material: 'visibility_off' };
 
 /** Un-hide — the "Visa fynd igen" action (BLOCKED's counterpart). */
 export const VISIBLE: IconName = { sf: 'eye', material: 'visibility' };
@@ -138,17 +137,14 @@ export function Icon({
    */
   animationSpec?: AnimationSpec;
 }) {
-  if (Platform.OS === 'ios') {
-    return (
-      <SymbolView
-        name={name.sf}
-        size={size}
-        tintColor={color}
-        type="monochrome"
-        weight={weight}
-        animationSpec={animationSpec}
-      />
-    );
-  }
-  return <MaterialIcons name={name.material} size={size} color={color} />;
+  return (
+    <SymbolView
+      name={{ ios: name.sf, android: name.material }}
+      size={size}
+      tintColor={color}
+      type="monochrome"
+      weight={Platform.OS === 'ios' ? weight : undefined}
+      animationSpec={Platform.OS === 'ios' ? animationSpec : undefined}
+    />
+  );
 }

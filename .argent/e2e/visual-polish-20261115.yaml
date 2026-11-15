@@ -1,0 +1,50 @@
+steps:
+  - echo: Read-only visual smoke; never submit Larma, select a photo or edit profile fields. Theme is restored to System.
+  - launch: nu.markarydsfagelklubb.mafk
+  - await: { visible: { text: Senaste 14 dagarna } }
+  - await: { idle: true }
+  - tap: { text: Filter, role: Button }
+  - await: { visible: { text: Filtrera larm } }
+  - await: { idle: true }
+  - assert: { visible: { text: Rensa filter } }
+  - tool: button
+    args: { button: back }
+  - await: { hidden: { text: Filtrera larm } }
+  - await: { idle: true }
+  - tap: { text: Larma, role: Button }
+  - await: { visible: { text: Nytt larm } }
+  - await: { idle: true }
+  - assert: { visible: { text: Tryck för att skriva antal } }
+  - assert: { visible: { text: Lägg till kommentar } }
+  - assert: { visible: { text: Lägg till bild } }
+  - tool: button
+    args: { button: back }
+  - await: { hidden: { text: Nytt larm } }
+  - await: { idle: true }
+  - tap: { text: Profil, role: FrameLayout }
+  - await: { visible: { text: Dina uppgifter } }
+  - await: { idle: true }
+  - assert: { visible: { text: Ändringar sparas automatiskt } }
+  - tap: { text: Ändra profilbild, role: Button }
+  - await: { visible: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tool: button
+    args: { button: back }
+  - await: { hidden: { text: Välj från galleri } }
+  - await: { idle: true }
+  - tap: { text: Mörkt, role: RadioButton }
+  - await: { idle: true }
+  - tap: { text: Larm, role: FrameLayout }
+  - await: { visible: { text: Senaste 14 dagarna } }
+  - await: { idle: true }
+  - tap: { text: Profil, role: FrameLayout }
+  - await: { visible: { text: Dina uppgifter } }
+  - await: { idle: true }
+  - tap: { text: System, role: RadioButton }
+  - await: { idle: true }
+  - tap: { text: Lokaler, role: FrameLayout }
+  - await: { visible: { text: Sök lokal } }
+  - await: { visible: { text: Ängabäcks kraftstation. } }
+  - await: { idle: true }
+  - tap: { text: Larm, role: FrameLayout }
+  - await: { visible: { text: Senaste 14 dagarna } }
