@@ -19,6 +19,10 @@
     "1.1.4": {
       "ios": "07c20dab35d3254276f82ae521b93bdb7d805327",
       "android": "a2a3bdd2123e770540fb12f2027bcf9c866b548f"
+    },
+    "1.1.5": {
+      "ios": "07c20dab35d3254276f82ae521b93bdb7d805327",
+      "android": "a2a3bdd2123e770540fb12f2027bcf9c866b548f"
     }
   }
 }
