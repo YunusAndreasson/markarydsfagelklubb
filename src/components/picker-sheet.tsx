@@ -1,5 +1,5 @@
 import { BottomSheet, Host, RNHostView } from '@expo/ui';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { CLOSE, Icon, type IconName } from '@/components/icon';
@@ -20,24 +20,42 @@ export type PickerSheetProps = {
   children: ReactNode;
 };
 
+/** How long a closed sheet's Android host outlives it, so the slide-out finishes. */
+const ANDROID_CLOSE_MS = 500;
+
 /**
  * Native sheet owns dragging, scrim, back handling and window safe areas.
  *
- * The `Host` is only an anchor for the natively presented sheet, so it is
- * unsized and `pointerEvents="none"` (as Expo UI's own BottomSheet wrapper does).
- * Never make it fill its parent: on iOS the SwiftUI hosting view ignores
- * `box-none` and swallowed every tap on the observation form (Art, Antal, Tid…),
- * because the closed time-picker sheet was mounted over the whole form.
- * Android keeps the full-size host (Compose passes `box-none` through, and Expo
- * UI's own Android wrapper fills too) — it never had the bug.
+ * The `Host` is only an anchor for the natively presented sheet, and it must
+ * never take a tap meant for the screen under it. Expo UI's host views ignore
+ * `pointerEvents` (`box-none` and `none` alike), and a full-size host left the
+ * observation form dead: on iOS the closed time-picker sheet covered Art, Antal,
+ * Tid…; on Android the image chooser covered "Lägg till bild".
+ * - iOS: an unsized anchor (as Expo UI's own wrapper), always mounted, so
+ *   SwiftUI animates `isPresented` both ways.
+ * - Android: the host has to fill (a zero-size one is detached by
+ *   `removeClippedSubviews`), so it only exists while the sheet is open or
+ *   sliding out, like Expo UI's own Android sheet mounts lazily.
  */
 export function PickerSheet({ visible, title, onClose, children }: PickerSheetProps) {
   const theme = useTheme();
   const { colorScheme } = useThemeMode();
   const { height } = useWindowDimensions();
+  const [closing, setClosing] = useState(false);
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (wasVisible !== visible) {
+    setWasVisible(visible);
+    setClosing(!visible);
+  }
+  useEffect(() => {
+    if (!closing) return;
+    const timer = setTimeout(() => setClosing(false), ANDROID_CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [closing]);
+
+  if (!isIOS && !visible && !closing) return null;
   return (
-    <Host style={isIOS ? styles.anchor : StyleSheet.absoluteFill}
-      pointerEvents={isIOS ? 'none' : 'box-none'}
+    <Host style={isIOS ? styles.anchor : StyleSheet.absoluteFill} pointerEvents="none"
       colorScheme={colorScheme} seedColor={theme.tint}>
       <BottomSheet isPresented={visible} onDismiss={onClose}
         containerColor={theme.card} contentColor={theme.foreground}
