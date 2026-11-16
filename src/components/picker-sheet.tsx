@@ -1,6 +1,6 @@
 import { BottomSheet, Host, RNHostView } from '@expo/ui';
 import { type ReactNode } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { CLOSE, Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
@@ -11,6 +11,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useThemeMode } from '@/hooks/use-theme-mode';
 import { sv } from '@/lib/i18n/sv';
 
+const isIOS = Platform.OS === 'ios';
+
 export type PickerSheetProps = {
   visible: boolean;
   title: string;
@@ -18,13 +20,24 @@ export type PickerSheetProps = {
   children: ReactNode;
 };
 
-/** Native sheet owns dragging, scrim, back handling and window safe areas. */
+/**
+ * Native sheet owns dragging, scrim, back handling and window safe areas.
+ *
+ * The `Host` is only an anchor for the natively presented sheet, so it is
+ * unsized and `pointerEvents="none"` (as Expo UI's own BottomSheet wrapper does).
+ * Never make it fill its parent: on iOS the SwiftUI hosting view ignores
+ * `box-none` and swallowed every tap on the observation form (Art, Antal, Tid…),
+ * because the closed time-picker sheet was mounted over the whole form.
+ * Android keeps the full-size host (Compose passes `box-none` through, and Expo
+ * UI's own Android wrapper fills too) — it never had the bug.
+ */
 export function PickerSheet({ visible, title, onClose, children }: PickerSheetProps) {
   const theme = useTheme();
   const { colorScheme } = useThemeMode();
   const { height } = useWindowDimensions();
   return (
-    <Host style={StyleSheet.absoluteFill} pointerEvents="box-none"
+    <Host style={isIOS ? styles.anchor : StyleSheet.absoluteFill}
+      pointerEvents={isIOS ? 'none' : 'box-none'}
       colorScheme={colorScheme} seedColor={theme.tint}>
       <BottomSheet isPresented={visible} onDismiss={onClose}
         containerColor={theme.card} contentColor={theme.foreground}
@@ -80,6 +93,7 @@ export function SheetActionRow({ icon, label, destructive = false, onPress }: Sh
 }
 
 const styles = StyleSheet.create({
+  anchor: { position: 'absolute' },
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.three, gap: Spacing.two },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, minHeight: 48 },
   actionRow: {
