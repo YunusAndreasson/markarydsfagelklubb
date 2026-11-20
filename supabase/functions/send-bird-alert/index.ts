@@ -116,6 +116,14 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // Authenticate the caller from their own bearer token. `verify_jwt` alone
+    // also lets the public anon key through, and this function pushes to every
+    // member's phone, so it must know who is asking.
+    const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const { data: callerData } = jwt ? await admin.auth.getUser(jwt) : { data: null };
+    const callerId = callerData?.user?.id;
+    if (!callerId) return json({ error: 'ogiltig session' }, 401);
+
     // Service role → RLS bypassed. Load enough to build the notification AND to
     // snapshot a durable `alerts` row (species/location/observer/coords).
     const { data: obs, error: obsErr } = await admin
@@ -128,6 +136,20 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (obsErr) throw obsErr;
     if (!obs || !obs.alert_requested) return json({ skipped: true }, 200);
+    // Only the reporter fans out their own sighting (the app invokes this right
+    // after the reporter's insert).
+    if (obs.user_id !== callerId) return json({ error: 'inte din observation' }, 403);
+
+    // One fan-out per observation: an existing `alerts` row means this larm was
+    // already sent, so a repeated call (or a replayed request) cannot re-push
+    // the whole club.
+    const { data: alreadySent } = await admin
+      .from('alerts')
+      .select('id')
+      .eq('observation_id', obs.id)
+      .limit(1)
+      .maybeSingle();
+    if (alreadySent) return json({ skipped: true, reason: 'already-sent' }, 200);
 
     const { data: reporter } = await admin
       .from('profiles')
